@@ -293,3 +293,16 @@ Jika credential/API belum siap atau write gagal, kembalikan error terstruktur/`5
 - Query key memasukkan role/entitas/filter/periode yang relevan agar cache tidak bocor antar user; reset query cache saat logout/pergantian akun.
 - Form memakai React Hook Form + Zod jika sesuai; backend tetap melakukan validasi otoritatif.
 - Mock API/export/anomaly harus berlabel mock. Jangan melaporkan integrasi live sebelum smoke test credential valid.
+
+## 10. Implementasi shared schema (`@mumtaz/contracts`, Phase 02)
+
+Schema Zod di `packages/contracts/src/` adalah bentuk implementasi kontrak ini. Detail teknis yang tidak ditentukan dokumen di atas memakai default berikut; semuanya **default teknis/provisional**, bukan aturan bisnis UMKM:
+
+- Request body memakai object strict: field tak dikenal (mis. `tutor_id`, `status` pada submit) ditolak `422`.
+- `duration_minutes`: integer positif dengan batas atas teknis 1440 menit (24 jam) sebagai guard nilai absurd; batas bisnis tetap terbuka (O-12).
+- `learning_material` wajib, maks 255 karakter (O-09); `learning_notes`/`next_focus` opsional, maks 5000, string kosong dinormalisasi ke `null` (O-13).
+- `new_password` dan `initial_password` minimal 8 karakter; backend boleh menaikkan batas ini.
+- `review_note` wajib pada `PATCH /admin/anomalies/:id/review`.
+- Nominal uang (`rate_amount`, `estimated_amount`, dll.) selalu string desimal.
+- Payroll preview per tutor memuat `rate_lines` (nilai tarif snapshot, jumlah sesi, subtotal, `session_ids`) agar nominal dapat ditelusuri, serta `approved_sessions_without_rate` untuk warning tarif kosong.
+- Fixture test-only tersedia di subpath `@mumtaz/contracts/fixtures` dan tidak boleh diimpor kode runtime production.
