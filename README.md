@@ -2,7 +2,7 @@
 
 Blueprint capstone Asah untuk membantu Bimbel Mumtaz Sampit memindahkan pencatatan sesi les tutor ke aplikasi, melakukan review absensi, membuat rekap bulanan, menghitung estimasi honor, dan menampilkan riwayat pembelajaran anak.
 
-> **Status:** Phase 01–03 selesai: fondasi monorepo, shared contracts + fixture, dan backend core (database, auth, role guard, master data, absensi, rekap, honor). UI dashboard (Phase 04), anomaly screening (Phase 05), dan ekspor Google Sheets (Phase 08) belum dibangun. Data dan akun contoh sintetis. Tarif Rp50.000 per sesi adalah nilai demo, bukan tarif resmi UMKM.
+> **Status:** Phase 01–04 selesai: fondasi monorepo, shared contracts + fixture, backend core (database, auth, role guard, master data, absensi, rekap, honor), dan frontend shell tiga role. Anomaly screening (Phase 05), alur revisi Tutor (Phase 06), dan ekspor Google Sheets (Phase 08) belum dibangun. Data dan akun contoh sintetis. Tarif Rp50.000 per sesi adalah nilai demo, bukan tarif resmi UMKM.
 
 ## Menjalankan secara lokal
 
@@ -47,6 +47,14 @@ Akun demo setelah seed: Admin `BOOTSTRAP_ADMIN_USERNAME`; Tutor `tutor-a.demo` d
 - Password Admin/Tutor: Argon2id (parameter OWASP); Orang Tua: HMAC-SHA-256 + `PARENT_ACCESS_CODE_PEPPER`, kode mentah hanya ditampilkan sekali.
 - Revocation: ganti password, rotasi kode, atau nonaktifkan login langsung mencabut session aktif (`users.credential_version`).
 - Rate limit percobaan gagal; respons gagal login generik; log JSON terstruktur tanpa body/cookie/parameter query.
+
+### Frontend
+
+- Route per role: `/admin` (Dashboard, Data Absensi, Rekap, Honor Tutor, Master Data), `/tutor` (Dashboard, Form Absensi, Riwayat Mengajar, Honor Saya, Profil), `/orang-tua-murid` (Progress Anak, Riwayat Pembelajaran); login di `/login` dan `/login/orang-tua`. Guard route hanya untuk UI — backend tetap otoritas izin.
+- Data: feature API functions → satu Axios client (`src/lib/api-client.ts`) → TanStack Query. Setiap respons divalidasi dengan schema `@mumtaz/contracts`. Periode dan filter disimpan di URL (`?period=YYYY-MM`) sehingga menjadi bagian query key.
+- CSRF token di memory; `403 CSRF_INVALID` → token diambil ulang lalu request diulang sekali; `401` → cache dibersihkan dan kembali ke login. Cache dibersihkan total saat login/logout.
+- **Mode demo** (`npm run dev:demo -w frontend`): fake API adapter in-memory berbasis fixture sintetis, dengan banner "Mode Demo". Build live tidak memuat chunk/fixture demo sama sekali.
+- Code splitting per halaman + chunk vendor terpisah (cache jangka panjang).
 
 ### Testing backend
 

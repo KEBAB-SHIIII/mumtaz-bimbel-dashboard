@@ -13,6 +13,21 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
   },
+  build: {
+    rolldownOptions: {
+      output: {
+        // Vendor dipisah per kelompok: jarang berubah → cache browser bertahan lintas deploy.
+        codeSplitting: {
+          groups: [
+            { name: 'vendor-react', test: /node_modules[\\/](react|react-dom|react-router|scheduler)[\\/]/ },
+            { name: 'vendor-data', test: /node_modules[\\/](@tanstack|axios|zod)[\\/]/ },
+            { name: 'vendor-ui', test: /node_modules[\\/](@headlessui|@floating-ui|@react-aria|lucide-react)[\\/]/ },
+            { name: 'vendor-form', test: /node_modules[\\/](react-hook-form|@hookform)[\\/]/ },
+          ],
+        },
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

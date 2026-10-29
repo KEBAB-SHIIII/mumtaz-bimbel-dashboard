@@ -12,6 +12,8 @@ coverage/
 .env
 .env.*
 !.env.example
+# Konfigurasi mode demo frontend (tanpa secret)
+!frontend/.env.demo
 backend/.env
 frontend/.env
 backend/secrets/

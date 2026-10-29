@@ -1,0 +1,184 @@
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it } from 'vitest';
+import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
+import { renderApp, useDemoBackend } from '../test/render';
+
+async function loginStaff(username: string, password: string) {
+  const user = userEvent.setup();
+  await user.type(await screen.findByLabelText(/^Username/), username);
+  await user.type(screen.getByLabelText(/^Password/), password);
+  await user.click(screen.getByRole('button', { name: 'Masuk' }));
+  return user;
+}
+
+const navLinks = async () =>
+  within(await screen.findByRole('navigation', { name: 'Navigasi utama' }))
+    .getAllByRole('link')
+    .map((link) => link.textContent);
+
+describe('autentikasi & navigasi per role', () => {
+  it('route terproteksi tanpa sesi → halaman login', async () => {
+    useDemoBackend();
+    renderApp('/admin');
+    expect(await screen.findByRole('heading', { name: 'Masuk Admin / Tutor' })).toBeInTheDocument();
+  });
+
+  it('kredensial salah → pesan generik dari server', async () => {
+    useDemoBackend();
+    renderApp('/login');
+    await loginStaff('admin.demo', 'salah');
+    expect(await screen.findByText('Kredensial tidak valid')).toBeInTheDocument();
+  });
+
+  it('Admin: menu Admin saja, tanpa menu Tutor/Orang Tua', async () => {
+    useDemoBackend();
+    renderApp('/login');
+    await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
+    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(await navLinks()).toEqual(['Dashboard', 'Data Absensi', 'Rekap', 'Honor Tutor', 'Master Data']);
+  });
+
+  it('Tutor: menu Tutor saja; membuka /admin dialihkan ke /tutor', async () => {
+    useDemoBackend();
+    renderApp('/login');
+    await loginStaff('tutor-a.demo', TEST_ONLY_CREDENTIALS.tutorPassword);
+    expect(await screen.findByRole('heading', { name: 'Halo, Tutor Demo A' })).toBeInTheDocument();
+    expect(await navLinks()).toEqual(['Dashboard', 'Form Absensi', 'Riwayat Mengajar', 'Honor Saya', 'Profil']);
+  });
+
+  it('Orang Tua: login satu field ID Akses, tanpa username/password', async () => {
+    useDemoBackend();
+    renderApp('/login/orang-tua');
+    const user = userEvent.setup();
+    expect(screen.queryByLabelText(/^Username/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Password/)).not.toBeInTheDocument();
+    await user.type(await screen.findByLabelText(/ID Akses Orang Tua/), 'MUMTAZ-DEMO-PARENT-ACCESS-ONLY');
+    await user.click(screen.getByRole('button', { name: 'Masuk' }));
+    expect(await screen.findByRole('heading', { name: 'Progress Anak' })).toBeInTheDocument();
+    expect(await navLinks()).toEqual(['Progress Anak', 'Riwayat Pembelajaran']);
+  });
+
+  it('logout membersihkan sesi dan kembali ke login', async () => {
+    useDemoBackend();
+    renderApp('/login');
+    const user = await loginStaff('tutor-a.demo', TEST_ONLY_CREDENTIALS.tutorPassword);
+    await user.click(await screen.findByRole('button', { name: 'Keluar' }));
+    expect(await screen.findByRole('heading', { name: 'Masuk Admin / Tutor' })).toBeInTheDocument();
+  });
+});
+
+describe('halaman berbasis periode', () => {
+  it('mengganti bulan mengubah query (Okt 9 sesi → Nov 1 sesi)', async () => {
+    useDemoBackend();
+    renderApp('/login');
+    const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
+    await user.click(await screen.findByRole('link', { name: 'Data Absensi' }));
+
+    await screen.findByRole('table');
+    // Default periode = bulan berjalan; set eksplisit ke Okt 2026.
+    const period = screen.getByLabelText('Periode');
+    await user.clear(period);
+    await user.type(period, '2026-10');
+    await waitFor(() => expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(10)); // header + 9
+
+    await user.click(screen.getByRole('button', { name: 'Bulan berikutnya' }));
+    await waitFor(() => expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(2));
+    expect(screen.getByText('1–1 dari 1')).toBeInTheDocument();
+  });
+
+  it('Honor Tutor menampilkan label simulasi tarif demo', async () => {
+    useDemoBackend();
+    renderApp('/login');
+    const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
+    await user.click(await screen.findByRole('link', { name: 'Honor Tutor' }));
+    const period = await screen.findByLabelText('Periode');
+    await user.clear(period);
+    await user.type(period, '2026-10');
+    expect((await screen.findAllByText('Simulasi — bukan tarif resmi UMKM')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Tutor Demo A')).toBeInTheDocument();
+  });
+});
+
+describe('Admin: keputusan review', () => {
+  it('tolak wajib alasan; setelah dikonfirmasi status berubah', async () => {
+    useDemoBackend();
+    renderApp('/login');
+    const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
+    await user.click(await screen.findByRole('link', { name: 'Data Absensi' }));
+    const period = await screen.findByLabelText('Periode');
+    await user.clear(period);
+    await user.type(period, '2026-10');
+    await user.selectOptions(screen.getByLabelText('Status'), 'pending');
+
+    const detailButtons = await screen.findAllByRole('button', { name: /Lihat detail sesi/ });
+    const first = detailButtons[0];
+    if (!first) throw new Error('tidak ada sesi pending');
+    await user.click(first);
+    const dialog = await screen.findByRole('dialog', { name: 'Detail sesi' });
+    await user.click(within(dialog).getByRole('button', { name: 'Tolak' }));
+
+    const confirm = await screen.findByRole('dialog', { name: 'Tolak sesi?' });
+    const confirmButton = within(confirm).getByRole('button', { name: 'Tolak' });
+    expect(confirmButton).toBeDisabled();
+    await user.type(within(confirm).getByLabelText(/Alasan/), 'Tidak ada jadwal pada tanggal ini');
+    await user.click(confirmButton);
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Tolak sesi?' })).not.toBeInTheDocument());
+    expect(await within(await screen.findByRole('dialog', { name: 'Detail sesi' })).findByText('Ditolak')).toBeInTheDocument();
+  });
+});
+
+describe('Tutor: Form Absensi', () => {
+  it('auto-fill kelas/sekolah, validasi di dekat field, sukses setelah server menyimpan', async () => {
+    useDemoBackend();
+    renderApp('/login');
+    const user = await loginStaff('tutor-a.demo', TEST_ONLY_CREDENTIALS.tutorPassword);
+    await user.click(await screen.findByRole('link', { name: 'Form Absensi' }));
+
+    expect(await screen.findByLabelText(/^Nama tutor/)).toHaveValue('Tutor Demo A');
+    await user.click(screen.getByRole('button', { name: 'Kirim absensi' }));
+    expect(await screen.findByText('Wajib diisi')).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText(/^Nama murid/), screen.getByRole('option', { name: /Murid Demo 1/ }));
+    expect(screen.getByLabelText(/^Kelas/)).toHaveValue('3 SD');
+    expect(screen.getByLabelText(/^Asal sekolah/)).toHaveValue('Sekolah Demo A');
+
+    await user.type(screen.getByLabelText(/^Tanggal les/), '2026-10-20');
+    await user.type(screen.getByLabelText(/^Durasi les/), '90');
+    await user.type(screen.getByLabelText(/^Materi pembelajaran/), 'Persamaan linear');
+    await user.click(screen.getByRole('button', { name: 'Kirim absensi' }));
+
+    expect(await screen.findByText('Absensi tersimpan dan menunggu verifikasi')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Materi pembelajaran/)).toHaveValue('');
+  });
+
+  it('durasi bukan bilangan bulat ditolak sebelum dikirim', async () => {
+    useDemoBackend();
+    renderApp('/login');
+    const user = await loginStaff('tutor-a.demo', TEST_ONLY_CREDENTIALS.tutorPassword);
+    await user.click(await screen.findByRole('link', { name: 'Form Absensi' }));
+    await user.type(await screen.findByLabelText(/^Durasi les/), '1.5');
+    await user.click(screen.getByRole('button', { name: 'Kirim absensi' }));
+    expect(await screen.findByText('Durasi harus bilangan bulat menit')).toBeInTheDocument();
+  });
+});
+
+describe('Orang Tua: Progress Anak', () => {
+  it('hanya sesi disetujui, tanpa catatan internal Admin', async () => {
+    useDemoBackend();
+    renderApp('/login/orang-tua');
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText(/ID Akses Orang Tua/), 'MUMTAZ-DEMO-PARENT-ACCESS-ONLY');
+    await user.click(screen.getByRole('button', { name: 'Masuk' }));
+    await user.click(await screen.findByRole('link', { name: 'Riwayat Pembelajaran' }));
+    const period = await screen.findByLabelText('Periode');
+    await user.clear(period);
+    await user.type(period, '2026-10');
+
+    expect(await screen.findByText(/Penjumlahan dan pengurangan/)).toBeInTheDocument();
+    expect(screen.getByText(/Perkalian dasar/)).toBeInTheDocument();
+    expect(screen.queryByText(/Catatan Admin/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Rp/)).not.toBeInTheDocument();
+  });
+});

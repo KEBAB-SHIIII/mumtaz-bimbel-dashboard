@@ -1,0 +1,56 @@
+import type { ReactNode } from 'react';
+import { cn } from '../../lib/cn';
+
+export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
+  return (
+    <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight text-text">{title}</h1>
+        {description && <p className="mt-1 text-sm text-muted">{description}</p>}
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    </header>
+  );
+}
+
+export function Card({ title, actions, children, className }: { title?: string; actions?: ReactNode; children: ReactNode; className?: string }) {
+  return (
+    <section className={cn('rounded-lg border border-border bg-surface shadow-sm', className)}>
+      {(title || actions) && (
+        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+          {title && <h2 className="text-sm font-semibold text-text">{title}</h2>}
+          {actions}
+        </div>
+      )}
+      {children}
+    </section>
+  );
+}
+
+export function StatCard({ label, value, hint }: { label: string; value: ReactNode; hint?: ReactNode }) {
+  return (
+    <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
+      <dt className="text-xs font-medium text-muted">{label}</dt>
+      <dd className="mt-1 text-2xl font-semibold tabular-nums text-text">{value}</dd>
+      {hint && <dd className="mt-1">{hint}</dd>}
+    </div>
+  );
+}
+
+/** Baris filter yang membungkus ke bawah di layar kecil. */
+export function FilterBar({ children }: { children: ReactNode }) {
+  return <div className="flex flex-wrap items-end gap-3">{children}</div>;
+}
+
+export function DescriptionList({ items }: { items: { label: string; value: ReactNode }[] }) {
+  return (
+    <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+      {items.map((item) => (
+        <div key={item.label}>
+          <dt className="text-xs font-medium text-muted">{item.label}</dt>
+          <dd className="mt-0.5 text-sm text-text">{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
