@@ -90,7 +90,8 @@ Jangan menambahkan global state library seperti Redux/Zustand untuk MVP kecuali 
 | `vitest` | Unit/integration test |
 | `supertest` | Pengujian HTTP Express |
 | `typescript` | Type checking strict |
-| `@types/node`, `@types/express`, `@types/express-session`, `@types/cors`, `@types/pg`, `@types/supertest` | Tipe yang diperlukan untuk TypeScript/test; jangan pasang `@types/*` bila package sudah menyertakan types. |
+| `@types/node`, `@types/express`, `@types/express-session`, `@types/connect-pg-simple`, `@types/cors`, `@types/pg`, `@types/supertest` | Tipe yang diperlukan untuk TypeScript/test; jangan pasang `@types/*` bila package sudah menyertakan types. |
+| `@electric-sql/pglite` | **Ditambahkan Phase 03.** PostgreSQL asli in-process (WASM) untuk integration/API test offline: migration Drizzle, CHECK/exclusion constraint, transaksi, dan session store `connect-pg-simple` yang sama dengan Neon diuji tanpa credential live. Dev-only; tidak dipakai runtime. |
 | `eslint` dan konfigurasi TypeScript/Node yang kompatibel | Lint source |
 | `prettier` | Formatting konsisten bila repo memilih Prettier |
 

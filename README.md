@@ -2,7 +2,7 @@
 
 Blueprint capstone Asah untuk membantu Bimbel Mumtaz Sampit memindahkan pencatatan sesi les tutor ke aplikasi, melakukan review absensi, membuat rekap bulanan, menghitung estimasi honor, dan menampilkan riwayat pembelajaran anak.
 
-> **Status:** Phase 01 (fondasi monorepo) selesai: workspace, tooling, health check. Fitur domain (auth, absensi, review, rekap, honor, ekspor) belum diimplementasikan. Data dan akun contoh sintetis. Tarif Rp50.000 per sesi adalah nilai demo, bukan tarif resmi UMKM.
+> **Status:** Phase 01–03 selesai: fondasi monorepo, shared contracts + fixture, dan backend core (database, auth, role guard, master data, absensi, rekap, honor). UI dashboard (Phase 04), anomaly screening (Phase 05), dan ekspor Google Sheets (Phase 08) belum dibangun. Data dan akun contoh sintetis. Tarif Rp50.000 per sesi adalah nilai demo, bukan tarif resmi UMKM.
 
 ## Menjalankan secara lokal
 
@@ -23,23 +23,49 @@ npm run dev                          # backend :3001 + frontend :5173
 | `npm run lint` | ESLint flat config root (termasuk larangan `fetch`, `localStorage`, dan UI kit terlarang di frontend) |
 | `npm test` | Vitest semua workspace; offline, tanpa credential live |
 
-Script backend tambahan: `npm run db:generate -w backend` dan `npm run db:migrate -w backend` (Drizzle Kit). Review migration sebelum dijalankan dan jangan migrate/seed ke DB UMKM tanpa izin.
+### Database (Neon development)
+
+```bash
+npm run db:migrate -w backend          # terapkan migration di backend/drizzle (pakai DATABASE_MIGRATION_URL)
+npm run db:bootstrap-admin -w backend  # buat Admin dari BOOTSTRAP_ADMIN_* (idempoten, tidak menimpa password)
+npm run db:seed -w backend             # seed SINTETIS (ditolak di production; idempoten, tidak menghapus data)
+```
+
+| Script backend | Fungsi |
+|---|---|
+| `db:generate` | Generate migration dari `src/db/schema.ts` (review SQL sebelum commit) |
+| `db:check` | Validasi konsistensi file migration |
+| `db:migrate` | Terapkan migration; **jangan** ke DB UMKM tanpa izin owner |
+| `db:bootstrap-admin` / `db:seed` | Akun Admin awal / data demo sintetis |
+
+Akun demo setelah seed: Admin `BOOTSTRAP_ADMIN_USERNAME`; Tutor `tutor-a.demo` dan `tutor-b.demo` dengan password `SEED_TUTOR_PASSWORD`; Orang Tua dengan ID akses fixture `MUMTAZ-DEMO-PARENT-ACCESS-ONLY` dan `MUMTAZ-DEMO-PARENT-B-ACCESS-ONLY` (test/dev saja; kode produksi dibuat acak 128-bit oleh Admin).
+
+### Keamanan backend
+
+- Session: cookie opaque `mumtaz.sid` (HttpOnly, SameSite=Lax, Secure di production), store PostgreSQL `app_sessions` via `connect-pg-simple`, idle timeout bergulir `SESSION_IDLE_TIMEOUT_MINUTES`, regenerasi session ID saat login/ganti password.
+- CSRF: `GET /auth/csrf` → token di memory frontend → header `X-CSRF-Token` + Origin wajib = `FRONTEND_ORIGIN` untuk semua mutasi (termasuk login).
+- Password Admin/Tutor: Argon2id (parameter OWASP); Orang Tua: HMAC-SHA-256 + `PARENT_ACCESS_CODE_PEPPER`, kode mentah hanya ditampilkan sekali.
+- Revocation: ganti password, rotasi kode, atau nonaktifkan login langsung mencabut session aktif (`users.credential_version`).
+- Rate limit percobaan gagal; respons gagal login generik; log JSON terstruktur tanpa body/cookie/parameter query.
+
+### Testing backend
+
+API/integration test memakai **PGlite** (PostgreSQL in-process) dengan migration yang sama seperti Neon dan seed fixture `@mumtaz/contracts/fixtures` — offline, deterministik (jam di-inject), tanpa credential live.
 
 ### Struktur workspace
 
 ```text
 packages/contracts/  # shared Zod schema + types (@mumtaz/contracts)
-backend/             # Express 5 API: src/{app,server}.ts, config/ (env Zod, session), db/ (Drizzle + pg), routes/, middleware/
+backend/             # Express 5 API: src/{app,server}.ts, auth/, config/, db/ (schema, seed), routes/, services/, middleware/, lib/, scripts/; drizzle/ (migration)
 frontend/            # Vite + React 19 + Tailwind v4: src/{app,features,lib,styles,components/ui}
 ```
 
 - `@mumtaz/contracts` diekspor dengan condition `source` (TypeScript langsung) untuk dev/test/typecheck, dan `dist/` untuk build production backend.
 - Backend memvalidasi environment dengan Zod (`backend/src/config/env.ts`) saat startup. Pesan error hanya memuat nama variabel, bukan nilainya. Integrasi Sheets/Gemini yang belum dikonfigurasi dilaporkan `disabled`/`not_configured`, bukan sukses palsu.
-- Pool `pg` bersifat lazy; unit test tidak membuka koneksi ke Neon.
 - Frontend memakai satu Axios client (`frontend/src/lib/api-client.ts`, `withCredentials: true`) dengan CSRF token di memory yang dikirim sebagai `X-CSRF-Token` pada request mutasi.
 - Design tokens semantik netral ada di `frontend/src/styles/tokens.css` (placeholder; palet/font final menunggu keputusan tim).
 - TypeScript dipatok `~6.0` karena `typescript-eslint` belum mendukung TypeScript 7.
-- Endpoint yang tersedia saat ini: `GET /api/v1/health` → `200 { "status": "ok" }`.
+- Endpoint yang tersedia: health, auth (CSRF, login, parent-access, logout, me), `/admin/*` (dashboard, absensi + keputusan, rekap, payroll, master data), `/tutor/*` (dashboard, assignment, submit/riwayat/revisi absensi, honor, ganti password), `/parent/*` (anak terhubung, dashboard, progress). Kontrak: `docs/04-API-CONTRACT.md`.
 
 ## Alur utama (target produk)
 

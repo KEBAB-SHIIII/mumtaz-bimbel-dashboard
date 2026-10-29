@@ -8,6 +8,8 @@ export const errorCodeSchema = z.enum([
   'FORBIDDEN',
   'CSRF_INVALID',
   'NOT_FOUND',
+  /** Konflik data unik/overlap (mis. username dipakai, periode tarif overlap). */
+  'CONFLICT',
   'RATE_LIMITED',
   'SESSION_STATE_CONFLICT',
   'IDEMPOTENCY_CONFLICT',

@@ -1,9 +1,13 @@
+import connectPgSimple from 'connect-pg-simple';
+import session from 'express-session';
+import type { Pool } from 'pg';
+import type { SessionStorePool } from '../db/client.js';
 import type { Env } from './env.js';
 
 /**
- * Baseline konfigurasi session (docs/03 §3, docs/04 §1).
- * Middleware `express-session` + store `connect-pg-simple` (tabel `app_sessions`)
- * dipasang pada Phase 03; modul ini hanya menetapkan opsi yang akan dipakai.
+ * Konfigurasi session (docs/03 §2.1, docs/04 §1): cookie opaque HttpOnly,
+ * SameSite=Lax, Secure di production; idle timeout bergulir; store PostgreSQL
+ * `app_sessions` (bukan MemoryStore).
  */
 export const SESSION_COOKIE_NAME = 'mumtaz.sid';
 export const SESSION_TABLE_NAME = 'app_sessions';
@@ -43,4 +47,24 @@ export function buildSessionConfig(env: Env): SessionConfig {
       maxAge: env.SESSION_IDLE_TIMEOUT_MINUTES * 60 * 1000,
     },
   };
+}
+
+const PgSessionStore = connectPgSimple(session);
+
+/**
+ * Store `connect-pg-simple` di atas tabel hasil migration (tanpa auto-create).
+ * `pruneIntervalSeconds: false` mematikan timer pembersihan (dipakai di test).
+ */
+export function createSessionStore(
+  pool: SessionStorePool,
+  options: { pruneIntervalSeconds: number | false; onError?: (message: string) => void },
+): session.Store {
+  return new PgSessionStore({
+    // connect-pg-simple hanya memakai `pool.query(text, params)`; PGlite di test memenuhi antarmuka yang sama.
+    pool: pool as unknown as Pool,
+    tableName: SESSION_TABLE_NAME,
+    createTableIfMissing: false,
+    pruneSessionInterval: options.pruneIntervalSeconds,
+    errorLog: (...args: unknown[]) => options.onError?.(args.map(String).join(' ')),
+  });
 }

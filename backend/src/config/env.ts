@@ -27,7 +27,12 @@ export const envSchema = z
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: positiveInt(3001),
     API_PREFIX: z.string().startsWith('/').default('/api/v1'),
-    FRONTEND_ORIGIN: z.url(),
+    FRONTEND_ORIGIN: z.url().transform((value) => new URL(value).origin),
+    /**
+     * Jumlah reverse proxy tepercaya di depan API (Express `trust proxy`).
+     * Default `0`: X-Forwarded-For diabaikan agar IP untuk rate limit tidak bisa dipalsukan.
+     */
+    TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
 
     DATABASE_URL: postgresUrl,
     DATABASE_MIGRATION_URL: z.preprocess(

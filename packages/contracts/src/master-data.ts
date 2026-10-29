@@ -18,6 +18,24 @@ export const masterDataListQuerySchema = paginationQuerySchema.extend({
 });
 export type MasterDataListQuery = z.infer<typeof masterDataListQuerySchema>;
 
+/** Query string boolean (`true`/`false`) → boolean. */
+const queryBoolean = z.enum(['true', 'false']).transform((value) => value === 'true');
+
+export const assignmentListQuerySchema = masterDataListQuerySchema.extend({
+  tutor_id: uuidSchema.optional(),
+  student_id: uuidSchema.optional(),
+  subject_id: uuidSchema.optional(),
+  is_active: queryBoolean.optional(),
+});
+export type AssignmentListQuery = z.infer<typeof assignmentListQuerySchema>;
+
+export const rateListQuerySchema = paginationQuerySchema.extend({
+  assignment_id: uuidSchema.optional(),
+});
+export type RateListQuery = z.infer<typeof rateListQuerySchema>;
+
+export const idParamSchema = z.object({ id: uuidSchema });
+
 const timestamps = {
   created_at: timestampSchema,
   updated_at: timestampSchema,

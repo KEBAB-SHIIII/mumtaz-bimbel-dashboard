@@ -343,6 +343,14 @@ Anomaly module mengklasifikasikan dugaan duplikasi/pola anomali. Validasi strukt
 - Cegah overlap periode tarif untuk assignment yang sama.
 - `client_submission_id` harus unique dan wajib pada submit awal. Frontend membuat UUID sekali untuk submission dan menggunakan ulang pada retry; backend mengembalikan record sesi yang sama untuk key/body yang sama dan `409` bila key sama dipakai untuk payload berbeda. UI tetap mencegah double-click.
 
+### 4.1 Implementasi (Phase 03, `backend/src/db/schema.ts` + `backend/drizzle/`)
+
+- **Anti-overlap via exclusion constraint** (`btree_gist`, migration `0001_overlap_constraints.sql`): `tutor_rates_no_overlap` (assignment sama, rentang `[effective_from, effective_to]` tidak boleh overlap) dan `tutor_assignments_active_no_overlap` (assignment aktif dengan tuple tutor+siswa+mapel sama tidak boleh overlap). Pelanggaran → API `409 CONFLICT`.
+- **`users.credential_version`** (kolom implementasi tambahan, `INTEGER DEFAULT 1`): dinaikkan saat password diganti, kode akses parent dirotasi, atau login dinonaktifkan. Session yang membawa versi lama otomatis dicabut pada request berikutnya.
+- **CHECK tambahan di `lesson_sessions`**: snapshot tarif all-or-nothing dan hanya untuk `approved`; `admin_note` wajib untuk `revision_requested`/`rejected`; status selain `pending` wajib punya `reviewed_by_user_id` + `reviewed_at`; `duration_minutes > 0`.
+- Uang `NUMERIC(12,2)`; semua FK `ON DELETE RESTRICT` (tidak ada cascade delete histori); nama mapel unik case-insensitive (`lower(name)`), email unik case-insensitive.
+- **`app_sessions`** (infrastruktur, bukan entitas domain): `sid VARCHAR PK`, `sess JSON`, `expire TIMESTAMP(6)` + index `expire` — kompatibel `connect-pg-simple`, dibuat lewat migration (`createTableIfMissing=false`).
+
 ## 5. Aturan waktu dan bulan
 
 - `lesson_date` adalah `DATE` tanpa jam; jangan menggesernya karena konversi zona waktu.

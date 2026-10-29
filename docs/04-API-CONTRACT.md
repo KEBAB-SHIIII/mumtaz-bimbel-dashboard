@@ -14,7 +14,7 @@ Base URL lokal: `http://localhost:3001/api/v1`. Kontrak ini harus selaras dengan
 - Role guard di backend: `admin`, `tutor`, `parent`. Menyembunyikan menu bukan kontrol keamanan.
 - Kode akses orang tua adalah credential rahasia, bukan public ID. Endpoint akses diberi rate limit dan pesan gagal generik.
 - Error codes: `400` request tidak dapat diproses, `401` kredensial/session tidak valid, `403` role atau scope tidak punya akses, `404` data tidak ditemukan, `409` konflik state/idempotency atau `EMPTY_EXPORT_CONFIRMATION_REQUIRED`, `422` validasi gagal, `429` rate limit, `500` error internal aman, `503` integrasi eksternal belum siap/gagal.
-- Bentuk body error seragam: `{ "error": { "code": "SNAKE_UPPER_CODE", "message": "Pesan aman untuk user", "details": [ { "field": "lesson_date", "message": "..." } ] } }`. `details` opsional dan dipakai untuk `422` validasi Zod (per field). Contoh `code`: `VALIDATION_FAILED`, `UNAUTHENTICATED`, `FORBIDDEN`, `CSRF_INVALID`, `NOT_FOUND`, `RATE_LIMITED`, `SESSION_STATE_CONFLICT`, `IDEMPOTENCY_CONFLICT`, `EMPTY_EXPORT_CONFIRMATION_REQUIRED`, `INTEGRATION_UNAVAILABLE`, `INTERNAL_ERROR`. Jangan menyertakan stack trace, SQL, atau detail credential.
+- Bentuk body error seragam: `{ "error": { "code": "SNAKE_UPPER_CODE", "message": "Pesan aman untuk user", "details": [ { "field": "lesson_date", "message": "..." } ] } }`. `details` opsional dan dipakai untuk `422` validasi Zod (per field). Contoh `code`: `VALIDATION_FAILED`, `UNAUTHENTICATED`, `FORBIDDEN`, `CSRF_INVALID`, `NOT_FOUND`, `CONFLICT` (data unik/overlap, mis. username dipakai atau periode tarif overlap; `details[].field` menunjuk field terkait), `RATE_LIMITED`, `SESSION_STATE_CONFLICT`, `IDEMPOTENCY_CONFLICT`, `EMPTY_EXPORT_CONFIRMATION_REQUIRED`, `INTEGRATION_UNAVAILABLE`, `INTERNAL_ERROR`. Jangan menyertakan stack trace, SQL, atau detail credential.
 - Token CSRF hilang/tidak cocok atau `Origin` tidak diizinkan → `403` dengan `code: "CSRF_INVALID"`.
 - Session memakai idle timeout yang dapat dikonfigurasi (`SESSION_IDLE_TIMEOUT_MINUTES`, default development 480 menit). Rate limit login/parent-access dapat dikonfigurasi (`AUTH_RATE_LIMIT_MAX` percobaan per `AUTH_RATE_LIMIT_WINDOW_MINUTES`, default development 5 per 15 menit) per IP dan identifier; nilai ini default teknis, bukan kebijakan bisnis final.
 
@@ -306,3 +306,15 @@ Schema Zod di `packages/contracts/src/` adalah bentuk implementasi kontrak ini. 
 - Nominal uang (`rate_amount`, `estimated_amount`, dll.) selalu string desimal.
 - Payroll preview per tutor memuat `rate_lines` (nilai tarif snapshot, jumlah sesi, subtotal, `session_ids`) agar nominal dapat ditelusuri, serta `approved_sessions_without_rate` untuk warning tarif kosong.
 - Fixture test-only tersedia di subpath `@mumtaz/contracts/fixtures` dan tidak boleh diimpor kode runtime production.
+
+### Detail implementasi Phase 03
+
+- `POST /auth/logout` → `204` tanpa body; cookie session dihapus.
+- `GET /tutor/me/assignments` dan `GET /parent/me/students` → `{ "items": [...] }` (tanpa pagination; jumlahnya kecil).
+- `PATCH /tutor/me/attendance/:id` → `200 { "session": TutorSession }`.
+- `POST /tutor/attendance` retry identik mengembalikan `201` dengan sesi yang sama (status terkini); key sama dari tutor lain atau payload berbeda → `409 IDEMPOTENCY_CONFLICT`.
+- Assignment milik tutor lain, nonaktif, siswa nonaktif, atau di luar masa berlaku → `422` pada field `assignment_id`/`lesson_date` (tidak membedakan "tidak ada" vs "milik tutor lain"). Profil tutor nonaktif → `403`.
+- Sesi tutor lain pada `PATCH /tutor/me/attendance/:id` → `404`. Anak yang tidak terhubung pada endpoint parent → `403`.
+- Filter list tambahan: `GET /admin/tutor-assignments?tutor_id=&student_id=&subject_id=&is_active=true|false&search=`; `GET /admin/tutor-rates?assignment_id=`.
+- Rate limit hanya menghitung percobaan gagal: login per IP dan per username; parent-access per IP dan per IP+kode (di-hash); ganti password per akun. Store in-memory (satu instance); scale-out butuh store bersama.
+- `TRUST_PROXY` (default `0`) menentukan apakah `X-Forwarded-For` dipercaya untuk IP rate limit.

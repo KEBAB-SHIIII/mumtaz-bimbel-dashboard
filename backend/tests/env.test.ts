@@ -56,6 +56,14 @@ describe('parseEnv', () => {
     ).toThrow(/SESSION_SECRET/);
   });
 
+  it('TRUST_PROXY default 0 (X-Forwarded-For tidak dipercaya) dan FRONTEND_ORIGIN dinormalisasi', () => {
+    const env = makeTestEnv({ FRONTEND_ORIGIN: 'http://localhost:5173/' });
+    expect(env.TRUST_PROXY).toBe(0);
+    expect(env.FRONTEND_ORIGIN).toBe('http://localhost:5173');
+    expect(makeTestEnv({ TRUST_PROXY: '1' }).TRUST_PROXY).toBe(1);
+    expect(() => makeTestEnv({ TRUST_PROXY: 'true' })).toThrow(/TRUST_PROXY/);
+  });
+
   it('memperlakukan nilai kosong sebagai tidak diset', () => {
     const env = makeTestEnv({ GEMINI_API_KEY: '', DATABASE_MIGRATION_URL: '' });
     expect(env.GEMINI_API_KEY).toBeUndefined();

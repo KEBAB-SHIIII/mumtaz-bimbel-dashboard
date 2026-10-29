@@ -93,12 +93,15 @@ const sessionCoreFields = {
   duration_minutes: z.number().int(),
 };
 
-/** Respons submit `201`. */
+/**
+ * Respons submit `201`. Submit baru selalu `pending`; retry idempoten dengan
+ * payload identik mengembalikan sesi yang sama beserta status terkininya.
+ */
 export const submitAttendanceResponseSchema = z.object({
   session: z.object({
     id: uuidSchema,
     client_submission_id: uuidSchema,
-    status: z.literal('pending'),
+    status: sessionStatusSchema,
     anomaly_analysis_status: anomalyAnalysisStatusSchema,
     submitted_at: timestampSchema,
   }),
