@@ -51,7 +51,7 @@
 - [ ] Ekspor hanya dapat dimulai Admin dan berjalan saat diminta.
 - [ ] Query periode `YYYY-MM` berdasarkan `lesson_date`.
 - [ ] Header tepat delapan kolom mentah dan urutannya benar; tanpa status, materi, anomaly, honor atau ID internal.
-- [ ] Working default sementara: semua status review masuk report standar sesuai keputusan owner.
+- [ ] Semua status review masuk report standar (keputusan owner O-08, final).
 - [ ] Tab `Absensi YYYY-MM` dibuat bila belum ada.
 - [ ] Re-export menulis ulang tab bulan sama dan membersihkan sisa row lama; tidak append duplikat.
 - [ ] Export kosong tidak menimpa report berisi tanpa konfirmasi Admin.

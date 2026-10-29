@@ -79,7 +79,7 @@ Sistem harus mengurangi pekerjaan manual/repetitif: isi form sesingkat mungkin, 
 ## 6. Navigasi
 
 - **Admin:** Dashboard, Data Absensi, Rekap, Honor Tutor, Master Data.
-- **Tutor:** Dashboard, Form Absensi, Riwayat Mengajar, Honor Saya.
+- **Tutor:** Dashboard, Form Absensi, Riwayat Mengajar, Honor Saya, Profil (data akun read-only + ganti password sendiri).
 - **Orang Tua:** Dashboard / Progress Anak, Riwayat Pembelajaran (boleh digabung menjadi satu halaman MVP).
 
 Detail isi per tab ada di `15-DASHBOARD-TABS.md`.

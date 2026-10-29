@@ -41,7 +41,7 @@ Login memiliki satu field `ID Akses Orang Tua`, tanpa password sesuai keputusan 
 Navigasi sidebar harus berbeda sesuai role:
 
 - Admin: Dashboard, Data Absensi, Rekap, Honor Tutor, Master Data.
-- Tutor: Dashboard, Form Absensi, Riwayat Mengajar, Honor Saya.
+- Tutor: Dashboard, Form Absensi, Riwayat Mengajar, Honor Saya, Profil (read-only + ganti password).
 - Orang Tua: Dashboard/Progress Anak dan Riwayat Pembelajaran (boleh digabung pada MVP).
 
 UI navigation bukan pengganti otorisasi server.
@@ -64,7 +64,7 @@ KPI relevan: tutor aktif, siswa aktif, sesi periode, pending verification, sesi 
 - Tampilkan filter bulan dengan jelas.
 - Rekap menampilkan agregat per tutor/siswa/mapel dan drill-down ke sesi sumber.
 - CTA: **Ekspor Absensi Bulanan ke Google Sheets**.
-- Sebelum menulis, ringkas periode, jumlah sesi approved, dan nama tab target.
+- Sebelum menulis, ringkas periode, jumlah **semua submission** yang akan ditulis, dan nama tab target, beserta peringatan bahwa data yang belum disetujui (pending/revisi/ditolak) ikut diekspor (O-08 final).
 - Tampilkan status `running/succeeded/failed`, jumlah record, waktu, dan link spreadsheet jika tersedia.
 - Jangan tampilkan sukses sebelum API mengonfirmasi write. Export adalah snapshot, bukan live sync.
 - Format standar tepat delapan kolom mentah; no, status, materi, anomaly, honor, dan ID internal tidak ditambahkan.

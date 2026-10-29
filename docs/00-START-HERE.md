@@ -79,7 +79,7 @@ O-08 adalah keputusan owner yang sudah ditutup; O-09 sampai O-15 masih provision
 
 ## Sumber kebenaran saat konflik
 
-1. **Keputusan owner dan konteks produk kanonik:** `PROJECT-CONTEXT.md` dan keputusan terbaru di `docs/17-DECISIONS-AND-OPEN-QUESTIONS.md`. Untuk Project ChatGPT, file `Mumtaz-Bimbel-Project-Context.md` harus disinkronkan dari `PROJECT-CONTEXT.md` ini.
+1. **Keputusan owner dan konteks produk kanonik:** [`docs/PROJECT-CONTEXT.md`](./PROJECT-CONTEXT.md) dan keputusan terbaru di `docs/17-DECISIONS-AND-OPEN-QUESTIONS.md`. Untuk Project ChatGPT, file `Mumtaz-Bimbel-Project-Context.md` harus disinkronkan dari `PROJECT-CONTEXT.md` ini.
 2. **Kontrak normatif implementasi:** `docs/01-PRD.md`, `docs/04-API-CONTRACT.md`, dan `docs/05-DATA-CONTRACT.md`, selama tidak bertentangan dengan keputusan owner/open questions.
 3. **Detail model/tampilan/integrasi:** `docs/14-ERD-AND-DATA-DICTIONARY.md`, `docs/15-DASHBOARD-TABS.md`, `docs/16-GOOGLE-SHEETS-MONTHLY-EXPORT.md`, dan `docs/12-USER-FLOWS.md`.
 4. **Dokumen fase, testing, dependency dan design** menerjemahkan kontrak; tidak boleh menciptakan keputusan bisnis baru.

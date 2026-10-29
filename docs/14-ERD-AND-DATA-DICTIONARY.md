@@ -158,7 +158,7 @@ erDiagram
 - Kode akses orang tua bukan `users.id`, ID siswa, NPM publik, nomor telepon, atau kode berurutan. Kode harus acak, sulit ditebak, hanya dibagikan privat, dapat dirotasi, dan dilindungi rate limit.
 - `tutor_rates` menyimpan tarif demo Rp50.000 per sesi untuk data seed; `is_demo_assumption=true` membuat UI memberi label nominal simulasi. Submenu Tarif Honor diperlukan untuk konfigurasi development, sedangkan tarif resmi UMKM masih belum diketahui.
 - `lesson_sessions.rate_amount_snapshot` ditetapkan saat sesi disetujui, menggunakan rate yang masa berlakunya mencakup `lesson_date`; snapshot menjaga histori honor tidak berubah saat tarif diganti.
-- `anomaly_flags` menyimpan hasil klasifikasi/indikasi anomali, termasuk `suspected_duplicate`. Status proses agregat disimpan di `lesson_sessions.anomaly_analysis_status`; `anomaly_flags.review_status` memiliki nilai `pending_review`, `confirmed_anomaly`, `false_positive`, `resolved`. Temuan tidak mengganti `lesson_sessions.status` dan harus ditinjau Admin.
+- `anomaly_flags` menyimpan hasil klasifikasi/indikasi anomali, termasuk `suspected_duplicate`. Status proses agregat disimpan di `lesson_sessions.anomaly_analysis_status`; `anomaly_flags.review_status` memiliki nilai `pending_review`, `confirmed_anomaly`, `false_positive`, `resolved`, dan `superseded` (khusus ditetapkan sistem saat Tutor merevisi payload). Temuan tidak mengganti `lesson_sessions.status` dan harus ditinjau Admin.
 - `sheet_export_runs` mencatat tindakan ekspor Admin. Tidak ada status sinkronisasi per sesi karena Sheets bukan tujuan submit live.
 - `no` pada tampilan dan ekspor adalah nomor urut sementara, bukan ID stabil. ID internal selalu UUID.
 

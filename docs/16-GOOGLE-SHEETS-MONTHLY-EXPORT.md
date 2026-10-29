@@ -39,7 +39,7 @@ Mapping delapan kolom:
 | `tanggal les` | `lesson_sessions.lesson_date` | Working default text `DD/MM/YYYY`; jangan menggeser tanggal karena timezone. Cocokkan dengan format spreadsheet asli sebelum live export (O-11). |
 | `durasi les` | `lesson_sessions.duration_minutes` | Working default `N menit`, contoh `90 menit`; cocokkan format/unit spreadsheet asli sebelum live export (O-11). |
 
-Urutkan baris secara deterministik, misalnya `lesson_date ASC`, lalu nama tutor dan ID sesi sebagai tie-breaker.
+Urutkan baris secara deterministik: `lesson_date ASC`, nama tutor, nama murid, mata pelajaran, lalu `lesson_sessions.id` sebagai tie-breaker (sama dengan `04-API-CONTRACT.md` §8).
 
 ## 3. UI dan tindakan
 
@@ -105,7 +105,7 @@ Untuk operasi tulis, gunakan API Google Sheets dari backend saja. Service accoun
 ## 7. Pengujian minimum
 
 - Header dan urutan kolom tepat delapan kolom.
-- Data `pending`, `revision_requested`, dan `rejected` tidak ikut ekspor baseline.
+- Semua status review (`pending`, `approved`, `revision_requested`, `rejected`) pada periode terpilih ikut diekspor; output tetap delapan kolom mentah tanpa kolom status (O-08 final).
 - Periode memakai `lesson_date`, bukan `submitted_at`/`reviewed_at`.
 - Nomor `no` selalu 1..N per hasil ekspor.
 - Ekspor pertama membuat tab yang benar.

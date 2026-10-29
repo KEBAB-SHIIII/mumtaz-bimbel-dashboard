@@ -57,6 +57,12 @@ SESSION_SECRET=replace-with-a-long-random-local-secret
 PARENT_ACCESS_CODE_PEPPER=replace-with-a-different-random-local-secret
 BOOTSTRAP_ADMIN_USERNAME=admin.demo
 BOOTSTRAP_ADMIN_PASSWORD=replace-with-a-local-password
+# Default teknis development, bukan kebijakan bisnis final
+SESSION_IDLE_TIMEOUT_MINUTES=480
+AUTH_RATE_LIMIT_MAX=5
+AUTH_RATE_LIMIT_WINDOW_MINUTES=15
+# Dev-only: password awal tutor demo untuk seed sintetis
+SEED_TUTOR_PASSWORD=replace-with-a-local-dev-password
 
 # Google Sheets: ekspor bulanan on-demand dari Dashboard Admin
 GOOGLE_SHEETS_EXPORT_ENABLED=false
@@ -67,6 +73,8 @@ GOOGLE_SERVICE_ACCOUNT_KEY_FILE=./secrets/google-service-account.json
 # Unit test/offline memakai fake detector, bukan credential kosong sebagai hasil live
 GEMINI_API_KEY=
 GEMINI_MODEL=replace-with-model-available-to-your-project
+# Heuristik demo duration_outlier (bukan aturan UMKM; O-03/O-12)
+ANOMALY_DURATION_OUTLIER_MINUTES=180
 ```
 
 Nama variabel aktual harus konsisten dengan Zod environment schema yang dibuat agent. Semua nilai di atas placeholder, bukan credential valid. `VITE_*` hanya untuk konfigurasi browser non-rahasia seperti `VITE_API_BASE_URL=http://localhost:3001/api/v1`; jangan pernah menaruh secret di variabel frontend.

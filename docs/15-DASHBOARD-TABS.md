@@ -103,8 +103,7 @@ Master Data adalah data referensi, bukan daftar transaksi absensi. Submenu:
 |---|---|---|
 | Tutor | Profil, username, kontak opsional, status operasional, akses login | `users`, `tutors`; buat/edit/nonaktifkan profil atau akses login secara terpisah |
 | Siswa | Nama, kelas, asal sekolah, status aktif | `students`; buat/edit/nonaktifkan |
-| Orang Tua/Wali | Profil wali dan relasi anak | `users`, `parent_students`; hubungkan orang tua dengan siswa |
-| ID Akses Orang Tua | Pembuatan/rotasi kode akses rahasia | Generate random code, tampilkan sekali, simpan digest; jangan tampilkan ulang digest/kode lama |
+| Orang Tua/Wali | Profil wali, relasi anak, dan aksi generate/rotasi ID Akses Orang Tua | `users`, `parent_students`; hubungkan orang tua dengan siswa. Kode akses acak ditampilkan sekali saat dibuat/dirotasi, disimpan sebagai digest; jangan tampilkan ulang digest/kode lama |
 | Mata Pelajaran | Daftar mata pelajaran | `subjects`; tambah/edit/nonaktifkan |
 | Penugasan Tutor | Tutor + siswa + mapel + tanggal berlaku | `tutor_assignments`; menentukan opsi pada Form Tutor |
 | Tarif Honor | Tarif per sesi dan masa berlaku | `tutor_rates`; dibutuhkan untuk kalkulasi demo Rp50.000/sesi dengan label simulasi; tarif resmi belum diketahui |
@@ -117,7 +116,11 @@ Navigasi: **Dashboard**, **Form Absensi**, **Riwayat Mengajar**, **Honor Saya**,
 
 ### 3.1 Dashboard
 
-Ringkasan bulan terpilih: jumlah sesi, pending, approved, revisi yang perlu diperbaiki, temuan anomali yang perlu diketahui bila kebijakan mengizinkan, serta estimasi honor dari sesi approved. Jangan tampilkan keputusan/anotasi internal Admin atau detail anomali sensitif.
+Ringkasan bulan terpilih: jumlah sesi, pending, approved, revisi yang perlu diperbaiki, serta estimasi honor dari sesi approved. Temuan anomali **tidak** ditampilkan kepada Tutor pada baseline (finding adalah data internal Admin). Jangan tampilkan anotasi internal Admin selain alasan revisi yang diperlukan Tutor untuk memperbaiki sesi.
+
+### 3.5 Profil
+
+Menampilkan nama lengkap, username, dan kontak dari akun login secara read-only, serta form **Ganti Password** (password lama, password baru, konfirmasi) melalui `PATCH /tutor/me/password`. Perubahan nama/username/kontak tetap dilakukan Admin lewat Master Data.
 
 ### 3.2 Form Absensi
 

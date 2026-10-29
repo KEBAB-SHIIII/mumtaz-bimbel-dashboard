@@ -14,6 +14,9 @@ Base URL lokal: `http://localhost:3001/api/v1`. Kontrak ini harus selaras dengan
 - Role guard di backend: `admin`, `tutor`, `parent`. Menyembunyikan menu bukan kontrol keamanan.
 - Kode akses orang tua adalah credential rahasia, bukan public ID. Endpoint akses diberi rate limit dan pesan gagal generik.
 - Error codes: `400` request tidak dapat diproses, `401` kredensial/session tidak valid, `403` role atau scope tidak punya akses, `404` data tidak ditemukan, `409` konflik state/idempotency atau `EMPTY_EXPORT_CONFIRMATION_REQUIRED`, `422` validasi gagal, `429` rate limit, `500` error internal aman, `503` integrasi eksternal belum siap/gagal.
+- Bentuk body error seragam: `{ "error": { "code": "SNAKE_UPPER_CODE", "message": "Pesan aman untuk user", "details": [ { "field": "lesson_date", "message": "..." } ] } }`. `details` opsional dan dipakai untuk `422` validasi Zod (per field). Contoh `code`: `VALIDATION_FAILED`, `UNAUTHENTICATED`, `FORBIDDEN`, `CSRF_INVALID`, `NOT_FOUND`, `RATE_LIMITED`, `SESSION_STATE_CONFLICT`, `IDEMPOTENCY_CONFLICT`, `EMPTY_EXPORT_CONFIRMATION_REQUIRED`, `INTEGRATION_UNAVAILABLE`, `INTERNAL_ERROR`. Jangan menyertakan stack trace, SQL, atau detail credential.
+- Token CSRF hilang/tidak cocok atau `Origin` tidak diizinkan → `403` dengan `code: "CSRF_INVALID"`.
+- Session memakai idle timeout yang dapat dikonfigurasi (`SESSION_IDLE_TIMEOUT_MINUTES`, default development 480 menit). Rate limit login/parent-access dapat dikonfigurasi (`AUTH_RATE_LIMIT_MAX` percobaan per `AUTH_RATE_LIMIT_WINDOW_MINUTES`, default development 5 per 15 menit) per IP dan identifier; nilai ini default teknis, bukan kebijakan bisnis final.
 
 ## 2. Health dan autentikasi
 
@@ -68,13 +71,27 @@ Request:
 
 Server memvalidasi CSRF dari anonymous session dan Origin, menghitung digest kode, mencari akun parent aktif, lalu meregenerasi session ID dan memasang session cookie baru. Response memuat profil/role non-rahasia dan `csrf_token` baru yang terikat pada authenticated session. Kode harus acak, tidak dapat ditebak, dan berbeda dari UUID siswa, NPM publik, nomor telepon, atau nomor berurutan. Batasi percobaan gagal per IP dan identifier digest; gunakan respons error generik. Kode mentah tidak boleh masuk log.
 
+Format kode akses baseline: minimal 128 bit dari CSPRNG (`crypto.randomBytes`), di-encode base32 Crockford uppercase dan dikelompokkan dengan tanda hubung agar mudah disalin (misalnya `XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-X`). Sebelum HMAC-SHA-256 dengan `PARENT_ACCESS_CODE_PEPPER`, input dinormalisasi: trim, uppercase, hapus spasi dan tanda hubung. Fixture `MUMTAZ-DEMO-PARENT-ACCESS-ONLY` di `examples/seed-data.json` hanya untuk test/dev lokal dan tidak memenuhi format produksi.
+
 ### `POST /auth/logout`
 
 Memerlukan sesi valid dan CSRF check. Hapus/expire cookie session.
 
 ### `GET /auth/me`
 
-Mengembalikan identitas user dari session aktif. Jangan mengirim hash password/kode akses.
+Mengembalikan identitas user dari session aktif. Jangan mengirim hash password/kode akses. Untuk Tutor, response boleh menyertakan `username` dan `phone` agar tab Profil dapat ditampilkan read-only.
+
+### `PATCH /tutor/me/password`
+
+Tutor only; memerlukan session valid dan CSRF. Dipakai tab Profil Tutor.
+
+Request:
+
+```json
+{ "current_password": "password-lama", "new_password": "password-baru" }
+```
+
+Backend memverifikasi `current_password` terhadap hash, memvalidasi `new_password` (panjang minimal dikonfigurasi; berbeda dari password lama), menyimpan hash Argon2id baru, meregenerasi session ID, dan mengembalikan `200` `{ "csrf_token": "..." }` baru. Password lama salah → `401` generik; validasi gagal → `422`. Endpoint diberi rate limit seperti login. Jangan pernah log password. Reset password oleh Admin belum termasuk baseline (O-16).
 
 ### Kode akses Orang Tua — administrasi Admin
 

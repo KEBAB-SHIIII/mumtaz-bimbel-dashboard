@@ -8,7 +8,7 @@ Mulai pekerjaan paralel setelah Phase 01–02 menyamakan shared contracts, ERD, 
 
 ## B. Frontend role dashboards
 
-> Baca `02-AGENT-CONTEXT.md`, `04-API-CONTRACT.md`, `07-DESIGN-GUIDELINES.md`, `12-USER-FLOWS.md`, `15-DASHBOARD-TABS.md` dan fase frontend. Kerjakan hanya `frontend/`. Implementasikan route/layout berdasarkan role Admin, Tutor dan Orang Tua. Admin memiliki Dashboard, Data Absensi, Rekap, Honor Tutor, Master Data; Tutor memiliki Dashboard, Form Absensi, Riwayat Mengajar, Honor Saya; Orang Tua memiliki Dashboard/Progress Anak dan Riwayat Pembelajaran. Gunakan React 19/TypeScript, Router, TanStack Query, shared Axios instance, Tailwind v4, Headless UI, Lucide React. Jangan gunakan native `fetch` untuk API, jangan gunakan shadcn/ui, jangan mengakses database/Sheets langsung, dan jangan ubah kontrak API tanpa koordinasi. Buat loading/error/empty/accessibility states dan tests.
+> Baca `02-AGENT-CONTEXT.md`, `04-API-CONTRACT.md`, `07-DESIGN-GUIDELINES.md`, `12-USER-FLOWS.md`, `15-DASHBOARD-TABS.md` dan fase frontend. Kerjakan hanya `frontend/`. Implementasikan route/layout berdasarkan role Admin, Tutor dan Orang Tua. Admin memiliki Dashboard, Data Absensi, Rekap, Honor Tutor, Master Data; Tutor memiliki Dashboard, Form Absensi, Riwayat Mengajar, Honor Saya, Profil (read-only + ganti password); Orang Tua memiliki Dashboard/Progress Anak dan Riwayat Pembelajaran. Gunakan React 19/TypeScript, Router, TanStack Query, shared Axios instance, Tailwind v4, Headless UI, Lucide React. Jangan gunakan native `fetch` untuk API, jangan gunakan shadcn/ui, jangan mengakses database/Sheets langsung, dan jangan ubah kontrak API tanpa koordinasi. Buat loading/error/empty/accessibility states dan tests.
 
 ## C. Google Sheets export lane
 

@@ -7,7 +7,7 @@ Bangun shell navigasi role Admin, Tutor dan Orang Tua serta halaman dasar dengan
 ## Tugas
 
 1. Ikuti `13-DEPENDENCIES-AND-UI-LIBRARY.md`: React 19 + TypeScript strict, Tailwind v4, Headless UI, Lucide, Axios dan TanStack Query. Jangan gunakan shadcn/ui.
-2. Routes: login Admin/Tutor (username+password), login Orang Tua (ID akses saja); Admin Dashboard/Data Absensi/Rekap/Honor Tutor/Master Data; Tutor Dashboard/Form Absensi/Riwayat Mengajar/Honor Saya; Parent Dashboard/Progress Anak/Riwayat Pembelajaran.
+2. Routes: login Admin/Tutor (username+password), login Orang Tua (ID akses saja); Admin Dashboard/Data Absensi/Rekap/Honor Tutor/Master Data; Tutor Dashboard/Form Absensi/Riwayat Mengajar/Honor Saya/Profil (read-only + form ganti password via `PATCH /tutor/me/password`); Parent Dashboard/Progress Anak/Riwayat Pembelajaran.
 3. Role-based layouts/navigation berdasarkan user login. Ini hanya UI; backend tetap jadi otoritas izin.
 4. Buat reusable `AppShell`, `Sidebar`, `Topbar`, `PageHeader`, `PeriodSelector`, `StatusBadge`, `DataTable`, `EmptyState`, `LoadingState`, `ErrorState` dan `ConfirmDialog` seperlunya.
 5. Dashboard Admin: KPI periode, pending verification, sesi terbaru, ringkasan honor jika rate siap.
