@@ -51,8 +51,8 @@ PORT=3001
 API_PREFIX=/api/v1
 FRONTEND_ORIGIN=http://localhost:5173
 
-DATABASE_URL=postgresql://USER:PASSWORD@HOST-pooler/DB?sslmode=require
-DATABASE_MIGRATION_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
+DATABASE_URL=postgresql://USER:PASSWORD@HOST-pooler/DB?sslmode=verify-full
+DATABASE_MIGRATION_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=verify-full
 SESSION_SECRET=replace-with-a-long-random-local-secret
 PARENT_ACCESS_CODE_PEPPER=replace-with-a-different-random-local-secret
 BOOTSTRAP_ADMIN_USERNAME=admin.demo
