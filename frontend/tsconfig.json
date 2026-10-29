@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "customConditions": ["source"],
+    "jsx": "react-jsx",
+    // Kode browser: tanpa tipe Node agar `process`/`Buffer` tidak lolos typecheck.
+    "types": ["vite/client"],
+    "noEmit": true
+  },
+  "include": ["src"]
+}

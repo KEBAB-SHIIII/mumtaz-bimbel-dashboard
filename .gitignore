@@ -5,6 +5,8 @@ node_modules/
 # Production builds
 dist/
 build/
+coverage/
+*.tsbuildinfo
 
 # Environment & Secrets (SANGAT PENTING: JANGAN DIHAPUS)
 .env

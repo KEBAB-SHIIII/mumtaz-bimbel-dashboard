@@ -2,9 +2,46 @@
 
 Blueprint capstone Asah untuk membantu Bimbel Mumtaz Sampit memindahkan pencatatan sesi les tutor ke aplikasi, melakukan review absensi, membuat rekap bulanan, menghitung estimasi honor, dan menampilkan riwayat pembelajaran anak.
 
-> **Status:** dokumentasi implementasi, bukan aplikasi yang sudah terintegrasi. Data dan akun contoh sintetis. Tarif Rp50.000 per sesi adalah nilai demo, bukan tarif resmi UMKM.
+> **Status:** Phase 01 (fondasi monorepo) selesai: workspace, tooling, health check. Fitur domain (auth, absensi, review, rekap, honor, ekspor) belum diimplementasikan. Data dan akun contoh sintetis. Tarif Rp50.000 per sesi adalah nilai demo, bukan tarif resmi UMKM.
 
-## Alur utama
+## Menjalankan secara lokal
+
+Prasyarat: Node.js 22+ (lihat `.nvmrc`) dan npm.
+
+```bash
+npm install                          # satu lockfile root untuk semua workspace
+cp backend/.env.example backend/.env # isi nilai lokal; jangan commit
+cp frontend/.env.example frontend/.env
+npm run dev                          # backend :3001 + frontend :5173
+```
+
+| Script (root) | Fungsi |
+|---|---|
+| `npm run dev` | Menjalankan backend (`tsx watch`) dan frontend (Vite) bersamaan |
+| `npm run build` | Build berurutan: `packages/contracts` → `backend` → `frontend` |
+| `npm run typecheck` | `tsc --noEmit` strict di semua workspace |
+| `npm run lint` | ESLint flat config root (termasuk larangan `fetch`, `localStorage`, dan UI kit terlarang di frontend) |
+| `npm test` | Vitest semua workspace; offline, tanpa credential live |
+
+Script backend tambahan: `npm run db:generate -w backend` dan `npm run db:migrate -w backend` (Drizzle Kit). Review migration sebelum dijalankan dan jangan migrate/seed ke DB UMKM tanpa izin.
+
+### Struktur workspace
+
+```text
+packages/contracts/  # shared Zod schema + types (@mumtaz/contracts)
+backend/             # Express 5 API: src/{app,server}.ts, config/ (env Zod, session), db/ (Drizzle + pg), routes/, middleware/
+frontend/            # Vite + React 19 + Tailwind v4: src/{app,features,lib,styles,components/ui}
+```
+
+- `@mumtaz/contracts` diekspor dengan condition `source` (TypeScript langsung) untuk dev/test/typecheck, dan `dist/` untuk build production backend.
+- Backend memvalidasi environment dengan Zod (`backend/src/config/env.ts`) saat startup. Pesan error hanya memuat nama variabel, bukan nilainya. Integrasi Sheets/Gemini yang belum dikonfigurasi dilaporkan `disabled`/`not_configured`, bukan sukses palsu.
+- Pool `pg` bersifat lazy; unit test tidak membuka koneksi ke Neon.
+- Frontend memakai satu Axios client (`frontend/src/lib/api-client.ts`, `withCredentials: true`) dengan CSRF token di memory yang dikirim sebagai `X-CSRF-Token` pada request mutasi.
+- Design tokens semantik netral ada di `frontend/src/styles/tokens.css` (placeholder; palet/font final menunggu keputusan tim).
+- TypeScript dipatok `~6.0` karena `typescript-eslint` belum mendukung TypeScript 7.
+- Endpoint yang tersedia saat ini: `GET /api/v1/health` → `200 { "status": "ok" }`.
+
+## Alur utama (target produk)
 
 1. Tutor login menggunakan username + password lalu mengisi Form Absensi pada Dashboard Tutor.
 2. Backend Express memvalidasi role, assignment, tanggal, durasi, dan field wajib. Sesi disimpan ke Neon PostgreSQL dengan status awal `pending`.

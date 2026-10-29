@@ -1,0 +1,39 @@
+/*
+ * Semantic design tokens — PLACEHOLDER NETRAL (docs/07 §3).
+ * Palet, typography, dan logo final belum diputuskan tim. Ubah nilai di sini saja;
+ * komponen hanya memakai nama token (mis. `bg-surface`, `text-muted`), bukan hex/font langsung.
+ */
+@theme {
+  /* Surface & text */
+  --color-background: oklch(0.985 0 0);
+  --color-surface: oklch(1 0 0);
+  --color-surface-muted: oklch(0.967 0 0);
+  --color-text: oklch(0.21 0 0);
+  --color-muted: oklch(0.5 0 0);
+  --color-border: oklch(0.91 0 0);
+
+  /* Accent & status (status selalu disertai label teks, bukan warna saja) */
+  --color-primary: oklch(0.32 0 0);
+  --color-primary-foreground: oklch(0.985 0 0);
+  --color-success: oklch(0.52 0.12 150);
+  --color-warning: oklch(0.62 0.13 75);
+  --color-danger: oklch(0.55 0.19 27);
+  --color-info: oklch(0.52 0.1 250);
+  --color-focus-ring: oklch(0.55 0.1 250);
+
+  /* Typography — system font stack sementara */
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Radius & shadow */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  --shadow-md: 0 4px 12px -2px oklch(0 0 0 / 0.08);
+
+  /* Spacing base (Tailwind menurunkan skala dari nilai ini) */
+  --spacing: 0.25rem;
+}

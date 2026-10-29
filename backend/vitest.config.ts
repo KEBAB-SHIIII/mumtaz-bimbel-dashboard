@@ -1,0 +1,16 @@
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  resolve: {
+    conditions: ['source'],
+  },
+  ssr: {
+    resolve: {
+      conditions: ['source'],
+    },
+  },
+  test: {
+    environment: 'node',
+    include: ['tests/**/*.test.ts'],
+  },
+});
