@@ -1,0 +1,43 @@
+{
+  "warning": "SYNTHETIC DEVELOPMENT FIXTURE ONLY. Names, schools, usernames, access codes, sessions and rates are fabricated. The parent access code below is deliberately a demo-only test credential and must never be used in production. All Rp50.000/session rates are simulation values, not official UMKM rates.",
+  "users": [
+    { "full_name": "Admin Demo", "username": "admin.demo", "email": "admin@example.test", "role": "admin", "is_active": true, "credential_setup": "BOOTSTRAP_ADMIN_USERNAME_AND_PASSWORD_ENV" },
+    { "full_name": "Tutor Demo A", "username": "tutor-a.demo", "email": "tutor-a@example.test", "role": "tutor", "is_active": true, "credential_setup": "development-only-password-seed-or-admin-created" },
+    { "full_name": "Tutor Demo B", "username": "tutor-b.demo", "email": "tutor-b@example.test", "role": "tutor", "is_active": true, "credential_setup": "development-only-password-seed-or-admin-created" },
+    { "full_name": "Orang Tua Demo A", "username": null, "email": "parent-a@example.test", "role": "parent", "is_active": true, "access_code_fixture": "MUMTAZ-DEMO-PARENT-ACCESS-ONLY" }
+  ],
+  "tutors": [
+    { "user_username": "tutor-a.demo", "phone": "080000000001", "is_active": true },
+    { "user_username": "tutor-b.demo", "phone": "080000000002", "is_active": true }
+  ],
+  "students": [
+    { "full_name": "Murid Demo 1", "grade": "3 SD", "school_name": "Sekolah Demo A", "is_active": true },
+    { "full_name": "Murid Demo 2", "grade": "5 SD", "school_name": "Sekolah Demo B", "is_active": true },
+    { "full_name": "Murid Demo 3", "grade": "2 SMP", "school_name": "Sekolah Demo C", "is_active": true }
+  ],
+  "parent_students": [
+    { "parent_username": null, "parent_email_fixture": "parent-a@example.test", "student_full_name": "Murid Demo 1", "relationship": "orang tua" }
+  ],
+  "subjects": [
+    { "name": "Matematika", "is_active": true },
+    { "name": "Bahasa Inggris", "is_active": true },
+    { "name": "IPA", "is_active": true }
+  ],
+  "tutor_assignments": [
+    { "assignment_ref": "tutor-a-demo-murid-1-matematika", "tutor_username": "tutor-a.demo", "student_full_name": "Murid Demo 1", "subject_name": "Matematika", "start_date": "2026-09-01", "end_date": null, "is_active": true },
+    { "assignment_ref": "tutor-a-demo-murid-2-english", "tutor_username": "tutor-a.demo", "student_full_name": "Murid Demo 2", "subject_name": "Bahasa Inggris", "start_date": "2026-09-01", "end_date": null, "is_active": true },
+    { "assignment_ref": "tutor-b-demo-murid-3-ipa", "tutor_username": "tutor-b.demo", "student_full_name": "Murid Demo 3", "subject_name": "IPA", "start_date": "2026-09-01", "end_date": null, "is_active": true }
+  ],
+  "tutor_rates": [
+    { "assignment_ref": "tutor-a-demo-murid-1-matematika", "rate_type": "per_session", "rate_amount": "50000", "is_demo_assumption": true, "effective_from": "2026-09-01", "effective_to": null },
+    { "assignment_ref": "tutor-a-demo-murid-2-english", "rate_type": "per_session", "rate_amount": "50000", "is_demo_assumption": true, "effective_from": "2026-09-01", "effective_to": null },
+    { "assignment_ref": "tutor-b-demo-murid-3-ipa", "rate_type": "per_session", "rate_amount": "50000", "is_demo_assumption": true, "effective_from": "2026-09-01", "effective_to": null }
+  ],
+  "development_auth_fixtures": {
+    "admin_username": "admin.demo",
+    "admin_password_env": "BOOTSTRAP_ADMIN_PASSWORD",
+    "tutor_usernames": ["tutor-a.demo", "tutor-b.demo"],
+    "parent_access_code": "MUMTAZ-DEMO-PARENT-ACCESS-ONLY",
+    "warning": "Only use this fixed code in isolated local/test environments. Production parent codes must be randomly generated with high entropy and stored as a digest."
+  }
+}

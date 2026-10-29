@@ -1,0 +1,26 @@
+{
+  "findings": [
+    {
+      "lesson_session_id": "00000000-0000-4000-8000-000000000009",
+      "related_lesson_session_id": "00000000-0000-4000-8000-000000000008",
+      "is_anomaly": true,
+      "finding_type": "suspected_duplicate",
+      "severity": "medium",
+      "reason": "Dua catatan memiliki kombinasi tutor, siswa, mata pelajaran, tanggal, dan durasi yang sangat mirip; perlu pemeriksaan Admin.",
+      "evidence_summary": "Kombinasi atribut sesi mirip dengan record pembanding sintetis. Kemiripan belum membuktikan bahwa salah satu catatan tidak valid.",
+      "suggested_action": "review"
+    },
+    {
+      "lesson_session_id": "00000000-0000-4000-8000-000000000010",
+      "related_lesson_session_id": null,
+      "is_anomaly": true,
+      "finding_type": "duration_outlier",
+      "severity": "low",
+      "reason": "Durasi lebih tinggi dari rentang demo yang dikonfigurasi dan perlu diperiksa Admin.",
+      "evidence_summary": "Sesi demo ini memiliki durasi 240 menit; data pembanding sintetis memiliki median 90 menit.",
+      "suggested_action": "review"
+    }
+  ],
+  "analysis_status": "completed",
+  "notice": "OUTPUT SINTETIS UNTUK TEST, bukan hasil model live atau keputusan final. Temuan disimpan terpisah dari status sesi dan harus ditinjau Admin."
+}
