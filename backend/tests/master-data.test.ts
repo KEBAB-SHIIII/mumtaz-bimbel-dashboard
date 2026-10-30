@@ -25,28 +25,28 @@ describe('Master Data → Tutor', () => {
   it('list terpaginasi sesuai kontrak (default page_size 20)', async () => {
     const res = await admin.get('/admin/tutors').expect(200);
     const body = paginatedSchema(tutorSchema).parse(res.body);
-    expect(body).toMatchObject({ page: 1, page_size: 20, total: 2 });
+    expect(body).toMatchObject({ page: 1, page_size: 20, total: 6 });
     expect(JSON.stringify(res.body)).not.toMatch(/password|hash/i);
   });
 
   it('create: users+tutors satu transaksi, password tidak pernah dikembalikan, bisa login', async () => {
     const res = await admin.post('/admin/tutors', {
-      full_name: 'Tutor Demo C',
-      username: 'tutor-c.demo',
+      full_name: 'Dewi',
+      username: 'dewi',
       initial_password: 'password-awal-tutor-c',
       phone: '080000000003',
     });
     expect(res.status).toBe(201);
     const tutor = tutorSchema.parse(res.body);
-    expect(tutor).toMatchObject({ full_name: 'Tutor Demo C', is_active: true, login_active: true });
+    expect(tutor).toMatchObject({ full_name: 'Dewi', is_active: true, login_active: true });
     expect(JSON.stringify(res.body)).not.toMatch(/password/i);
-    await new TestClient(t.app).login('tutor-c.demo', 'password-awal-tutor-c');
+    await new TestClient(t.app).login('dewi', 'password-awal-tutor-c');
   });
 
   it('username duplikat → 409 CONFLICT dengan pesan aman', async () => {
     const res = await admin.post('/admin/tutors', {
       full_name: 'Duplikat',
-      username: 'tutor-a.demo',
+      username: 'farhan',
       initial_password: 'password-panjang-123',
     });
     expect(res.status).toBe(409);
@@ -84,15 +84,18 @@ describe('Master Data → Tutor', () => {
 describe('Master Data → Siswa & Mapel', () => {
   it('create/update siswa; soft deactivation', async () => {
     const created = studentSchema.parse(
-      (await admin.post('/admin/students', { full_name: 'Murid Demo 4', grade: '6 SD', school_name: 'Sekolah Demo D' }).expect(201)).body,
+      (await admin.post('/admin/students', { full_name: 'Putri', grade: '6 SD', school_name: 'SD Harapan Bangsa' }).expect(201)).body,
     );
     const updated = await admin.patch(`/admin/students/${created.id}`, { is_active: false }).expect(200);
     expect(studentSchema.parse(updated.body).is_active).toBe(false);
   });
 
   it('search siswa memperlakukan wildcard secara literal', async () => {
-    const all = await admin.get('/admin/students?search=Murid').expect(200);
-    expect(all.body.total).toBeGreaterThanOrEqual(3);
+    const byName = await admin.get('/admin/students?search=aisyah').expect(200);
+    expect(byName.body.items.map((s: { full_name: string }) => s.full_name)).toEqual(['Aisyah']);
+    // Pencarian juga mencakup asal sekolah (Aisyah, Dimas, Hana, Lutfi, …).
+    const bySchool = await admin.get('/admin/students?search=Harapan').expect(200);
+    expect(bySchool.body.total).toBeGreaterThanOrEqual(4);
     const wildcard = await admin.get('/admin/students?search=%25').expect(200);
     expect(wildcard.body.total).toBe(0);
   });
@@ -115,7 +118,7 @@ describe('Master Data → Orang Tua & ID Akses', () => {
     expect(res.status).toBe(201);
     expect(res.headers['cache-control']).toBe('no-store');
     const issued = parentAccessCodeIssuedSchema.parse(res.body);
-    expect(issued.parent.students).toEqual([{ student_id: STUDENT_IDS.murid2, full_name: 'Murid Demo 2', relationship: 'ibu' }]);
+    expect(issued.parent.students).toEqual([{ student_id: STUDENT_IDS.murid2, full_name: 'Bima', relationship: 'ibu' }]);
 
     const detail = await admin.get(`/admin/parents/${issued.parent.id}`).expect(200);
     parentSchema.parse(detail.body);
@@ -160,7 +163,7 @@ describe('Master Data → Orang Tua & ID Akses', () => {
       [STUDENT_IDS.murid1, STUDENT_IDS.murid3].sort(),
     );
     await admin
-      .patch(`/admin/parents/${USER_IDS.parentA}`, { student_links: [{ student_id: STUDENT_IDS.murid1, relationship: 'orang tua' }] })
+      .patch(`/admin/parents/${USER_IDS.parentA}`, { student_links: [{ student_id: STUDENT_IDS.murid1, relationship: 'ibu' }] })
       .expect(200);
   });
 });
@@ -190,7 +193,7 @@ describe('Master Data → Penugasan & Tarif', () => {
           .expect(201)
       ).body,
     );
-    expect(created).toMatchObject({ tutor_name: 'Tutor Demo A', student_name: 'Murid Demo 3', subject_name: 'Matematika' });
+    expect(created).toMatchObject({ tutor_name: 'Farhan', student_name: 'Citra', subject_name: 'Matematika' });
 
     const tuple = await admin.patch(`/admin/tutor-assignments/${created.id}`, { student_id: STUDENT_IDS.murid1 });
     expect(tuple.status).toBe(422);

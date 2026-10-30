@@ -24,15 +24,15 @@ export const EXPECTED_SESSION_IDS_BY_PERIOD: Record<Period, string[]> = {
  * lesson_date → nama tutor → nama murid → mapel → id sesi; `no` 1..N.
  */
 export const EXPECTED_EXPORT_ROWS_2026_10: SheetExportRow[] = [
-  [1, 'Tutor Demo A', 'Murid Demo 1', '3 SD', 'Sekolah Demo A', 'Matematika', '01/10/2026', '90 menit'],
-  [2, 'Tutor Demo A', 'Murid Demo 2', '5 SD', 'Sekolah Demo B', 'Bahasa Inggris', '03/10/2026', '60 menit'],
-  [3, 'Tutor Demo B', 'Murid Demo 3', '2 SMP', 'Sekolah Demo C', 'IPA', '05/10/2026', '90 menit'],
-  [4, 'Tutor Demo B', 'Murid Demo 3', '2 SMP', 'Sekolah Demo C', 'IPA', '06/10/2026', '75 menit'],
-  [5, 'Tutor Demo A', 'Murid Demo 2', '5 SD', 'Sekolah Demo B', 'Bahasa Inggris', '10/10/2026', '60 menit'],
-  [6, 'Tutor Demo A', 'Murid Demo 2', '5 SD', 'Sekolah Demo B', 'Bahasa Inggris', '10/10/2026', '60 menit'],
-  [7, 'Tutor Demo B', 'Murid Demo 3', '2 SMP', 'Sekolah Demo C', 'IPA', '10/10/2026', '60 menit'],
-  [8, 'Tutor Demo B', 'Murid Demo 3', '2 SMP', 'Sekolah Demo C', 'IPA', '12/10/2026', '240 menit'],
-  [9, 'Tutor Demo A', 'Murid Demo 1', '3 SD', 'Sekolah Demo A', 'Matematika', '31/10/2026', '90 menit'],
+  [1, 'Farhan', 'Aisyah', '3 SD', 'SD Harapan Bangsa', 'Matematika', '01/10/2026', '90 menit'],
+  [2, 'Farhan', 'Bima', '5 SD', 'SD Pelita Ilmu', 'Bahasa Inggris', '03/10/2026', '60 menit'],
+  [3, 'Noreen', 'Citra', '2 SMP', 'SMP Tunas Mulia', 'IPA', '05/10/2026', '90 menit'],
+  [4, 'Noreen', 'Citra', '2 SMP', 'SMP Tunas Mulia', 'IPA', '06/10/2026', '75 menit'],
+  [5, 'Farhan', 'Bima', '5 SD', 'SD Pelita Ilmu', 'Bahasa Inggris', '10/10/2026', '60 menit'],
+  [6, 'Farhan', 'Bima', '5 SD', 'SD Pelita Ilmu', 'Bahasa Inggris', '10/10/2026', '60 menit'],
+  [7, 'Noreen', 'Citra', '2 SMP', 'SMP Tunas Mulia', 'IPA', '10/10/2026', '60 menit'],
+  [8, 'Noreen', 'Citra', '2 SMP', 'SMP Tunas Mulia', 'IPA', '12/10/2026', '240 menit'],
+  [9, 'Farhan', 'Aisyah', '3 SD', 'SD Harapan Bangsa', 'Matematika', '31/10/2026', '90 menit'],
 ];
 
 /** Urutan sesi sumber untuk `EXPECTED_EXPORT_ROWS_2026_10` (s08 sebelum s09 via tie-breaker id). */
@@ -49,7 +49,7 @@ export const EXPECTED_PAYROLL_2026_10 = {
   tutors: [
     {
       tutor_id: TUTOR_IDS.tutorA,
-      tutor_name: 'Tutor Demo A',
+      tutor_name: 'Farhan',
       approved_sessions: 3,
       pending_sessions: 2,
       revision_requested_sessions: 0,
@@ -59,7 +59,7 @@ export const EXPECTED_PAYROLL_2026_10 = {
     },
     {
       tutor_id: TUTOR_IDS.tutorB,
-      tutor_name: 'Tutor Demo B',
+      tutor_name: 'Noreen',
       approved_sessions: 1,
       pending_sessions: 1,
       revision_requested_sessions: 1,

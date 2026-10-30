@@ -78,7 +78,7 @@ describe('auth', () => {
   });
 
   it('login menolak field tambahan', () => {
-    expect(loginRequestSchema.safeParse({ username: 'tutor-a.demo', password: 'x' }).success).toBe(true);
+    expect(loginRequestSchema.safeParse({ username: 'farhan', password: 'x' }).success).toBe(true);
     expect(loginRequestSchema.safeParse({ username: 'a', password: 'x', role: 'admin' }).success).toBe(false);
   });
 
@@ -164,7 +164,7 @@ describe('Progress Anak', () => {
     const item = {
       id: UNKNOWN_ID,
       lesson_date: '2026-10-01',
-      tutor_name: 'Tutor Demo A',
+      tutor_name: 'Farhan',
       subject_name: 'Matematika',
       duration_minutes: 90,
       learning_material: 'Penjumlahan',

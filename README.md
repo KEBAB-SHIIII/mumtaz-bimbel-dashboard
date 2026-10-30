@@ -2,7 +2,7 @@
 
 Blueprint capstone Asah untuk membantu Bimbel Mumtaz Sampit memindahkan pencatatan sesi les tutor ke aplikasi, melakukan review absensi, membuat rekap bulanan, menghitung estimasi honor, dan menampilkan riwayat pembelajaran anak.
 
-> **Status:** Phase 01–04 selesai: fondasi monorepo, shared contracts + fixture, backend core (database, auth, role guard, master data, absensi, rekap, honor), dan frontend shell tiga role. Anomaly screening (Phase 05), alur revisi Tutor (Phase 06), dan ekspor Google Sheets (Phase 08) belum dibangun. Data dan akun contoh sintetis. Tarif Rp50.000 per sesi adalah nilai demo, bukan tarif resmi UMKM.
+> **Status:** Phase 01–05 selesai: fondasi monorepo, shared contracts + fixture, backend core (database, auth, role guard, master data, absensi, rekap, honor), frontend shell tiga role, dan modul anomali (rule engine + Gemini + review Admin). Alur revisi Tutor di UI (Phase 06) dan ekspor Google Sheets (Phase 08) belum dibangun. Data dan akun contoh sintetis. Tarif Rp50.000 per sesi adalah nilai demo, bukan tarif resmi UMKM.
 
 ## Menjalankan secara lokal
 
@@ -29,6 +29,7 @@ npm run dev                          # backend :3001 + frontend :5173
 npm run db:migrate -w backend          # terapkan migration di backend/drizzle (pakai DATABASE_MIGRATION_URL)
 npm run db:bootstrap-admin -w backend  # buat Admin dari BOOTSTRAP_ADMIN_* (idempoten, tidak menimpa password)
 npm run db:seed -w backend             # seed SINTETIS (ditolak di production; idempoten, tidak menghapus data)
+npm run db:reset-dev -w backend -- --yes  # RESET TOTAL DB dev lalu seed ulang (hanya branch development)
 ```
 
 | Script backend | Fungsi |
@@ -36,9 +37,12 @@ npm run db:seed -w backend             # seed SINTETIS (ditolak di production; i
 | `db:generate` | Generate migration dari `src/db/schema.ts` (review SQL sebelum commit) |
 | `db:check` | Validasi konsistensi file migration |
 | `db:migrate` | Terapkan migration; **jangan** ke DB UMKM tanpa izin owner |
-| `db:bootstrap-admin` / `db:seed` | Akun Admin awal / data demo sintetis |
+| `db:bootstrap-admin` / `db:seed` | Akun Admin awal / master data + dataset dev sintetis (~150 sesi Sep–Okt 2026) |
+| `db:reset-dev -- --yes` | Hapus semua data (schema tetap) lalu seed ulang dalam satu transaksi; ditolak di production |
 
-Akun demo setelah seed: Admin `BOOTSTRAP_ADMIN_USERNAME`; Tutor `tutor-a.demo` dan `tutor-b.demo` dengan password `SEED_TUTOR_PASSWORD`; Orang Tua dengan ID akses fixture `MUMTAZ-DEMO-PARENT-ACCESS-ONLY` dan `MUMTAZ-DEMO-PARENT-B-ACCESS-ONLY` (test/dev saja; kode produksi dibuat acak 128-bit oleh Admin).
+Akun demo setelah seed (nama fiktif): Admin `BOOTSTRAP_ADMIN_USERNAME`; Tutor `farhan`, `noreen`, `fazrin`, `rama`, `giyas`, `nasywa` dengan password `SEED_TUTOR_PASSWORD`; Orang Tua (mis. Sari, wali Aisyah) dengan ID akses fixture `MUMTAZ-DEMO-PARENT-ACCESS-ONLY`, Budi `MUMTAZ-DEMO-PARENT-B-ACCESS-ONLY`, wali lain `MUMTAZ-DEMO-PARENT-03` s.d. `-08` (test/dev saja; kode produksi dibuat acak 128-bit oleh Admin).
+
+Dataset dev (`buildDevDataset` di `@mumtaz/contracts/fixtures`) sengaja memuat duplikat, duplikat lintas tutor, dan durasi > 180 menit; semua sesi masuk dengan status analisis `pending` sehingga worker menganalisisnya lewat Gemini saat backend start.
 
 ### Keamanan backend
 
@@ -55,6 +59,10 @@ Akun demo setelah seed: Admin `BOOTSTRAP_ADMIN_USERNAME`; Tutor `tutor-a.demo` d
 - CSRF token di memory; `403 CSRF_INVALID` → token diambil ulang lalu request diulang sekali; `401` → cache dibersihkan dan kembali ke login. Cache dibersihkan total saat login/logout.
 - **Mode demo** (`npm run dev:demo -w frontend`): fake API adapter in-memory berbasis fixture sintetis, dengan banner "Mode Demo". Build live tidak memuat chunk/fixture demo sama sekali.
 - Code splitting per halaman + chunk vendor terpisah (cache jangka panjang).
+
+### Modul anomali
+
+Setelah submit/revisi, worker in-process menyaring kandidat duplikasi/durasi tidak wajar secara deterministik lalu (bila `GEMINI_API_KEY` + `GEMINI_MODEL` diisi) meminta Gemini mengklasifikasikannya dengan data **pseudonymous**. Temuan masuk `anomaly_flags` untuk direview Admin; status sesi dan honor tidak pernah diubah otomatis. Tanpa provider → `not_evaluated`; provider gagal/timeout → `failed`. Test offline memakai fake detector berlabel; UI menandai sumber hasil (AI live vs fake).
 
 ### Testing backend
 

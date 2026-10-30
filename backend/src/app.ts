@@ -17,6 +17,7 @@ import { authRouter } from './routes/auth.js';
 import { healthRouter } from './routes/health.js';
 import { parentRouter } from './routes/parent.js';
 import { tutorRouter } from './routes/tutor.js';
+import type { AnomalyQueue } from './services/anomaly/anomaly-worker.js';
 import type { ServiceContext } from './services/context.js';
 
 export interface AppDependencies {
@@ -24,15 +25,19 @@ export interface AppDependencies {
   db: Database;
   sessionStore: session.Store;
   logger: Logger;
+  /** Antrean analisis anomali setelah commit (default: tidak ada analisis). */
+  anomalyQueue?: AnomalyQueue;
   /** Jam yang dapat di-inject (default: jam sistem). */
   now?: () => Date;
 }
+
+const NO_ANOMALY_QUEUE: AnomalyQueue = { enqueue: () => undefined };
 
 /**
  * Komposisi Express app. Semua dependensi eksternal di-inject sehingga app dapat
  * diuji offline (PGlite + session store yang sama dengan production).
  */
-export function createApp({ env, db, sessionStore, logger, now = () => new Date() }: AppDependencies) {
+export function createApp({ env, db, sessionStore, logger, anomalyQueue = NO_ANOMALY_QUEUE, now = () => new Date() }: AppDependencies) {
   const ctx: ServiceContext = { db, now, parentAccessCodePepper: env.PARENT_ACCESS_CODE_PEPPER };
   const sessionConfig = buildSessionConfig(env);
   const limiters = createAuthRateLimiters({
@@ -71,7 +76,7 @@ export function createApp({ env, db, sessionStore, logger, now = () => new Date(
   api.use(loadAuth(ctx));
   api.use(authRouter(ctx, limiters, sessionConfig));
   api.use(adminRouter(ctx));
-  api.use(tutorRouter(ctx, limiters));
+  api.use(tutorRouter(ctx, limiters, anomalyQueue));
   api.use(parentRouter(ctx));
 
   app.use(env.API_PREFIX, api);

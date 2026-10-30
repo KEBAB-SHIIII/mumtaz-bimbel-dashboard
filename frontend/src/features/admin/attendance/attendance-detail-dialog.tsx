@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, CircleX, PencilLine } from 'lucide-react';
 import { useState } from 'react';
 import type { AdminAttendanceDetail, SessionDecision, SessionDecisionRequest } from '@mumtaz/contracts';
-import { AnalysisBadge, Badge, StatusBadge } from '../../../components/ui/badge';
+import { AnalysisBadge, StatusBadge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { ConfirmDialog, Modal } from '../../../components/ui/dialog';
 import { ErrorState, InlineAlert, LoadingState } from '../../../components/ui/feedback';
@@ -12,20 +12,7 @@ import { toApiError } from '../../../lib/api-error';
 import { formatDuration, formatLessonDate, formatTimestamp } from '../../../lib/format';
 import { queryKeys } from '../../../lib/query-keys';
 import { decideAttendance, fetchAdminAttendanceDetail } from '../api';
-
-const FINDING_LABEL = {
-  suspected_duplicate: 'Dugaan duplikasi',
-  duration_outlier: 'Durasi tidak wajar',
-  unusual_pattern: 'Pola tidak biasa',
-} as const;
-
-const REVIEW_LABEL = {
-  pending_review: 'Belum direview',
-  confirmed_anomaly: 'Anomali terkonfirmasi',
-  false_positive: 'Bukan anomali',
-  resolved: 'Selesai',
-  superseded: 'Digantikan revisi',
-} as const;
+import { FindingList } from './finding-list';
 
 const DECISIONS: Record<SessionDecision, { title: string; label: string; description: string; tone: 'primary' | 'danger'; noteRequired: boolean }> = {
   approved: {
@@ -81,27 +68,7 @@ function DetailBody({ detail }: { detail: AdminAttendanceDetail }) {
           { label: 'Catatan Admin (internal)', value: detail.last_review.admin_note ?? '—' },
         ]}
       />
-      <section aria-labelledby="findings-heading">
-        <h3 id="findings-heading" className="text-sm font-semibold text-text">Temuan anomali</h3>
-        <p className="mt-0.5 text-xs text-muted">Indikasi untuk direview, bukan bukti kecurangan; tidak mengubah status sesi.</p>
-        {detail.findings.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">Tidak ada temuan.</p>
-        ) : (
-          <ul className="mt-2 flex flex-col gap-2">
-            {detail.findings.map((finding) => (
-              <li key={finding.id} className="rounded-md border border-border p-3 text-sm">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone="warning">{FINDING_LABEL[finding.finding_type]}</Badge>
-                  <Badge>{REVIEW_LABEL[finding.review_status]}</Badge>
-                  <span className="text-xs text-muted">Prioritas {finding.severity}</span>
-                </div>
-                <p className="mt-2 text-text">{finding.reason}</p>
-                {finding.evidence_summary && <p className="mt-1 text-muted">{finding.evidence_summary}</p>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <FindingList findings={detail.findings} />
     </div>
   );
 }

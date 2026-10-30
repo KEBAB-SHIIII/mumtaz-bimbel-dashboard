@@ -16,9 +16,11 @@
     "db:migrate": "drizzle-kit migrate",
     "db:bootstrap-admin": "tsx --conditions=source src/scripts/bootstrap-admin.ts",
     "db:seed": "tsx --conditions=source src/scripts/seed-dev.ts",
-    "db:check": "drizzle-kit check"
+    "db:check": "drizzle-kit check",
+    "db:reset-dev": "tsx --conditions=source src/scripts/seed-dev.ts --reset"
   },
   "dependencies": {
+    "@google/genai": "^2.29.1",
     "@mumtaz/contracts": "0.0.0",
     "argon2": "^0.45.1",
     "connect-pg-simple": "^10.0.0",

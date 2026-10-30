@@ -41,7 +41,7 @@ Untuk Admin dan Tutor, memakai username + password.
 Request:
 
 ```json
-{ "username": "tutor.demo", "password": "password-lokal" }
+{ "username": "farhan", "password": "password-lokal" }
 ```
 
 Success `200`: server meregenerasi session ID, memasang session cookie baru, dan response mengembalikan data pengguna non-rahasia serta CSRF token baru:
@@ -50,7 +50,7 @@ Success `200`: server meregenerasi session ID, memasang session cookie baru, dan
 {
   "user": {
     "id": "uuid",
-    "full_name": "Tutor Demo A",
+    "full_name": "Farhan",
     "role": "tutor"
   },
   "csrf_token": "token-baru-yang-terikat-ke-session-authenticated"
@@ -318,3 +318,12 @@ Schema Zod di `packages/contracts/src/` adalah bentuk implementasi kontrak ini. 
 - Filter list tambahan: `GET /admin/tutor-assignments?tutor_id=&student_id=&subject_id=&is_active=true|false&search=`; `GET /admin/tutor-rates?assignment_id=`.
 - Rate limit hanya menghitung percobaan gagal: login per IP dan per username; parent-access per IP dan per IP+kode (di-hash); ganti password per akun. Store in-memory (satu instance); scale-out butuh store bersama.
 - `TRUST_PROXY` (default `0`) menentukan apakah `X-Forwarded-For` dipercaya untuk IP rate limit.
+
+### Detail implementasi Phase 05 — modul anomali
+
+- Alur: submit/revisi commit → worker in-process (`AnomalyWorker`) → candidate generator deterministik → detektor (Gemini) → `anomaly_flags`. Respons submit tidak menunggu analisis. Startup melanjutkan sesi `anomaly_analysis_status='pending'`.
+- Candidate generator (heuristik demo, O-03 terbuka): `suspected_duplicate` bila assignment+tanggal+durasi sama dengan sesi yang disubmit lebih awal, atau siswa+mapel+tanggal sama lewat assignment lain; `duration_outlier` bila durasi > `ANOMALY_DURATION_OUTLIER_MINUTES`. Pembanding dibatasi ±7 hari untuk tutor/siswa yang sama (maks. 30 dikirim ke model).
+- Status analisis ditetapkan backend: provider tidak dikonfigurasi → `not_evaluated`; provider dipanggil lalu timeout (`ANOMALY_PROVIDER_TIMEOUT_MS`)/error/output tidak valid → `failed`; selesai → `completed`. Bila rule engine tidak menemukan kandidat, screening dinyatakan `completed` tanpa memanggil model.
+- Payload ke Gemini dipseudonimkan (alias S/A/T/P/M, tanggal, durasi); tanpa nama, materi/catatan, kontak, atau kode akses. Output divalidasi Zod secara ketat: setiap kandidat wajib diklasifikasikan, referensi tak dikenal → `failed` (tidak ada hasil parsial). Error transien 429/5xx di-retry sekali dalam batas waktu yang sama.
+- Hasil ditulis kondisional terhadap payload yang dianalisis; revisi di tengah analisis membuat hasil lama dibuang.
+- `PATCH /admin/anomalies/:id/review` → `200 AnomalyFinding`. Body `{ review_status: confirmed_anomaly|false_positive|resolved, review_note }` (note wajib). Temuan `superseded` → `409 SESSION_STATE_CONFLICT`. Tidak mengubah `lesson_sessions.status` atau honor.

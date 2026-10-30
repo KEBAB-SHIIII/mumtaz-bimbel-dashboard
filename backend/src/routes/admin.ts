@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   adminAttendanceListQuerySchema,
+  anomalyReviewRequestSchema,
   assignmentListQuerySchema,
   createParentRequestSchema,
   createStudentRequestSchema,
@@ -28,6 +29,7 @@ import {
   getAdminAttendanceDetail,
   listAdminAttendance,
 } from '../services/attendance/attendance-service.js';
+import { reviewFinding } from '../services/anomaly/anomaly-review.js';
 import type { ServiceContext } from '../services/context.js';
 import { getAdminDashboardSummary } from '../services/dashboard-service.js';
 import * as assignments from '../services/master-data/assignments.js';
@@ -73,6 +75,12 @@ export function adminRouter(ctx: ServiceContext) {
   router.patch('/admin/attendance/:id/decision', async (req, res) => {
     const input = parseInput(sessionDecisionRequestSchema, req.body);
     res.json(await decideAttendance(ctx, authOf(req).userId, idOf(req.params), input));
+  });
+
+  /** Review temuan anomali — terpisah dari keputusan sesi; status sesi tidak berubah. */
+  router.patch('/admin/anomalies/:id/review', async (req, res) => {
+    const input = parseInput(anomalyReviewRequestSchema, req.body);
+    res.json(await reviewFinding(ctx, authOf(req).userId, idOf(req.params), input));
   });
 
   // --- Master Data: tanpa DELETE; gunakan soft deactivation (`is_active`) ----

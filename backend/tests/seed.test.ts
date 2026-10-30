@@ -1,10 +1,11 @@
 import { count, eq } from 'drizzle-orm';
 import { afterEach, describe, expect, it } from 'vitest';
-import { TEST_ONLY_CREDENTIALS, USER_IDS, fixtureSessions } from '@mumtaz/contracts/fixtures';
+import { TEST_ONLY_CREDENTIALS, USER_IDS, buildDevDataset, fixtureSessions, resolveFixtureSession } from '@mumtaz/contracts/fixtures';
 import { ensureBootstrapAdmin } from '../src/db/bootstrap-admin.js';
 import type { DatabaseHandle } from '../src/db/client.js';
-import { lessonSessions, users } from '../src/db/schema.js';
-import { seedSyntheticData } from '../src/db/seed.js';
+import { anomalyFlags, lessonSessions, users } from '../src/db/schema.js';
+import { seedDevDataset, seedSyntheticData } from '../src/db/seed.js';
+import { generateCandidates } from '../src/services/anomaly/candidates.js';
 import { safeErrorMessage } from '../src/lib/db-errors.js';
 import { createTestDatabase } from './helpers/test-db.js';
 import { testEnvSource } from './test-env.js';
@@ -65,5 +66,47 @@ describe('safeErrorMessage', () => {
     expect(message).toMatch(/^PostgreSQL 23514 \[users_role_check\]/);
     expect(message).not.toContain('RAHASIA');
     expect(message).not.toContain('Failed query');
+  });
+});
+
+describe('seed dataset dev (Neon development)', () => {
+  it('master data + ~150 sesi, semua analisis pending tanpa temuan; idempoten', async () => {
+    handle = await createTestDatabase();
+    const first = await seedDevDataset(handle.db, options);
+    await seedDevDataset(handle.db, options);
+    const rows = await handle.db.select().from(lessonSessions);
+    expect(rows).toHaveLength(first.sessions);
+    expect(first.sessions).toBeGreaterThanOrEqual(120);
+    expect(rows.every((row) => row.anomaly_analysis_status === 'pending')).toBe(true);
+    expect(await handle.db.select().from(anomalyFlags)).toEqual([]);
+    expect(rows.every((row) => row.lesson_date >= '2026-09-01' && row.lesson_date <= '2026-10-29')).toBe(true);
+  });
+
+  it('reset menghapus data lama (termasuk sesi fixture test) lalu mengisi ulang dalam satu transaksi', async () => {
+    handle = await createTestDatabase();
+    await seedSyntheticData(handle.db, options);
+    const result = await seedDevDataset(handle.db, { ...options, reset: true });
+    const rows = await handle.db.select().from(lessonSessions);
+    expect(rows).toHaveLength(result.sessions);
+    expect(rows.some((row) => row.id === fixtureSessions[0]?.id)).toBe(false);
+    expect(await handle.db.select().from(anomalyFlags)).toEqual([]);
+  });
+
+  it('skenario pemicu menghasilkan kandidat anomali untuk Gemini', () => {
+    const { sessions, triggers } = buildDevDataset();
+    const snapshots = sessions.map(resolveFixtureSession).map(({ session, assignment }) => ({
+      id: session.id,
+      assignment_id: session.assignment_id,
+      tutor_id: assignment.tutor_id,
+      student_id: assignment.student_id,
+      subject_id: assignment.subject_id,
+      lesson_date: session.lesson_date,
+      duration_minutes: session.duration_minutes,
+      submitted_at: session.submitted_at,
+    }));
+    const withCandidates = snapshots.filter((target) => generateCandidates(target, snapshots, { durationOutlierMinutes: 180 }).length > 0);
+    const triggerIds = new Set([...triggers.exactDuplicates, ...triggers.crossTutorDuplicates, ...triggers.durationOutliers]);
+    for (const id of triggerIds) expect(withCandidates.map((s) => s.id)).toContain(id);
+    expect(withCandidates.length).toBeGreaterThanOrEqual(20);
   });
 });

@@ -3,6 +3,7 @@ import {
   adminAttendanceDetailSchema,
   adminAttendanceListItemSchema,
   adminDashboardSummarySchema,
+  anomalyFindingSchema,
   paginatedSchema,
   parentAccessCodeIssuedSchema,
   parentSchema,
@@ -14,6 +15,7 @@ import {
   tutorRateSchema,
   tutorSchema,
   type AdminAttendanceListQuery,
+  type AnomalyReviewRequest,
   type Paginated,
   type RecapGroupBy,
   type SessionDecisionRequest,
@@ -95,4 +97,12 @@ export async function createParent(body: object) {
 export async function rotateParentAccessCode(id: string) {
   const { data } = await apiClient.post<unknown>(`/admin/parents/${encodeURIComponent(id)}/rotate-access-code`);
   return parentAccessCodeIssuedSchema.parse(data);
+}
+
+// --- Review temuan anomali ---------------------------------------------------------
+
+/** Mencatat review temuan; tidak mengubah status sesi (keputusan sesi terpisah). */
+export async function reviewAnomalyFinding(id: string, input: AnomalyReviewRequest) {
+  const { data } = await apiClient.patch<unknown>(`/admin/anomalies/${encodeURIComponent(id)}/review`, input);
+  return anomalyFindingSchema.parse(data);
 }

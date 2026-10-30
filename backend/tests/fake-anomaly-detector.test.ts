@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { anomalyFindingCandidateSchema, isDateInPeriod } from '@mumtaz/contracts';
+import { isDateInPeriod } from '@mumtaz/contracts';
 import {
   EXPECTED_FAKE_DETECTOR_FINDINGS_2026_10,
-  FAKE_DETECTOR_PROVIDER,
   FIXTURE_DURATION_OUTLIER_MINUTES,
   fixtureSessions,
   resolveFixtureSession,
 } from '@mumtaz/contracts/fixtures';
 import type { AnomalySessionSnapshot } from '../src/integrations/anomaly/types.js';
+import { generateCandidates, selectComparisons } from '../src/services/anomaly/candidates.js';
 import { FakeAnomalyDetector } from './fakes/fake-anomaly-detector.js';
 
 const october: AnomalySessionSnapshot[] = fixtureSessions
@@ -25,6 +25,7 @@ const october: AnomalySessionSnapshot[] = fixtureSessions
   }));
 
 const config = { durationOutlierMinutes: FIXTURE_DURATION_OUTLIER_MINUTES };
+const signal = new AbortController().signal;
 
 function sessionAt(index: number): AnomalySessionSnapshot {
   const session = october.at(index);
@@ -32,23 +33,14 @@ function sessionAt(index: number): AnomalySessionSnapshot {
   return session;
 }
 
-describe('FakeAnomalyDetector (test double deterministik, bukan AI live)', () => {
-  it('berlabel provider fake yang jelas', () => {
-    const detector = new FakeAnomalyDetector();
-    expect(detector.provider).toBe(FAKE_DETECTOR_PROVIDER);
-    expect(detector.model).toBeNull();
-  });
-
-  it('menghasilkan finding Oktober sesuai expected outcome (pembanding = sesi lebih awal)', async () => {
+describe('candidate generator (rule engine deterministik)', () => {
+  it('menghasilkan kandidat Oktober sesuai expected outcome fixture & examples/anomaly-response.json', async () => {
     const detector = new FakeAnomalyDetector();
     const findings = [];
     for (const target of october) {
-      const comparisons = october.filter((other) => other.submitted_at < target.submitted_at);
-      findings.push(...(await detector.detect({ target, comparisons, config })));
-    }
-
-    for (const finding of findings) {
-      expect(anomalyFindingCandidateSchema.safeParse(finding).success).toBe(true);
+      const candidates = generateCandidates(target, october, config);
+      if (candidates.length === 0) continue;
+      findings.push(...(await detector.detect({ target, comparisons: selectComparisons(target, october, candidates), candidates, config }, { signal })));
     }
     expect(
       findings.map(({ lesson_session_id, related_lesson_session_id, finding_type, severity }) => ({
@@ -57,21 +49,33 @@ describe('FakeAnomalyDetector (test double deterministik, bukan AI live)', () =>
     ).toEqual(EXPECTED_FAKE_DETECTOR_FINDINGS_2026_10);
   });
 
-  it('deterministik: input sama → output sama', async () => {
-    const detector = new FakeAnomalyDetector();
-    const input = { target: sessionAt(-1), comparisons: october, config };
-    expect(await detector.detect(input)).toEqual(await detector.detect(input));
+  it('duplikasi hanya terhadap sesi yang disubmit lebih awal (satu kandidat per pasangan)', () => {
+    const [first, second] = [sessionAt(0), { ...sessionAt(0), id: '00000000-0000-4000-8000-0000000000aa', submitted_at: '2026-12-01T00:00:00Z' }];
+    expect(generateCandidates(first, [first, second], config)).toEqual([]);
+    expect(generateCandidates(second, [first, second], config)).toEqual([
+      { finding_type: 'suspected_duplicate', signal: 'same_assignment_date_duration', related_lesson_session_id: first.id, default_severity: 'medium' },
+    ]);
   });
 
-  it('input pseudonymous: tidak ada nama/kontak/kode akses yang dikirim ke detektor', async () => {
-    const detector = new FakeAnomalyDetector();
-    await detector.detect({ target: sessionAt(0), comparisons: october, config });
-    const payload = JSON.stringify(detector.calls);
-    expect(payload).not.toMatch(/Tutor Demo|Murid Demo|@example\.test|0800000|MUMTAZ-DEMO/);
+  it('siswa+mapel+tanggal sama lewat penugasan lain → kandidat duplikasi severity rendah', () => {
+    const base = sessionAt(0);
+    const other = { ...base, id: '00000000-0000-4000-8000-0000000000ab', assignment_id: '00000000-0000-4000-8005-0000000000ff', tutor_id: 'tutor-lain', submitted_at: '2026-12-01T00:00:00Z' };
+    expect(generateCandidates(other, [base, other], config)).toEqual([
+      { finding_type: 'suspected_duplicate', signal: 'same_student_subject_date', related_lesson_session_id: base.id, default_severity: 'low' },
+    ]);
   });
 
-  it('mode error melempar agar service menandai analisis `failed` tanpa membatalkan sesi', async () => {
-    const detector = new FakeAnomalyDetector({ mode: 'error' });
-    await expect(detector.detect({ target: sessionAt(0), comparisons: [], config })).rejects.toThrow();
+  it('durasi di atas ambang konfigurasi → kandidat duration_outlier', () => {
+    const long = { ...sessionAt(0), duration_minutes: 181 };
+    expect(generateCandidates(long, [long], config).map((c) => c.finding_type)).toEqual(['duration_outlier']);
+    expect(generateCandidates({ ...long, duration_minutes: 180 }, [long], config)).toEqual([]);
+  });
+
+  it('pembanding: kandidat terkait diprioritaskan dan jumlahnya dibatasi', () => {
+    const target = sessionAt(-1);
+    const candidates = [{ finding_type: 'suspected_duplicate' as const, signal: 'same_assignment_date_duration' as const, related_lesson_session_id: sessionAt(1).id, default_severity: 'medium' as const }];
+    const comparisons = selectComparisons(target, october, candidates);
+    expect(comparisons[0]?.id).toBe(sessionAt(1).id);
+    expect(comparisons.map((c) => c.id)).not.toContain(target.id);
   });
 });

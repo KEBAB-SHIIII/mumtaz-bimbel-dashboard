@@ -99,7 +99,7 @@ describe('Payroll preview (estimasi honor)', () => {
       rate_lines: [],
     });
     expect(body.total_estimated_amount).toBe('50000'); // tidak bertambah
-    expect(body.warnings).toEqual([expect.stringContaining('Tutor Demo B: 1 sesi approved belum memiliki tarif')]);
+    expect(body.warnings).toEqual([expect.stringContaining('Noreen: 1 sesi approved belum memiliki tarif')]);
   });
 });
 
@@ -108,7 +108,7 @@ describe('Rekap bulanan', () => {
     const body = recapResponseSchema.parse((await admin.get('/admin/recap?period=2026-10&group_by=tutor').expect(200)).body);
     const tutorB = body.groups.find((group) => group.key_id === TUTOR_IDS.tutorB);
     expect(tutorB).toMatchObject({
-      key_label: 'Tutor Demo B',
+      key_label: 'Noreen',
       total_sessions: 4,
       approved_sessions: 1,
       pending_sessions: 1,
@@ -131,8 +131,8 @@ describe('Ringkasan dashboard', () => {
   it('Admin: status, finding pending review, honor berlabel simulasi', async () => {
     const body = adminDashboardSummarySchema.parse((await admin.get('/admin/dashboard/summary?period=2026-10').expect(200)).body);
     expect(body).toMatchObject({
-      active_tutors: 2,
-      active_students: 3,
+      active_tutors: 6,
+      active_students: 12,
       total_sessions: 9,
       status_counts: { pending: 3, approved: 4, revision_requested: 1, rejected: 1 },
       anomaly_findings_pending_review: 2,

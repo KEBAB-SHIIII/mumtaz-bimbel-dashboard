@@ -4,6 +4,7 @@ import { createApp } from '../../src/app.js';
 import { createSessionStore } from '../../src/config/session.js';
 import type { DatabaseHandle } from '../../src/db/client.js';
 import { seedSyntheticData } from '../../src/db/seed.js';
+import type { AnomalyQueue } from '../../src/services/anomaly/anomaly-worker.js';
 import { createLogger } from '../../src/lib/logger.js';
 import { makeTestEnv, testEnvSource } from '../test-env.js';
 import { createTestDatabase } from './test-db.js';
@@ -21,7 +22,13 @@ export interface TestApp {
 }
 
 export async function createTestApp(
-  options: { seed?: boolean; env?: Record<string, string>; now?: () => Date } = {},
+  options: {
+    seed?: boolean;
+    env?: Record<string, string>;
+    now?: () => Date;
+    /** Factory antrean anomali (mis. worker dengan fake detector) yang memakai DB test. */
+    anomalyQueue?: (database: DatabaseHandle) => AnomalyQueue;
+  } = {},
 ): Promise<TestApp> {
   const database = await createTestDatabase();
   if (options.seed ?? true) {
@@ -39,6 +46,7 @@ export async function createTestApp(
     sessionStore,
     logger: createLogger({ silent: true }),
     now: options.now ?? (() => FIXED_NOW),
+    ...(options.anomalyQueue ? { anomalyQueue: options.anomalyQueue(database) } : {}),
   });
   return { app, database, close: () => database.close() };
 }
@@ -96,8 +104,8 @@ export class TestClient {
 export const as = {
   admin: (app: TestApp['app']) =>
     new TestClient(app).login(TEST_ONLY_CREDENTIALS.adminUsername, TEST_ONLY_CREDENTIALS.adminPassword),
-  tutorA: (app: TestApp['app']) => new TestClient(app).login('tutor-a.demo', TEST_ONLY_CREDENTIALS.tutorPassword),
-  tutorB: (app: TestApp['app']) => new TestClient(app).login('tutor-b.demo', TEST_ONLY_CREDENTIALS.tutorPassword),
+  tutorA: (app: TestApp['app']) => new TestClient(app).login('farhan', TEST_ONLY_CREDENTIALS.tutorPassword),
+  tutorB: (app: TestApp['app']) => new TestClient(app).login('noreen', TEST_ONLY_CREDENTIALS.tutorPassword),
   parentA: (app: TestApp['app']) => new TestClient(app).loginParent('MUMTAZ-DEMO-PARENT-ACCESS-ONLY'),
   parentB: (app: TestApp['app']) => new TestClient(app).loginParent('MUMTAZ-DEMO-PARENT-B-ACCESS-ONLY'),
 };

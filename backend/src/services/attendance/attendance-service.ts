@@ -6,9 +6,7 @@ import {
   type AdminAttendanceListItem,
   type AdminAttendanceListQuery,
   type AnomalyAnalysisStatus,
-  type AnomalyFinding,
   type AnomalyReviewStatus,
-  type FindingSeverity,
   type FindingType,
   type Paginated,
   type ReviseAttendanceRequest,
@@ -32,6 +30,7 @@ import {
   type ErrorDetail,
 } from '../../lib/http-error.js';
 import { likePattern, pageOffset, paginated } from '../../lib/pagination.js';
+import { toFinding } from '../anomaly/finding-mapper.js';
 import type { ServiceContext } from '../context.js';
 import { lessonDateInPeriod, selectSessionView, tutorUser, type SessionView } from './session-query.js';
 
@@ -70,17 +69,6 @@ function toTutorSession(row: SessionView): TutorSession {
 }
 
 type FlagRow = typeof anomalyFlags.$inferSelect;
-
-function toFinding(row: FlagRow): AnomalyFinding {
-  return {
-    ...row,
-    finding_type: row.finding_type as FindingType,
-    severity: row.severity as FindingSeverity,
-    review_status: row.review_status as AnomalyReviewStatus,
-    reviewed_at: isoOrNull(row.reviewed_at),
-    created_at: iso(row.created_at),
-  };
-}
 
 async function findingsFor(db: DbOrTx, sessionIds: string[]): Promise<FlagRow[]> {
   if (sessionIds.length === 0) return [];

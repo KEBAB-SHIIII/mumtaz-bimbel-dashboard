@@ -1,50 +1,655 @@
 {
-  "warning": "SYNTHETIC DEVELOPMENT FIXTURE ONLY. Names, schools, usernames, access codes, sessions and rates are fabricated. The parent access codes below are deliberately demo-only test credentials and must never be used in production. All Rp50.000/session rates are simulation values, not official UMKM rates.",
+  "warning": "SYNTHETIC DEVELOPMENT FIXTURE ONLY. Nama (fiktif), sekolah, akun, kode akses, dan tarif dibuat-buat. Kode akses wali hanya untuk test/dev lokal. Tarif Rp50.000/sesi adalah simulasi, bukan tarif resmi UMKM.",
   "schema_note": "Struktur mengikuti tabel docs/14 (users, tutors, students, parent_students, subjects, tutor_assignments, tutor_rates). UUID stabil dan identik dengan packages/contracts/src/fixtures (dijaga test). Password tidak pernah disimpan di file ini.",
   "users": [
-    { "id": "00000000-0000-4000-8001-000000000001", "full_name": "Admin Demo", "username": "admin.demo", "email": "admin@example.test", "role": "admin", "is_active": true, "credential_setup": "BOOTSTRAP_ADMIN_USERNAME_AND_PASSWORD_ENV" },
-    { "id": "00000000-0000-4000-8001-000000000002", "full_name": "Tutor Demo A", "username": "tutor-a.demo", "email": "tutor-a@example.test", "role": "tutor", "is_active": true, "credential_setup": "SEED_TUTOR_PASSWORD_ENV_DEVELOPMENT_ONLY" },
-    { "id": "00000000-0000-4000-8001-000000000003", "full_name": "Tutor Demo B", "username": "tutor-b.demo", "email": "tutor-b@example.test", "role": "tutor", "is_active": true, "credential_setup": "SEED_TUTOR_PASSWORD_ENV_DEVELOPMENT_ONLY" },
-    { "id": "00000000-0000-4000-8001-000000000004", "full_name": "Orang Tua Demo A", "username": null, "email": "parent-a@example.test", "role": "parent", "is_active": true, "credential_setup": "development_auth_fixtures.parent_access_codes" },
-    { "id": "00000000-0000-4000-8001-000000000005", "full_name": "Orang Tua Demo B", "username": null, "email": "parent-b@example.test", "role": "parent", "is_active": true, "credential_setup": "development_auth_fixtures.parent_access_codes" }
+    {
+      "id": "00000000-0000-4000-8001-000000000001",
+      "full_name": "Admin",
+      "username": "admin.demo",
+      "email": "admin@example.test",
+      "role": "admin",
+      "is_active": true,
+      "credential_setup": "BOOTSTRAP_ADMIN_USERNAME_AND_PASSWORD_ENV"
+    },
+    {
+      "id": "00000000-0000-4000-8001-000000000002",
+      "full_name": "Farhan",
+      "username": "farhan",
+      "email": "farhan@example.test",
+      "role": "tutor",
+      "is_active": true,
+      "credential_setup": "SEED_TUTOR_PASSWORD_ENV_DEVELOPMENT_ONLY"
+    },
+    {
+      "id": "00000000-0000-4000-8001-000000000003",
+      "full_name": "Noreen",
+      "username": "noreen",
+      "email": "noreen@example.test",
+      "role": "tutor",
+      "is_active": true,
+      "credential_setup": "SEED_TUTOR_PASSWORD_ENV_DEVELOPMENT_ONLY"
+    },
+    {
+      "id": "00000000-0000-4000-8001-000000000004",
+      "full_name": "Sari",
+      "username": null,
+      "email": "sari@example.test",
+      "role": "parent",
+      "is_active": true,
+      "credential_setup": "development_auth_fixtures.parent_access_codes"
+    },
+    {
+      "id": "00000000-0000-4000-8001-000000000005",
+      "full_name": "Budi",
+      "username": null,
+      "email": "budi@example.test",
+      "role": "parent",
+      "is_active": true,
+      "credential_setup": "development_auth_fixtures.parent_access_codes"
+    },
+    {
+      "id": "00000000-0000-4000-8001-000000000006",
+      "full_name": "Fazrin",
+      "username": "fazrin",
+      "email": "fazrin@example.test",
+      "role": "tutor",
+      "is_active": true,
+      "credential_setup": "SEED_TUTOR_PASSWORD_ENV_DEVELOPMENT_ONLY"
+    },
+    {
+      "id": "00000000-0000-4000-8001-000000000007",
+      "full_name": "Rama",
+      "username": "rama",
+      "email": "rama@example.test",
+      "role": "tutor",
+      "is_active": true,
+      "credential_setup": "SEED_TUTOR_PASSWORD_ENV_DEVELOPMENT_ONLY"
+    },
+    {
+      "id": "00000000-0000-4000-8001-000000000008",
+      "full_name": "Giyas",
+      "username": "giyas",
+      "email": "giyas@example.test",
+      "role": "tutor",
+      "is_active": true,
+      "credential_setup": "SEED_TUTOR_PASSWORD_ENV_DEVELOPMENT_ONLY"
+    },
+    {
+      "id": "00000000-0000-4000-8001-000000000009",
+      "full_name": "Nasywa",
+      "username": "nasywa",
+      "email": "nasywa@example.test",
+      "role": "tutor",
+      "is_active": true,
+      "credential_setup": "SEED_TUTOR_PASSWORD_ENV_DEVELOPMENT_ONLY"
+    },
+    {
+      "id": "00000000-0000-4000-8001-000000000010",
+      "full_name": "Wati",
+      "username": null,
+      "email": "wati@example.test",
+      "role": "parent",
+      "is_active": true,
+      "credential_setup": "development_auth_fixtures.parent_access_codes"
+    },
+    {
+      "id": "00000000-0000-4000-8001-000000000011",
+      "full_name": "Agus",
+      "username": null,
+      "email": "agus@example.test",
+      "role": "parent",
+      "is_active": true,
+      "credential_setup": "development_auth_fixtures.parent_access_codes"
+    },
+    {
+      "id": "00000000-0000-4000-8001-000000000012",
+      "full_name": "Rina",
+      "username": null,
+      "email": "rina@example.test",
+      "role": "parent",
+      "is_active": true,
+      "credential_setup": "development_auth_fixtures.parent_access_codes"
+    },
+    {
+      "id": "00000000-0000-4000-8001-000000000013",
+      "full_name": "Hendra",
+      "username": null,
+      "email": "hendra@example.test",
+      "role": "parent",
+      "is_active": true,
+      "credential_setup": "development_auth_fixtures.parent_access_codes"
+    },
+    {
+      "id": "00000000-0000-4000-8001-000000000014",
+      "full_name": "Yuni",
+      "username": null,
+      "email": "yuni@example.test",
+      "role": "parent",
+      "is_active": true,
+      "credential_setup": "development_auth_fixtures.parent_access_codes"
+    },
+    {
+      "id": "00000000-0000-4000-8001-000000000015",
+      "full_name": "Dedi",
+      "username": null,
+      "email": "dedi@example.test",
+      "role": "parent",
+      "is_active": true,
+      "credential_setup": "development_auth_fixtures.parent_access_codes"
+    }
   ],
   "tutors": [
-    { "id": "00000000-0000-4000-8002-000000000001", "user_id": "00000000-0000-4000-8001-000000000002", "phone": "080000000001", "is_active": true },
-    { "id": "00000000-0000-4000-8002-000000000002", "user_id": "00000000-0000-4000-8001-000000000003", "phone": "080000000002", "is_active": true }
+    {
+      "id": "00000000-0000-4000-8002-000000000001",
+      "user_id": "00000000-0000-4000-8001-000000000002",
+      "phone": "080000000001",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8002-000000000002",
+      "user_id": "00000000-0000-4000-8001-000000000003",
+      "phone": "080000000002",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8002-000000000003",
+      "user_id": "00000000-0000-4000-8001-000000000006",
+      "phone": "080000000003",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8002-000000000004",
+      "user_id": "00000000-0000-4000-8001-000000000007",
+      "phone": "080000000004",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8002-000000000005",
+      "user_id": "00000000-0000-4000-8001-000000000008",
+      "phone": "080000000005",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8002-000000000006",
+      "user_id": "00000000-0000-4000-8001-000000000009",
+      "phone": "080000000006",
+      "is_active": true
+    }
   ],
   "students": [
-    { "id": "00000000-0000-4000-8003-000000000001", "full_name": "Murid Demo 1", "grade": "3 SD", "school_name": "Sekolah Demo A", "is_active": true },
-    { "id": "00000000-0000-4000-8003-000000000002", "full_name": "Murid Demo 2", "grade": "5 SD", "school_name": "Sekolah Demo B", "is_active": true },
-    { "id": "00000000-0000-4000-8003-000000000003", "full_name": "Murid Demo 3", "grade": "2 SMP", "school_name": "Sekolah Demo C", "is_active": true }
+    {
+      "id": "00000000-0000-4000-8003-000000000001",
+      "full_name": "Aisyah",
+      "grade": "3 SD",
+      "school_name": "SD Harapan Bangsa",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8003-000000000002",
+      "full_name": "Bima",
+      "grade": "5 SD",
+      "school_name": "SD Pelita Ilmu",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8003-000000000003",
+      "full_name": "Citra",
+      "grade": "2 SMP",
+      "school_name": "SMP Tunas Mulia",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8003-000000000004",
+      "full_name": "Dimas",
+      "grade": "4 SD",
+      "school_name": "SD Harapan Bangsa",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8003-000000000005",
+      "full_name": "Eka",
+      "grade": "6 SD",
+      "school_name": "SD Pelita Ilmu",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8003-000000000006",
+      "full_name": "Fikri",
+      "grade": "1 SMP",
+      "school_name": "SMP Tunas Mulia",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8003-000000000007",
+      "full_name": "Gita",
+      "grade": "3 SMP",
+      "school_name": "SMP Bina Insani",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8003-000000000008",
+      "full_name": "Hana",
+      "grade": "2 SD",
+      "school_name": "SD Harapan Bangsa",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8003-000000000009",
+      "full_name": "Intan",
+      "grade": "1 SMA",
+      "school_name": "SMA Cendekia",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8003-000000000010",
+      "full_name": "Joko",
+      "grade": "5 SD",
+      "school_name": "SD Pelita Ilmu",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8003-000000000011",
+      "full_name": "Kirana",
+      "grade": "2 SMA",
+      "school_name": "SMA Cendekia",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8003-000000000012",
+      "full_name": "Lutfi",
+      "grade": "4 SD",
+      "school_name": "SD Harapan Bangsa",
+      "is_active": true
+    }
   ],
   "parent_students": [
-    { "parent_user_id": "00000000-0000-4000-8001-000000000004", "student_id": "00000000-0000-4000-8003-000000000001", "relationship": "orang tua" },
-    { "parent_user_id": "00000000-0000-4000-8001-000000000005", "student_id": "00000000-0000-4000-8003-000000000003", "relationship": "wali" }
+    {
+      "parent_user_id": "00000000-0000-4000-8001-000000000004",
+      "student_id": "00000000-0000-4000-8003-000000000001",
+      "relationship": "ibu"
+    },
+    {
+      "parent_user_id": "00000000-0000-4000-8001-000000000005",
+      "student_id": "00000000-0000-4000-8003-000000000003",
+      "relationship": "ayah"
+    },
+    {
+      "parent_user_id": "00000000-0000-4000-8001-000000000010",
+      "student_id": "00000000-0000-4000-8003-000000000002",
+      "relationship": "ibu"
+    },
+    {
+      "parent_user_id": "00000000-0000-4000-8001-000000000011",
+      "student_id": "00000000-0000-4000-8003-000000000004",
+      "relationship": "ayah"
+    },
+    {
+      "parent_user_id": "00000000-0000-4000-8001-000000000011",
+      "student_id": "00000000-0000-4000-8003-000000000005",
+      "relationship": "ayah"
+    },
+    {
+      "parent_user_id": "00000000-0000-4000-8001-000000000012",
+      "student_id": "00000000-0000-4000-8003-000000000006",
+      "relationship": "ibu"
+    },
+    {
+      "parent_user_id": "00000000-0000-4000-8001-000000000012",
+      "student_id": "00000000-0000-4000-8003-000000000007",
+      "relationship": "ibu"
+    },
+    {
+      "parent_user_id": "00000000-0000-4000-8001-000000000013",
+      "student_id": "00000000-0000-4000-8003-000000000008",
+      "relationship": "ayah"
+    },
+    {
+      "parent_user_id": "00000000-0000-4000-8001-000000000013",
+      "student_id": "00000000-0000-4000-8003-000000000009",
+      "relationship": "ayah"
+    },
+    {
+      "parent_user_id": "00000000-0000-4000-8001-000000000014",
+      "student_id": "00000000-0000-4000-8003-000000000010",
+      "relationship": "ibu"
+    },
+    {
+      "parent_user_id": "00000000-0000-4000-8001-000000000014",
+      "student_id": "00000000-0000-4000-8003-000000000011",
+      "relationship": "ibu"
+    },
+    {
+      "parent_user_id": "00000000-0000-4000-8001-000000000015",
+      "student_id": "00000000-0000-4000-8003-000000000012",
+      "relationship": "wali"
+    }
   ],
   "subjects": [
-    { "id": "00000000-0000-4000-8004-000000000001", "name": "Matematika", "is_active": true },
-    { "id": "00000000-0000-4000-8004-000000000002", "name": "Bahasa Inggris", "is_active": true },
-    { "id": "00000000-0000-4000-8004-000000000003", "name": "IPA", "is_active": true }
+    {
+      "id": "00000000-0000-4000-8004-000000000001",
+      "name": "Matematika",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8004-000000000002",
+      "name": "Bahasa Inggris",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8004-000000000003",
+      "name": "IPA",
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8004-000000000004",
+      "name": "Bahasa Indonesia",
+      "is_active": true
+    }
   ],
   "tutor_assignments": [
-    { "id": "00000000-0000-4000-8005-000000000001", "tutor_id": "00000000-0000-4000-8002-000000000001", "student_id": "00000000-0000-4000-8003-000000000001", "subject_id": "00000000-0000-4000-8004-000000000001", "start_date": "2026-09-01", "end_date": null, "is_active": true },
-    { "id": "00000000-0000-4000-8005-000000000002", "tutor_id": "00000000-0000-4000-8002-000000000001", "student_id": "00000000-0000-4000-8003-000000000002", "subject_id": "00000000-0000-4000-8004-000000000002", "start_date": "2026-09-01", "end_date": null, "is_active": true },
-    { "id": "00000000-0000-4000-8005-000000000003", "tutor_id": "00000000-0000-4000-8002-000000000002", "student_id": "00000000-0000-4000-8003-000000000003", "subject_id": "00000000-0000-4000-8004-000000000003", "start_date": "2026-09-01", "end_date": null, "is_active": true },
-    { "id": "00000000-0000-4000-8005-000000000004", "tutor_id": "00000000-0000-4000-8002-000000000002", "student_id": "00000000-0000-4000-8003-000000000002", "subject_id": "00000000-0000-4000-8004-000000000001", "start_date": "2026-09-01", "end_date": "2026-09-30", "is_active": false }
+    {
+      "id": "00000000-0000-4000-8005-000000000001",
+      "tutor_id": "00000000-0000-4000-8002-000000000001",
+      "student_id": "00000000-0000-4000-8003-000000000001",
+      "subject_id": "00000000-0000-4000-8004-000000000001",
+      "start_date": "2026-09-01",
+      "end_date": null,
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8005-000000000002",
+      "tutor_id": "00000000-0000-4000-8002-000000000001",
+      "student_id": "00000000-0000-4000-8003-000000000002",
+      "subject_id": "00000000-0000-4000-8004-000000000002",
+      "start_date": "2026-09-01",
+      "end_date": null,
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8005-000000000003",
+      "tutor_id": "00000000-0000-4000-8002-000000000002",
+      "student_id": "00000000-0000-4000-8003-000000000003",
+      "subject_id": "00000000-0000-4000-8004-000000000003",
+      "start_date": "2026-09-01",
+      "end_date": null,
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8005-000000000004",
+      "tutor_id": "00000000-0000-4000-8002-000000000002",
+      "student_id": "00000000-0000-4000-8003-000000000002",
+      "subject_id": "00000000-0000-4000-8004-000000000001",
+      "start_date": "2026-09-01",
+      "end_date": "2026-09-30",
+      "is_active": false
+    },
+    {
+      "id": "00000000-0000-4000-8005-000000000005",
+      "tutor_id": "00000000-0000-4000-8002-000000000003",
+      "student_id": "00000000-0000-4000-8003-000000000004",
+      "subject_id": "00000000-0000-4000-8004-000000000001",
+      "start_date": "2026-09-01",
+      "end_date": null,
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8005-000000000006",
+      "tutor_id": "00000000-0000-4000-8002-000000000003",
+      "student_id": "00000000-0000-4000-8003-000000000005",
+      "subject_id": "00000000-0000-4000-8004-000000000004",
+      "start_date": "2026-09-01",
+      "end_date": null,
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8005-000000000007",
+      "tutor_id": "00000000-0000-4000-8002-000000000004",
+      "student_id": "00000000-0000-4000-8003-000000000006",
+      "subject_id": "00000000-0000-4000-8004-000000000003",
+      "start_date": "2026-09-01",
+      "end_date": null,
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8005-000000000008",
+      "tutor_id": "00000000-0000-4000-8002-000000000004",
+      "student_id": "00000000-0000-4000-8003-000000000001",
+      "subject_id": "00000000-0000-4000-8004-000000000001",
+      "start_date": "2026-09-01",
+      "end_date": null,
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8005-000000000009",
+      "tutor_id": "00000000-0000-4000-8002-000000000005",
+      "student_id": "00000000-0000-4000-8003-000000000007",
+      "subject_id": "00000000-0000-4000-8004-000000000002",
+      "start_date": "2026-09-01",
+      "end_date": null,
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8005-000000000010",
+      "tutor_id": "00000000-0000-4000-8002-000000000005",
+      "student_id": "00000000-0000-4000-8003-000000000008",
+      "subject_id": "00000000-0000-4000-8004-000000000001",
+      "start_date": "2026-09-01",
+      "end_date": null,
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8005-000000000011",
+      "tutor_id": "00000000-0000-4000-8002-000000000006",
+      "student_id": "00000000-0000-4000-8003-000000000009",
+      "subject_id": "00000000-0000-4000-8004-000000000004",
+      "start_date": "2026-09-01",
+      "end_date": null,
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8005-000000000012",
+      "tutor_id": "00000000-0000-4000-8002-000000000006",
+      "student_id": "00000000-0000-4000-8003-000000000010",
+      "subject_id": "00000000-0000-4000-8004-000000000003",
+      "start_date": "2026-09-01",
+      "end_date": null,
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8005-000000000013",
+      "tutor_id": "00000000-0000-4000-8002-000000000003",
+      "student_id": "00000000-0000-4000-8003-000000000011",
+      "subject_id": "00000000-0000-4000-8004-000000000002",
+      "start_date": "2026-09-01",
+      "end_date": null,
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8005-000000000014",
+      "tutor_id": "00000000-0000-4000-8002-000000000004",
+      "student_id": "00000000-0000-4000-8003-000000000012",
+      "subject_id": "00000000-0000-4000-8004-000000000001",
+      "start_date": "2026-09-01",
+      "end_date": null,
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8005-000000000015",
+      "tutor_id": "00000000-0000-4000-8002-000000000005",
+      "student_id": "00000000-0000-4000-8003-000000000003",
+      "subject_id": "00000000-0000-4000-8004-000000000003",
+      "start_date": "2026-09-01",
+      "end_date": null,
+      "is_active": true
+    },
+    {
+      "id": "00000000-0000-4000-8005-000000000016",
+      "tutor_id": "00000000-0000-4000-8002-000000000006",
+      "student_id": "00000000-0000-4000-8003-000000000002",
+      "subject_id": "00000000-0000-4000-8004-000000000002",
+      "start_date": "2026-09-01",
+      "end_date": null,
+      "is_active": true
+    }
   ],
   "tutor_rates": [
-    { "id": "00000000-0000-4000-8006-000000000001", "assignment_id": "00000000-0000-4000-8005-000000000001", "rate_type": "per_session", "rate_amount": "50000", "is_demo_assumption": true, "effective_from": "2026-09-01", "effective_to": null },
-    { "id": "00000000-0000-4000-8006-000000000002", "assignment_id": "00000000-0000-4000-8005-000000000002", "rate_type": "per_session", "rate_amount": "50000", "is_demo_assumption": true, "effective_from": "2026-09-01", "effective_to": null },
-    { "id": "00000000-0000-4000-8006-000000000003", "assignment_id": "00000000-0000-4000-8005-000000000003", "rate_type": "per_session", "rate_amount": "50000", "is_demo_assumption": true, "effective_from": "2026-09-01", "effective_to": null }
+    {
+      "id": "00000000-0000-4000-8006-000000000001",
+      "assignment_id": "00000000-0000-4000-8005-000000000001",
+      "rate_type": "per_session",
+      "rate_amount": "50000",
+      "is_demo_assumption": true,
+      "effective_from": "2026-09-01",
+      "effective_to": null
+    },
+    {
+      "id": "00000000-0000-4000-8006-000000000002",
+      "assignment_id": "00000000-0000-4000-8005-000000000002",
+      "rate_type": "per_session",
+      "rate_amount": "50000",
+      "is_demo_assumption": true,
+      "effective_from": "2026-09-01",
+      "effective_to": null
+    },
+    {
+      "id": "00000000-0000-4000-8006-000000000003",
+      "assignment_id": "00000000-0000-4000-8005-000000000003",
+      "rate_type": "per_session",
+      "rate_amount": "50000",
+      "is_demo_assumption": true,
+      "effective_from": "2026-09-01",
+      "effective_to": null
+    },
+    {
+      "id": "00000000-0000-4000-8006-000000000004",
+      "assignment_id": "00000000-0000-4000-8005-000000000005",
+      "rate_type": "per_session",
+      "rate_amount": "50000",
+      "is_demo_assumption": true,
+      "effective_from": "2026-09-01",
+      "effective_to": null
+    },
+    {
+      "id": "00000000-0000-4000-8006-000000000005",
+      "assignment_id": "00000000-0000-4000-8005-000000000006",
+      "rate_type": "per_session",
+      "rate_amount": "50000",
+      "is_demo_assumption": true,
+      "effective_from": "2026-09-01",
+      "effective_to": null
+    },
+    {
+      "id": "00000000-0000-4000-8006-000000000006",
+      "assignment_id": "00000000-0000-4000-8005-000000000007",
+      "rate_type": "per_session",
+      "rate_amount": "50000",
+      "is_demo_assumption": true,
+      "effective_from": "2026-09-01",
+      "effective_to": null
+    },
+    {
+      "id": "00000000-0000-4000-8006-000000000007",
+      "assignment_id": "00000000-0000-4000-8005-000000000008",
+      "rate_type": "per_session",
+      "rate_amount": "50000",
+      "is_demo_assumption": true,
+      "effective_from": "2026-09-01",
+      "effective_to": null
+    },
+    {
+      "id": "00000000-0000-4000-8006-000000000008",
+      "assignment_id": "00000000-0000-4000-8005-000000000009",
+      "rate_type": "per_session",
+      "rate_amount": "50000",
+      "is_demo_assumption": true,
+      "effective_from": "2026-09-01",
+      "effective_to": null
+    },
+    {
+      "id": "00000000-0000-4000-8006-000000000009",
+      "assignment_id": "00000000-0000-4000-8005-000000000010",
+      "rate_type": "per_session",
+      "rate_amount": "50000",
+      "is_demo_assumption": true,
+      "effective_from": "2026-09-01",
+      "effective_to": null
+    },
+    {
+      "id": "00000000-0000-4000-8006-000000000010",
+      "assignment_id": "00000000-0000-4000-8005-000000000011",
+      "rate_type": "per_session",
+      "rate_amount": "50000",
+      "is_demo_assumption": true,
+      "effective_from": "2026-09-01",
+      "effective_to": null
+    },
+    {
+      "id": "00000000-0000-4000-8006-000000000011",
+      "assignment_id": "00000000-0000-4000-8005-000000000012",
+      "rate_type": "per_session",
+      "rate_amount": "50000",
+      "is_demo_assumption": true,
+      "effective_from": "2026-09-01",
+      "effective_to": null
+    },
+    {
+      "id": "00000000-0000-4000-8006-000000000012",
+      "assignment_id": "00000000-0000-4000-8005-000000000013",
+      "rate_type": "per_session",
+      "rate_amount": "50000",
+      "is_demo_assumption": true,
+      "effective_from": "2026-09-01",
+      "effective_to": null
+    },
+    {
+      "id": "00000000-0000-4000-8006-000000000013",
+      "assignment_id": "00000000-0000-4000-8005-000000000014",
+      "rate_type": "per_session",
+      "rate_amount": "50000",
+      "is_demo_assumption": true,
+      "effective_from": "2026-09-01",
+      "effective_to": null
+    },
+    {
+      "id": "00000000-0000-4000-8006-000000000014",
+      "assignment_id": "00000000-0000-4000-8005-000000000015",
+      "rate_type": "per_session",
+      "rate_amount": "50000",
+      "is_demo_assumption": true,
+      "effective_from": "2026-09-01",
+      "effective_to": null
+    },
+    {
+      "id": "00000000-0000-4000-8006-000000000015",
+      "assignment_id": "00000000-0000-4000-8005-000000000016",
+      "rate_type": "per_session",
+      "rate_amount": "50000",
+      "is_demo_assumption": true,
+      "effective_from": "2026-09-01",
+      "effective_to": null
+    }
   ],
   "development_auth_fixtures": {
     "admin_username": "admin.demo",
     "admin_password_env": "BOOTSTRAP_ADMIN_PASSWORD",
-    "tutor_usernames": ["tutor-a.demo", "tutor-b.demo"],
+    "tutor_usernames": [
+      "farhan",
+      "noreen",
+      "fazrin",
+      "rama",
+      "giyas",
+      "nasywa"
+    ],
     "tutor_password_env": "SEED_TUTOR_PASSWORD",
     "parent_access_codes": {
       "00000000-0000-4000-8001-000000000004": "MUMTAZ-DEMO-PARENT-ACCESS-ONLY",
-      "00000000-0000-4000-8001-000000000005": "MUMTAZ-DEMO-PARENT-B-ACCESS-ONLY"
+      "00000000-0000-4000-8001-000000000005": "MUMTAZ-DEMO-PARENT-B-ACCESS-ONLY",
+      "00000000-0000-4000-8001-000000000010": "MUMTAZ-DEMO-PARENT-03",
+      "00000000-0000-4000-8001-000000000011": "MUMTAZ-DEMO-PARENT-04",
+      "00000000-0000-4000-8001-000000000012": "MUMTAZ-DEMO-PARENT-05",
+      "00000000-0000-4000-8001-000000000013": "MUMTAZ-DEMO-PARENT-06",
+      "00000000-0000-4000-8001-000000000014": "MUMTAZ-DEMO-PARENT-07",
+      "00000000-0000-4000-8001-000000000015": "MUMTAZ-DEMO-PARENT-08"
     },
     "warning": "Only use these fixed codes in isolated local/test environments. Production parent codes must be randomly generated with high entropy and stored as a digest."
   }

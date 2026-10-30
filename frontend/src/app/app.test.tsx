@@ -42,8 +42,8 @@ describe('autentikasi & navigasi per role', () => {
   it('Tutor: menu Tutor saja; membuka /admin dialihkan ke /tutor', async () => {
     useDemoBackend();
     renderApp('/login');
-    await loginStaff('tutor-a.demo', TEST_ONLY_CREDENTIALS.tutorPassword);
-    expect(await screen.findByRole('heading', { name: 'Halo, Tutor Demo A' })).toBeInTheDocument();
+    await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
+    expect(await screen.findByRole('heading', { name: 'Halo, Farhan' })).toBeInTheDocument();
     expect(await navLinks()).toEqual(['Dashboard', 'Form Absensi', 'Riwayat Mengajar', 'Honor Saya', 'Profil']);
   });
 
@@ -62,7 +62,7 @@ describe('autentikasi & navigasi per role', () => {
   it('logout membersihkan sesi dan kembali ke login', async () => {
     useDemoBackend();
     renderApp('/login');
-    const user = await loginStaff('tutor-a.demo', TEST_ONLY_CREDENTIALS.tutorPassword);
+    const user = await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
     await user.click(await screen.findByRole('button', { name: 'Keluar' }));
     expect(await screen.findByRole('heading', { name: 'Masuk Admin / Tutor' })).toBeInTheDocument();
   });
@@ -96,7 +96,7 @@ describe('halaman berbasis periode', () => {
     await user.clear(period);
     await user.type(period, '2026-10');
     expect((await screen.findAllByText('Simulasi — bukan tarif resmi UMKM')).length).toBeGreaterThan(0);
-    expect(screen.getByText('Tutor Demo A')).toBeInTheDocument();
+    expect(screen.getByText('Farhan')).toBeInTheDocument();
   });
 });
 
@@ -129,20 +129,50 @@ describe('Admin: keputusan review', () => {
   });
 });
 
+describe('Admin: review temuan anomali', () => {
+  it('review mencatat hasil tanpa mengubah status sesi; label sumber analisis jelas', async () => {
+    useDemoBackend();
+    renderApp('/login');
+    const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
+    await user.click(await screen.findByRole('link', { name: 'Data Absensi' }));
+    const period = await screen.findByLabelText('Periode');
+    await user.clear(period);
+    await user.type(period, '2026-10');
+
+    // s10: durasi 240 menit dengan temuan duration_outlier.
+    await user.click(await screen.findByRole('button', { name: /Lihat detail sesi Citra 12 Okt 2026/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Detail sesi' });
+    expect(within(dialog).getByText('Durasi tidak wajar')).toBeInTheDocument();
+    expect(within(dialog).getByText('Hasil uji (fake detector), bukan AI live')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Review temuan' }));
+    const review = await screen.findByRole('dialog', { name: 'Review temuan anomali' });
+    const save = within(review).getByRole('button', { name: 'Simpan review' });
+    expect(save).toBeDisabled();
+    await user.selectOptions(within(review).getByLabelText(/Hasil review/), 'false_positive');
+    await user.type(within(review).getByLabelText(/Catatan review/), 'Sesi persiapan ujian memang panjang');
+    await user.click(save);
+
+    const refreshed = await screen.findByRole('dialog', { name: 'Detail sesi' });
+    expect(await within(refreshed).findByText('Bukan anomali')).toBeInTheDocument();
+    expect(within(refreshed).getByText('Menunggu verifikasi')).toBeInTheDocument();
+  });
+});
+
 describe('Tutor: Form Absensi', () => {
   it('auto-fill kelas/sekolah, validasi di dekat field, sukses setelah server menyimpan', async () => {
     useDemoBackend();
     renderApp('/login');
-    const user = await loginStaff('tutor-a.demo', TEST_ONLY_CREDENTIALS.tutorPassword);
+    const user = await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
     await user.click(await screen.findByRole('link', { name: 'Form Absensi' }));
 
-    expect(await screen.findByLabelText(/^Nama tutor/)).toHaveValue('Tutor Demo A');
+    expect(await screen.findByLabelText(/^Nama tutor/)).toHaveValue('Farhan');
     await user.click(screen.getByRole('button', { name: 'Kirim absensi' }));
     expect(await screen.findByText('Wajib diisi')).toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText(/^Nama murid/), screen.getByRole('option', { name: /Murid Demo 1/ }));
+    await user.selectOptions(screen.getByLabelText(/^Nama murid/), screen.getByRole('option', { name: /Aisyah/ }));
     expect(screen.getByLabelText(/^Kelas/)).toHaveValue('3 SD');
-    expect(screen.getByLabelText(/^Asal sekolah/)).toHaveValue('Sekolah Demo A');
+    expect(screen.getByLabelText(/^Asal sekolah/)).toHaveValue('SD Harapan Bangsa');
 
     await user.type(screen.getByLabelText(/^Tanggal les/), '2026-10-20');
     await user.type(screen.getByLabelText(/^Durasi les/), '90');
@@ -156,7 +186,7 @@ describe('Tutor: Form Absensi', () => {
   it('durasi bukan bilangan bulat ditolak sebelum dikirim', async () => {
     useDemoBackend();
     renderApp('/login');
-    const user = await loginStaff('tutor-a.demo', TEST_ONLY_CREDENTIALS.tutorPassword);
+    const user = await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
     await user.click(await screen.findByRole('link', { name: 'Form Absensi' }));
     await user.type(await screen.findByLabelText(/^Durasi les/), '1.5');
     await user.click(screen.getByRole('button', { name: 'Kirim absensi' }));

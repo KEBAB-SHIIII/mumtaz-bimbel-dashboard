@@ -58,6 +58,8 @@ export const envSchema = z
     GEMINI_MODEL: optionalString,
     // Heuristik demo duration_outlier (O-03/O-12 masih terbuka).
     ANOMALY_DURATION_OUTLIER_MINUTES: positiveInt(180),
+    /** Batas waktu satu panggilan provider anomali; lewat batas → `failed`. */
+    ANOMALY_PROVIDER_TIMEOUT_MS: positiveInt(20_000),
   })
   .superRefine((env, ctx) => {
     if (env.SESSION_SECRET === env.PARENT_ACCESS_CODE_PEPPER) {

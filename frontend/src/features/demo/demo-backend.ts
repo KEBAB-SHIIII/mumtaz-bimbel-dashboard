@@ -380,6 +380,26 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
       },
     ],
     [
+      'patch',
+      /^\/admin\/anomalies\/([^/]+)\/review$/,
+      (req, [id]) => {
+        const admin = requireRole('admin');
+        const flag = flags.find((f) => f.id === id);
+        if (!flag) throw new DemoError(404, 'NOT_FOUND', 'Temuan anomali tidak ditemukan');
+        if (flag.review_status === 'superseded') {
+          throw new DemoError(409, 'SESSION_STATE_CONFLICT', 'Temuan sudah digantikan oleh revisi sesi dan tidak dapat direview');
+        }
+        const status = req.body.review_status;
+        const note = typeof req.body.review_note === 'string' ? req.body.review_note.trim() : '';
+        if ((status !== 'confirmed_anomaly' && status !== 'false_positive' && status !== 'resolved') || !note) {
+          throw new DemoError(422, 'VALIDATION_FAILED', 'Validasi gagal');
+        }
+        // Hanya temuan yang berubah; status sesi tidak disentuh.
+        Object.assign(flag, { review_status: status, review_note: note, reviewed_by_user_id: admin.id, reviewed_at: now().toISOString() });
+        return ok(toFinding(flag));
+      },
+    ],
+    [
       'get',
       /^\/admin\/recap$/,
       (req) => {

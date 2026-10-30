@@ -1,33 +1,72 @@
 /**
  * UUID sintetis yang stabil untuk fixture. Segmen ke-4 menandai jenis entitas;
- * sesi memakai `8000` agar selaras dengan `examples/anomaly-response.json`.
+ * sesi test memakai `8000` agar selaras dengan `examples/anomaly-response.json`,
+ * sesi dataset dev memakai `8100`.
+ *
+ * Kunci `tutorA/tutorB`, `murid1..3`, `parentA/parentB` dipertahankan (dipakai test)
+ * walau nama tampilannya kini nama depan Indonesia — lihat `master-data.ts`.
  */
-const id = (namespace: string, n: number) =>
+export const fixtureId = (namespace: string, n: number) =>
   `00000000-0000-4000-${namespace}-${String(n).padStart(12, '0')}`;
+
+const id = fixtureId;
 
 export const USER_IDS = {
   admin: id('8001', 1),
+  /** Farhan */
   tutorA: id('8001', 2),
+  /** Noreen */
   tutorB: id('8001', 3),
+  /** Sari (wali Aisyah) */
   parentA: id('8001', 4),
+  /** Budi (wali Citra) */
   parentB: id('8001', 5),
+  fazrin: id('8001', 6),
+  rama: id('8001', 7),
+  giyas: id('8001', 8),
+  nasywa: id('8001', 9),
+  wati: id('8001', 10),
+  agus: id('8001', 11),
+  rina: id('8001', 12),
+  hendra: id('8001', 13),
+  yuni: id('8001', 14),
+  dedi: id('8001', 15),
 } as const;
 
 export const TUTOR_IDS = {
+  /** Farhan */
   tutorA: id('8002', 1),
+  /** Noreen */
   tutorB: id('8002', 2),
+  fazrin: id('8002', 3),
+  rama: id('8002', 4),
+  giyas: id('8002', 5),
+  nasywa: id('8002', 6),
 } as const;
 
 export const STUDENT_IDS = {
+  /** Aisyah */
   murid1: id('8003', 1),
+  /** Bima */
   murid2: id('8003', 2),
+  /** Citra */
   murid3: id('8003', 3),
+  dimas: id('8003', 4),
+  eka: id('8003', 5),
+  fikri: id('8003', 6),
+  gita: id('8003', 7),
+  hana: id('8003', 8),
+  intan: id('8003', 9),
+  joko: id('8003', 10),
+  kirana: id('8003', 11),
+  lutfi: id('8003', 12),
 } as const;
 
 export const SUBJECT_IDS = {
   matematika: id('8004', 1),
   bahasaInggris: id('8004', 2),
   ipa: id('8004', 3),
+  bahasaIndonesia: id('8004', 4),
 } as const;
 
 export const ASSIGNMENT_IDS = {
@@ -36,12 +75,21 @@ export const ASSIGNMENT_IDS = {
   tutorBMurid3Ipa: id('8005', 3),
   /** Nonaktif sejak 2026-09-30 — fixture "invalid assignment". */
   tutorBMurid2MatematikaInactive: id('8005', 4),
-} as const;
-
-export const RATE_IDS = {
-  tutorAMurid1Matematika: id('8006', 1),
-  tutorAMurid2BahasaInggris: id('8006', 2),
-  tutorBMurid3Ipa: id('8006', 3),
+  fazrinDimasMatematika: id('8005', 5),
+  fazrinEkaBahasaIndonesia: id('8005', 6),
+  ramaFikriIpa: id('8005', 7),
+  /** Aisyah–Matematika juga diajar Farhan → pasangan lintas tutor. */
+  ramaAisyahMatematika: id('8005', 8),
+  giyasGitaBahasaInggris: id('8005', 9),
+  giyasHanaMatematika: id('8005', 10),
+  nasywaIntanBahasaIndonesia: id('8005', 11),
+  nasywaJokoIpa: id('8005', 12),
+  fazrinKiranaBahasaInggris: id('8005', 13),
+  ramaLutfiMatematika: id('8005', 14),
+  /** Citra–IPA juga diajar Noreen → pasangan lintas tutor. */
+  giyasCitraIpa: id('8005', 15),
+  /** Bima–Bahasa Inggris juga diajar Farhan → pasangan lintas tutor. */
+  nasywaBimaBahasaInggris: id('8005', 16),
 } as const;
 
 export const SESSION_IDS = {

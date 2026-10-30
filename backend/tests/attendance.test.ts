@@ -48,7 +48,7 @@ describe('POST /tutor/attendance', () => {
     );
     expect(items.find((i) => i.assignment_id === ASSIGNMENT_IDS.tutorAMurid1Matematika)?.student).toMatchObject({
       grade: '3 SD',
-      school_name: 'Sekolah Demo A',
+      school_name: 'SD Harapan Bangsa',
     });
   });
 
@@ -139,7 +139,7 @@ describe('riwayat Tutor', () => {
   it('hanya sesi milik tutor login, difilter lesson_date', async () => {
     const res = await tutorA.get('/tutor/me/attendance?period=2026-10&page_size=100').expect(200);
     const body = paginatedSchema(tutorSessionSchema).parse(res.body);
-    expect(body.items.every((item) => item.tutor_name === 'Tutor Demo A')).toBe(true);
+    expect(body.items.every((item) => item.tutor_name === 'Farhan')).toBe(true);
     // s01, s02, s05 (31 Okt, disubmit Nov), s08, s09 + sesi baru 20 Okt
     expect(body.total).toBe(6);
     expect(body.items.map((item) => item.id)).toContain(SESSION_IDS.s05);
@@ -166,8 +166,8 @@ describe('Admin: Data Absensi & keputusan review', () => {
     const pending = await admin.get('/admin/attendance?period=2026-10&status=pending&page_size=100').expect(200);
     expect(pending.body.items.every((i: { status: string }) => i.status === 'pending')).toBe(true);
 
-    const search = await admin.get('/admin/attendance?period=2026-10&search=Murid%20Demo%203&page_size=100').expect(200);
-    expect(search.body.items.every((i: { student_name: string }) => i.student_name === 'Murid Demo 3')).toBe(true);
+    const search = await admin.get('/admin/attendance?period=2026-10&search=Citra&page_size=100').expect(200);
+    expect(search.body.items.every((i: { student_name: string }) => i.student_name === 'Citra')).toBe(true);
 
     const page = await admin.get('/admin/attendance?period=2026-10&page=2&page_size=4').expect(200);
     expect(page.body).toMatchObject({ page: 2, page_size: 4, total: 10 });
@@ -283,7 +283,7 @@ describe('Progress Anak (Orang Tua)', () => {
     const parent = await as.parentA(t.app);
     const res = await parent.get('/parent/me/students').expect(200);
     expect(res.body.items).toEqual([
-      { id: STUDENT_IDS.murid1, full_name: 'Murid Demo 1', grade: '3 SD', school_name: 'Sekolah Demo A', relationship: 'orang tua' },
+      { id: STUDENT_IDS.murid1, full_name: 'Aisyah', grade: '3 SD', school_name: 'SD Harapan Bangsa', relationship: 'ibu' },
     ]);
   });
 

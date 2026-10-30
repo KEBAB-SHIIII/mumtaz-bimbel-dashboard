@@ -19,6 +19,7 @@ import {
   submitAttendance,
 } from '../services/attendance/attendance-service.js';
 import { changePassword } from '../services/auth-service.js';
+import type { AnomalyQueue } from '../services/anomaly/anomaly-worker.js';
 import type { ServiceContext } from '../services/context.js';
 import { getTutorDashboardSummary } from '../services/dashboard-service.js';
 import { getPayrollPreview } from '../services/payroll-service.js';
@@ -27,7 +28,7 @@ import { getPayrollPreview } from '../services/payroll-service.js';
  * Semua route `/tutor/*` — role Tutor saja. Identitas tutor SELALU dari session,
  * tidak pernah dari body/query.
  */
-export function tutorRouter(ctx: ServiceContext, limiters: AuthRateLimiters) {
+export function tutorRouter(ctx: ServiceContext, limiters: AuthRateLimiters, anomalyQueue: AnomalyQueue) {
   const router = Router();
   router.use('/tutor', requireRole('tutor'));
 
@@ -49,6 +50,8 @@ export function tutorRouter(ctx: ServiceContext, limiters: AuthRateLimiters) {
       { tutorId: tutorIdOf(req), tutorActive: auth.tutorActive },
       input,
     );
+    // Analisis anomali berjalan SETELAH commit; kegagalannya tidak memengaruhi submit.
+    anomalyQueue.enqueue(response.session.id);
     res.status(201).json(response);
   });
 
@@ -59,7 +62,10 @@ export function tutorRouter(ctx: ServiceContext, limiters: AuthRateLimiters) {
   router.patch('/tutor/me/attendance/:id', async (req, res) => {
     const { id } = parseInput(idParamSchema, req.params);
     const input = parseInput(reviseAttendanceRequestSchema, req.body);
-    res.json({ session: await reviseAttendance(ctx, tutorIdOf(req), id, input) });
+    const session = await reviseAttendance(ctx, tutorIdOf(req), id, input);
+    // Payload baru → analisis ulang (no-op bila retry identik yang sudah dianalisis).
+    anomalyQueue.enqueue(session.id);
+    res.json({ session });
   });
 
   router.get('/tutor/me/payroll', async (req, res) => {

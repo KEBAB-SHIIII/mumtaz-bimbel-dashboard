@@ -74,12 +74,12 @@ describe('login Admin/Tutor (username + password)', () => {
     const anonymousCookie = sessionCookie(await client.get('/auth/csrf'));
 
     const res = await client.post('/auth/login', {
-      username: 'tutor-a.demo',
+      username: 'farhan',
       password: TEST_ONLY_CREDENTIALS.tutorPassword,
     });
     expect(res.status).toBe(200);
     const body = loginResponseSchema.parse(res.body);
-    expect(body.user).toMatchObject({ id: USER_IDS.tutorA, role: 'tutor', username: 'tutor-a.demo' });
+    expect(body.user).toMatchObject({ id: USER_IDS.tutorA, role: 'tutor', username: 'farhan' });
     expect(body.csrf_token).not.toBe(anonymousToken);
     expect(sessionCookie(res)).toBeDefined();
     expect(sessionCookie(res)).not.toBe(anonymousCookie);
@@ -88,7 +88,7 @@ describe('login Admin/Tutor (username + password)', () => {
 
   it('username tak dikenal dan password salah → pesan generik identik (401)', async () => {
     const unknown = await (await new TestClient(t.app).init()).post('/auth/login', { username: 'tidak.ada', password: 'x' });
-    const wrong = await (await new TestClient(t.app).init()).post('/auth/login', { username: 'tutor-a.demo', password: 'salah' });
+    const wrong = await (await new TestClient(t.app).init()).post('/auth/login', { username: 'farhan', password: 'salah' });
     expect(unknown.status).toBe(401);
     expect(wrong.status).toBe(401);
     expect(unknown.body).toEqual(wrong.body);
@@ -110,9 +110,9 @@ describe('login Admin/Tutor (username + password)', () => {
     const body = meResponseSchema.parse(res.body);
     expect(body.user).toEqual({
       id: USER_IDS.tutorA,
-      full_name: 'Tutor Demo A',
+      full_name: 'Farhan',
       role: 'tutor',
-      username: 'tutor-a.demo',
+      username: 'farhan',
       phone: '080000000001',
     });
   });
@@ -134,7 +134,7 @@ describe('login Orang Tua (satu ID Akses)', () => {
     expect(res.status).toBe(200);
     expect(loginResponseSchema.parse(res.body).user).toEqual({
       id: USER_IDS.parentA,
-      full_name: 'Orang Tua Demo A',
+      full_name: 'Sari',
       role: 'parent',
     });
   });
@@ -168,11 +168,11 @@ describe('rate limit autentikasi', () => {
     const limited = await createTestApp({ env: { AUTH_RATE_LIMIT_MAX: '3' } });
     try {
       for (let i = 0; i < 3; i += 1) {
-        const res = await (await new TestClient(limited.app).init()).post('/auth/login', { username: 'tutor-b.demo', password: 'salah' });
+        const res = await (await new TestClient(limited.app).init()).post('/auth/login', { username: 'noreen', password: 'salah' });
         expect(res.status).toBe(401);
       }
       const blocked = await (await new TestClient(limited.app).init()).post('/auth/login', {
-        username: 'tutor-b.demo',
+        username: 'noreen',
         password: TEST_ONLY_CREDENTIALS.tutorPassword,
       });
       expect(blocked.status).toBe(429);
@@ -227,9 +227,9 @@ describe('PATCH /tutor/me/password (tab Profil)', () => {
       await device1.get('/auth/me').expect(200);
       await device2.get('/auth/me').expect(401);
 
-      await new TestClient(isolated.app).login('tutor-a.demo', 'password-baru-yang-panjang');
+      await new TestClient(isolated.app).login('farhan', 'password-baru-yang-panjang');
       const old = await (await new TestClient(isolated.app).init()).post('/auth/login', {
-        username: 'tutor-a.demo',
+        username: 'farhan',
         password: TEST_ONLY_CREDENTIALS.tutorPassword,
       });
       expect(old.status).toBe(401);

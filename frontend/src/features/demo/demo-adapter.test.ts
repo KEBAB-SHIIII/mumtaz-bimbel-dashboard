@@ -35,12 +35,12 @@ describe('fake API adapter mengikuti kontrak (data sintetis)', () => {
 
   it('Tutor: endpoint milik sendiri lolos schema; submit idempoten', async () => {
     useDemoBackend();
-    await login({ username: 'tutor-a.demo', password: TEST_ONLY_CREDENTIALS.tutorPassword });
+    await login({ username: 'farhan', password: TEST_ONLY_CREDENTIALS.tutorPassword });
     await tutor.fetchTutorDashboard('2026-10');
     const assignments = await tutor.fetchTutorAssignments();
     expect(assignments).toHaveLength(2);
     const history = await tutor.fetchTutorAttendance({ period: '2026-10', page: 1, page_size: 20 });
-    expect(history.items.every((item) => item.tutor_name === 'Tutor Demo A')).toBe(true);
+    expect(history.items.every((item) => item.tutor_name === 'Farhan')).toBe(true);
     await tutor.fetchTutorPayroll('2026-10');
 
     const body = {
@@ -70,7 +70,7 @@ describe('fake API adapter mengikuti kontrak (data sintetis)', () => {
 
   it('meniru role guard dan CSRF backend', async () => {
     useDemoBackend();
-    await login({ username: 'tutor-a.demo', password: TEST_ONLY_CREDENTIALS.tutorPassword });
+    await login({ username: 'farhan', password: TEST_ONLY_CREDENTIALS.tutorPassword });
     const forbidden = await admin.fetchAdminDashboard('2026-10').catch((e: unknown) => e);
     expect(toApiError(forbidden).status).toBe(403);
 
