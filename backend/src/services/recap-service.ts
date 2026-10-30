@@ -1,4 +1,4 @@
-import type { RecapGroup, RecapQuery, RecapResponse } from '@mumtaz/contracts';
+import type { RecapGroup, RecapQuery, RecapResponse, RecapTotals } from '@mumtaz/contracts';
 import type { ServiceContext } from './context.js';
 import { sessionsInPeriod, type SessionView } from './attendance/session-query.js';
 
@@ -53,11 +53,22 @@ export async function getRecap(ctx: ServiceContext, query: RecapQuery): Promise<
     groups.set(key.id, group);
   }
 
-  return {
-    period: query.period,
-    group_by: query.group_by,
-    groups: [...groups.values()]
-      .map((group) => ({ ...group, session_ids: [...group.session_ids].sort() }))
-      .sort((a, b) => a.key_label.localeCompare(b.key_label) || a.key_id.localeCompare(b.key_id)),
+  const sorted = [...groups.values()]
+    .map((group) => ({ ...group, session_ids: [...group.session_ids].sort() }))
+    .sort((a, b) => a.key_label.localeCompare(b.key_label) || a.key_id.localeCompare(b.key_id));
+
+  // Grup membagi habis sesi periode, sehingga total = jumlah semua grup.
+  const totals: RecapTotals = {
+    total_sessions: 0,
+    approved_sessions: 0,
+    pending_sessions: 0,
+    revision_requested_sessions: 0,
+    rejected_sessions: 0,
+    approved_duration_minutes: 0,
   };
+  for (const group of sorted) {
+    for (const key of Object.keys(totals) as (keyof RecapTotals)[]) totals[key] += group[key];
+  }
+
+  return { period: query.period, group_by: query.group_by, groups: sorted, totals };
 }

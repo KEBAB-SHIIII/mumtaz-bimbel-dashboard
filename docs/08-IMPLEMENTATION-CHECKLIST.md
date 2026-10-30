@@ -41,7 +41,7 @@
 - [ ] Rekap per bulan dapat dikelompokkan berdasarkan tutor/siswa/mapel.
 - [ ] Honor dihitung hanya dari sesi approved.
 - [ ] Tarif demo Rp50.000 per sesi berasal dari data `tutor_rates`, bukan konstanta tersebar.
-- [ ] UI honor menampilkan `Simulasi — bukan tarif resmi UMKM` selama memakai data demo.
+- [ ] UI honor menandai nominal dari tarif demo dengan badge "Tarif demo" (D-20).
 - [ ] Parent hanya melihat siswa yang terkait dengan ID akses yang login dan hanya sesi approved.
 - [ ] Progress Anak menampilkan materi/catatan yang boleh dipublikasikan.
 - [ ] Estimasi honor tidak disebut sebagai pembayaran aktual; payment tracking tidak dibuat tanpa scope.

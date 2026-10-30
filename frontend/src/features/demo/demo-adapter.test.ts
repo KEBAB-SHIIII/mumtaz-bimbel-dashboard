@@ -24,10 +24,14 @@ describe('fake API adapter mengikuti kontrak (data sintetis)', () => {
     const first = list.items[0];
     if (!first) throw new Error('list kosong');
     await admin.fetchAdminAttendanceDetail(first.id);
-    await admin.fetchRecap('2026-10', 'tutor');
     const payroll = await admin.fetchPayrollPreview('2026-10');
     expect(payroll.total_estimated_amount).toBe('200000');
-    expect(payroll.demo_label).toBe('Simulasi — bukan tarif resmi UMKM');
+    expect(payroll.is_demo_assumption).toBe(true);
+    // Total dapat ditelusuri ke rincian sesi.
+    const counted = payroll.tutors.flatMap((t) => t.sessions).filter((line) => line.counted);
+    expect(counted.reduce((sum, line) => sum + Number(line.amount), 0)).toBe(200000);
+    const recap = await admin.fetchRecap('2026-10', 'tutor');
+    expect(recap.totals.total_sessions).toBe(9);
     for (const entity of ['tutors', 'students', 'parents', 'subjects', 'tutor-assignments', 'tutor-rates'] as const) {
       await admin.fetchMasterData(entity, { page: 1, page_size: 20 });
     }

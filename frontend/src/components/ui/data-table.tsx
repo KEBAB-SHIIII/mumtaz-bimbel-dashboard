@@ -21,13 +21,15 @@ interface DataTableProps<T> {
   empty?: ReactNode;
   /** Data sebelumnya tetap tampil saat refetch (mis. ganti halaman). */
   isFetching?: boolean;
+  /** Satu baris ringkasan (mis. total dari backend); sel harus sejajar dengan kolom. */
+  footer?: ReactNode[];
 }
 
 /**
  * Tabel berbasis TanStack Table dengan pagination server-side.
  * Overflow horizontal terkontrol di layar kecil.
  */
-export function DataTable<T>({ caption, columns, data, getRowId, pagination, empty, isFetching = false }: DataTableProps<T>) {
+export function DataTable<T>({ caption, columns, data, getRowId, pagination, empty, isFetching = false, footer }: DataTableProps<T>) {
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table mengelola memoisasi sendiri.
   const table = useReactTable({ data, columns, getRowId, getCoreRowModel: getCoreRowModel(), manualPagination: true });
 
@@ -60,6 +62,15 @@ export function DataTable<T>({ caption, columns, data, getRowId, pagination, emp
               </tr>
             ))}
           </tbody>
+          {footer && (
+            <tfoot>
+              <tr className="border-t-2 border-border bg-surface-muted font-semibold">
+                {footer.map((cell, index) => (
+                  <td key={index} className="px-3 py-2 text-text">{cell}</td>
+                ))}
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
       {pagination && <Pagination {...pagination} />}

@@ -11,7 +11,7 @@ Bangun aplikasi full-stack TypeScript untuk Bimbel Mumtaz Sampit: form absensi s
 - Semua dashboard membaca Neon melalui API dengan filter role/relasi server-side.
 - Catatan sesi satu tabel `lesson_sessions`; jangan menggandakan tabel hanya karena tampilan dashboard berbeda.
 - Status awal sesi selalu `pending`. Admin meninjau manual sebelum sesi dihitung untuk honor.
-- Tarif demo per sesi Rp50.000 disimpan di `tutor_rates` sebagai seed/config dengan `is_demo_assumption=true`. Tampilkan label simulasi; nominal bukan aturan resmi UMKM.
+- Tarif demo per sesi Rp50.000 disimpan di `tutor_rates` sebagai seed/config dengan `is_demo_assumption=true`. Tandai nominalnya dengan badge "Tarif demo" di halaman Honor (D-20); nominal bukan aturan resmi UMKM.
 - Data ekspor standar terdiri dari delapan kolom mentah UMKM. Semua status review ikut diekspor sesuai keputusan owner; materi/catatan/status/anomaly/honor tidak ikut report standar.
 - Anomaly module adalah bagian baseline dan wajib mengklasifikasikan kandidat anomali, terutama `suspected_duplicate`, lalu menyimpan finding di `anomaly_flags`. AI bukan penentu status/honor; Admin membuat keputusan terpisah. Kegagalan provider tidak boleh menggagalkan penyimpanan sesi dan harus terlihat sebagai `failed`/`not_evaluated`.
 - Admin/Tutor login dengan username + password. Orang Tua login hanya dengan ID Akses Orang Tua acak/rahasia, tanpa password, sesuai kebutuhan owner. ID tersebut harus berupa credential berentropi tinggi, bukan ID publik atau berurutan.
@@ -56,7 +56,7 @@ Bangun aplikasi full-stack TypeScript untuk Bimbel Mumtaz Sampit: form absensi s
 - Seed menggunakan `rate_type='per_session'`, `rate_amount=50000`, `is_demo_assumption=true` untuk assignment demo.
 - Hanya sesi `approved` masuk honor estimasi.
 - Jangan menyebarkan angka 50000 sebagai konstanta ke komponen/service; kalkulasi membaca `tutor_rates`/snapshot.
-- Selalu tampilkan `Simulasi — bukan tarif resmi UMKM` jika nominal demo digunakan.
+- Tandai nominal dari tarif demo dengan badge kecil "Tarif demo" di halaman Honor (D-20); jangan memakai label panjang di dashboard/halaman lain.
 - Jangan menambahkan status pembayaran aktual pada MVP.
 
 ## Export Google Sheets

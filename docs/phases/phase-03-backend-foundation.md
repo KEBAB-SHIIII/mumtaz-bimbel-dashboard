@@ -16,7 +16,7 @@ Implementasikan database dan backend core yang menjadi kontrak bersama semua das
 8. Implementasikan `POST /tutor/attendance`: identitas tutor dari session terautentikasi (cookie server-side), validasi assignment aktif, simpan `lesson_sessions` status pending. Jangan panggil Sheets.
 9. Implementasikan API untuk admin attendance list/detail/decision, tutor history/edit revision, parent linked students/progress, admin recap dan tutor/admin payroll preview sesuai kontrak.
 10. Pastikan semua query period menggunakan `lesson_date`. Parent access harus memeriksa `parent_students` di backend.
-11. Business service payroll di backend; gunakan seed Rp50.000 per sesi dengan `is_demo_assumption=true`, beri label simulasi; jangan hard-code angka pada kalkulator. Tarif resmi UMKM tetap belum diketahui.
+11. Business service payroll di backend; gunakan seed Rp50.000 per sesi dengan `is_demo_assumption=true` (UI: badge "Tarif demo"); jangan hard-code angka pada kalkulator. Tarif resmi UMKM tetap belum diketahui.
 12. Buat seed sintetis yang eksplisit untuk environment development.
 13. Jangan jalankan migrasi/destructive seed pada DB UMKM tanpa izin.
 

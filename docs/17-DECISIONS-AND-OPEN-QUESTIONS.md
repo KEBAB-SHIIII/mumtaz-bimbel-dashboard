@@ -25,6 +25,8 @@ Dokumen ini memisahkan keputusan owner yang sudah disepakati untuk development d
 | D-17 | UX harus minim friction dan tetap aman. | Auto-fill dari Master Data, field jelas, loading/empty/error/success states, role/scope checks, dan validasi server-side. |
 | D-18 | Anomaly finding harus ditinjau manusia. | Status anomaly dipisahkan dari status sesi. Kandidat duplikasi bukan bukti kesalahan; jangan hapus atau tolak otomatis. |
 | D-19 | Ekspor Sheets mencakup semua submission pada bulan terpilih tanpa filter status review. | Tetap gunakan delapan kolom mentah. Sebelum menulis, UI memperingatkan Admin bahwa data pending/revisi/ditolak juga ikut; jangan menyiratkan semua baris sudah disetujui. |
+| D-20 | Label panjang "Simulasi — bukan tarif resmi UMKM" dihapus karena membingungkan. | Nominal dari tarif demo (`is_demo_assumption=true`) ditandai badge kecil "Tarif demo" di samping nominal pada halaman Honor saja; tidak ada alert/label di dashboard. API tidak lagi mengirim teks label (`demo_label`); UI memakai flag `is_demo_assumption`. |
+| D-21 | Status analisis anomali tidak ditampilkan di UI. | `anomaly_analysis_status` tetap dipakai backend (resume worker, filter API) dan polling frontend; Admin cukup melihat temuan. |
 
 ## 2. Detail yang masih perlu konfirmasi
 

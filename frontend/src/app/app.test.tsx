@@ -77,13 +77,14 @@ describe('halaman berbasis periode', () => {
     expect(screen.getByText('1–1 dari 1')).toBeInTheDocument();
   });
 
-  it('Honor Tutor menampilkan label simulasi tarif demo', async () => {
+  it('Honor Tutor menandai tarif demo dengan badge kecil (tanpa label simulasi panjang)', async () => {
     useDemoBackend();
     renderApp('/login');
     const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
     await user.click(await screen.findByRole('link', { name: 'Honor Tutor' }));
     await choosePeriod('2026-10');
-    expect((await screen.findAllByText('Simulasi — bukan tarif resmi UMKM')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Tarif demo')).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Simulasi/)).not.toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Farhan' })).toBeInTheDocument();
   });
 });

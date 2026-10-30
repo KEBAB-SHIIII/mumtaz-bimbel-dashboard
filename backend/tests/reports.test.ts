@@ -1,13 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
-  DEMO_RATE_LABEL,
   adminDashboardSummarySchema,
+  paginatedSchema,
   parentDashboardSummarySchema,
   payrollPreviewResponseSchema,
   recapResponseSchema,
   tutorDashboardSummarySchema,
+  tutorRateSchema,
 } from '@mumtaz/contracts';
-import { EXPECTED_PAYROLL_2026_10, STUDENT_IDS, SUBJECT_IDS, TUTOR_IDS, SESSION_IDS } from '@mumtaz/contracts/fixtures';
+import { ASSIGNMENT_IDS, EXPECTED_PAYROLL_2026_10, STUDENT_IDS, SUBJECT_IDS, TUTOR_IDS, SESSION_IDS } from '@mumtaz/contracts/fixtures';
 import { as, createTestApp, type TestApp, type TestClient } from './helpers/test-app.js';
 
 let t: TestApp;
@@ -26,7 +27,6 @@ describe('Payroll preview (estimasi honor)', () => {
 
     expect(body.total_estimated_amount).toBe(EXPECTED_PAYROLL_2026_10.total_estimated_amount);
     expect(body.is_demo_assumption).toBe(true);
-    expect(body.demo_label).toBe(DEMO_RATE_LABEL);
     expect(body.warnings).toEqual([]);
 
     for (const expected of EXPECTED_PAYROLL_2026_10.tutors) {
@@ -52,9 +52,9 @@ describe('Payroll preview (estimasi honor)', () => {
     expect(nov.tutors[0]?.rate_lines[0]?.session_ids).toEqual([SESSION_IDS.s06]);
   });
 
-  it('periode tanpa sesi → nol, tanpa label demo', async () => {
+  it('periode tanpa sesi → nol, bukan tarif demo', async () => {
     const body = payrollPreviewResponseSchema.parse((await admin.get('/admin/payroll/preview?period=2027-01').expect(200)).body);
-    expect(body).toMatchObject({ tutors: [], total_estimated_amount: '0', is_demo_assumption: false, demo_label: null });
+    expect(body).toMatchObject({ tutors: [], total_estimated_amount: '0', is_demo_assumption: false });
   });
 
   it('tutor hanya melihat honor miliknya', async () => {
@@ -100,6 +100,72 @@ describe('Payroll preview (estimasi honor)', () => {
     });
     expect(body.total_estimated_amount).toBe('50000'); // tidak bertambah
     expect(body.warnings).toEqual([expect.stringContaining('Noreen: 1 sesi approved belum memiliki tarif')]);
+
+    // Worst case: tarif baru dibuat SETELAH sesi di-approve → snapshot kosong diisi, honor ikut terhitung.
+    const rate = await admin
+      .post('/admin/tutor-rates', {
+        assignment_id: assignment.body.id as string,
+        rate_type: 'per_session',
+        rate_amount: '65000',
+        is_demo_assumption: true,
+        effective_from: '2026-11-01',
+      })
+      .expect(201);
+    expect(rate.body.applied_to_approved_sessions).toBe(1);
+
+    const after = payrollPreviewResponseSchema.parse((await admin.get('/admin/payroll/preview?period=2026-11').expect(200)).body);
+    expect(after.tutors.find((tutor) => tutor.tutor_id === TUTOR_IDS.tutorB)).toMatchObject({
+      approved_sessions_without_rate: 0,
+      estimated_amount: '65000',
+    });
+    expect(after.total_estimated_amount).toBe('115000');
+    expect(after.warnings).toEqual([]);
+  });
+
+  it('snapshot yang sudah ada tidak pernah ditimpa oleh tarif baru', async () => {
+    // s05 (Farhan–Aisyah, 31 Okt) sudah approved dengan snapshot Rp50.000.
+    const [current] = paginatedSchema(tutorRateSchema).parse(
+      (await admin.get(`/admin/tutor-rates?assignment_id=${ASSIGNMENT_IDS.tutorAMurid1Matematika}`).expect(200)).body,
+    ).items;
+    if (!current) throw new Error('tarif fixture tidak ada');
+    await admin.patch(`/admin/tutor-rates/${current.id}`, { effective_to: '2026-10-15' }).expect(200);
+    const next = await admin
+      .post('/admin/tutor-rates', {
+        assignment_id: ASSIGNMENT_IDS.tutorAMurid1Matematika,
+        rate_type: 'per_session',
+        rate_amount: '80000',
+        is_demo_assumption: false,
+        effective_from: '2026-10-16',
+      })
+      .expect(201);
+    expect(next.body.applied_to_approved_sessions).toBe(0);
+
+    const oct = payrollPreviewResponseSchema.parse((await admin.get('/admin/payroll/preview?period=2026-10').expect(200)).body);
+    const s05 = oct.tutors.flatMap((tutor) => tutor.sessions).find((line) => line.session_id === SESSION_IDS.s05);
+    expect(s05).toMatchObject({ rate_amount: '50000', amount: '50000', counted: true });
+    expect(oct.total_estimated_amount).toBe(EXPECTED_PAYROLL_2026_10.total_estimated_amount);
+  });
+
+  it('total dapat ditelusuri: Σ nilai sesi yang dihitung = estimasi; sesi lain tampil tanpa nominal', async () => {
+    const body = payrollPreviewResponseSchema.parse((await admin.get('/admin/payroll/preview?period=2026-10').expect(200)).body);
+    for (const tutor of body.tutors) {
+      const counted = tutor.sessions.filter((line) => line.counted);
+      expect(counted.every((line) => line.status === 'approved' && line.amount !== null)).toBe(true);
+      expect(tutor.sessions.filter((line) => !line.counted).every((line) => line.amount === null)).toBe(true);
+      expect(counted.reduce((sum, line) => sum + Number(line.amount), 0)).toBe(Number(tutor.estimated_amount));
+      expect(tutor.sessions.length).toBe(
+        tutor.approved_sessions + tutor.pending_sessions + tutor.revision_requested_sessions + tutor.rejected_sessions,
+      );
+      const dates = tutor.sessions.map((line) => line.lesson_date);
+      expect(dates).toEqual([...dates].sort());
+    }
+    const farhan = body.tutors.find((tutor) => tutor.tutor_id === TUTOR_IDS.tutorA);
+    expect(farhan?.sessions.find((line) => line.session_id === SESSION_IDS.s02)).toMatchObject({
+      status: 'pending',
+      counted: false,
+      rate_amount: null,
+      amount: null,
+    });
   });
 });
 
@@ -117,6 +183,15 @@ describe('Rekap bulanan', () => {
       approved_duration_minutes: 60,
     });
     expect(body.groups.reduce((sum, group) => sum + group.total_sessions, 0)).toBe(9);
+    // Total periode dari backend = jumlah semua grup.
+    expect(body.totals).toEqual({
+      total_sessions: 9,
+      approved_sessions: 4,
+      pending_sessions: 3,
+      revision_requested_sessions: 1,
+      rejected_sessions: 1,
+      approved_duration_minutes: 300,
+    });
   });
 
   it('group_by=subject dan default group_by=tutor', async () => {
@@ -128,7 +203,7 @@ describe('Rekap bulanan', () => {
 });
 
 describe('Ringkasan dashboard', () => {
-  it('Admin: status, finding pending review, honor berlabel simulasi', async () => {
+  it('Admin: status, finding pending review, honor dengan penanda tarif demo', async () => {
     const body = adminDashboardSummarySchema.parse((await admin.get('/admin/dashboard/summary?period=2026-10').expect(200)).body);
     expect(body).toMatchObject({
       active_tutors: 6,
@@ -136,7 +211,7 @@ describe('Ringkasan dashboard', () => {
       total_sessions: 9,
       status_counts: { pending: 3, approved: 4, revision_requested: 1, rejected: 1 },
       anomaly_findings_pending_review: 2,
-      honor: { estimated_amount: '200000', is_demo_assumption: true, demo_label: DEMO_RATE_LABEL },
+      honor: { estimated_amount: '200000', is_demo_assumption: true },
     });
   });
 

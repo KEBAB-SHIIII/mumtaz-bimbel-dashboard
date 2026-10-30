@@ -77,7 +77,7 @@ Semua integrasi eksternal harus dipisahkan dari aturan bisnis melalui service/ad
 - Ekspor menggunakan `lesson_date` untuk menentukan bulan laporan, bukan waktu submit atau waktu verifikasi.
 - Tab tujuan Google Sheets dibuat deterministik per bulan, misalnya `Absensi 2026-10`. Ekspor ulang bulan yang sama memperbarui isi tab tersebut, bukan melakukan append berulang yang menggandakan baris.
 - Kolom `no` hanya nomor urut tampilan/ekspor; setiap record punya UUID internal.
-- Data honor resmi dari UMKM belum tersedia. Untuk development gunakan **Rp50.000 per sesi** sebagai data dummy; selalu beri label simulasi, bukan tarif resmi.
+- Data honor resmi dari UMKM belum tersedia. Untuk development gunakan **Rp50.000 per sesi** sebagai data dummy; nominal dari tarif demo ditandai badge kecil "Tarif demo" di halaman Honor (D-20), bukan tarif resmi.
 - `learning_material` dimasukkan ke form dan database untuk pengembangan Progress Anak saat ini. `learning_notes` dan `next_focus` adalah field tambahan yang berguna; buat opsional jika belum disepakati sebagai wajib.
 - Sistem AI membantu mengklasifikasikan temuan anomali, terutama dugaan data duplikat. Temuan ditinjau admin; AI tidak otomatis menghapus, menolak, menyetujui sesi, atau mengubah honor.
 - Admin dan Tutor login menggunakan username + password.

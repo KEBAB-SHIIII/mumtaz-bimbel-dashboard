@@ -36,7 +36,7 @@ Membangun aplikasi full-stack TypeScript berbasis role (Admin, Tutor, Orang Tua)
    - Unit tests offline WAJIB menggunakan deterministic fake detector, bukan fake live.
 7. **Honor Simulasi Demo**:
    - Default tarif demo Rp50.000 per sesi (`is_demo_assumption=true`).
-   - UI WAJIB mencantumkan label _"Simulasi — bukan tarif resmi UMKM"_.
+   - Nominal dari tarif demo ditandai badge kecil **"Tarif demo"** di samping nominal pada halaman Honor (Admin `Honor Tutor`, Tutor `Honor Saya`). Label panjang "Simulasi — bukan tarif resmi UMKM" tidak dipakai lagi karena membingungkan (keputusan owner, `docs/17` D-20).
 
 ---
 

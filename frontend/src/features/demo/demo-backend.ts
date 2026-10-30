@@ -4,7 +4,6 @@
  * docs/04 (diverifikasi test terhadap schema kontrak). Bukan data Neon.
  */
 import {
-  DEMO_RATE_LABEL,
   isDateInPeriod,
   normalizeParentAccessCode,
   type AdminAttendanceDetail,
@@ -255,10 +254,27 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
           : [],
         approved_sessions_without_rate: counts.approved - priced.length,
         is_demo_assumption: isDemo,
+        sessions: [...own]
+          .sort((a, b) => a.lesson_date.localeCompare(b.lesson_date) || a.id.localeCompare(b.id))
+          .map((s) => {
+            const c = core(s);
+            const counted = s.status === 'approved' && s.rate_amount_snapshot !== null;
+            return {
+              session_id: s.id,
+              lesson_date: s.lesson_date,
+              student_name: c.student_name,
+              subject_name: c.subject_name,
+              duration_minutes: s.duration_minutes,
+              status: s.status,
+              rate_amount: counted ? s.rate_amount_snapshot : null,
+              is_demo_assumption: counted ? s.rate_is_demo_snapshot : null,
+              amount: counted ? s.rate_amount_snapshot : null,
+              counted,
+            };
+          }),
       };
     });
-    const isDemo = tutorsOut.some((t) => t.is_demo_assumption);
-    return { period, tutors: tutorsOut, total_estimated_amount: String(total), is_demo_assumption: isDemo, demo_label: isDemo ? DEMO_RATE_LABEL : null, warnings: [] };
+    return { period, tutors: tutorsOut, total_estimated_amount: String(total), is_demo_assumption: tutorsOut.some((t) => t.is_demo_assumption), warnings: [] };
   };
 
   const requireCsrf = (req: DemoRequest) => {
@@ -326,7 +342,7 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
           total_sessions: rows.length,
           status_counts: statusCounts(rows),
           anomaly_findings_pending_review: flags.filter((f) => f.review_status === 'pending_review' && ids.has(f.lesson_session_id)).length,
-          honor: { estimated_amount: p.total_estimated_amount, is_demo_assumption: p.is_demo_assumption, demo_label: p.demo_label },
+          honor: { estimated_amount: p.total_estimated_amount, is_demo_assumption: p.is_demo_assumption },
         });
       },
     ],
@@ -420,7 +436,18 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
           else g.rejected_sessions += 1;
           groups.set(key.id, g);
         }
-        return ok({ period: req.params.period, group_by: groupBy, groups: [...groups.values()].sort((a, b) => a.key_label.localeCompare(b.key_label)) });
+        const sorted = [...groups.values()].sort((a, b) => a.key_label.localeCompare(b.key_label));
+        const sum = (key: 'total_sessions' | 'approved_sessions' | 'pending_sessions' | 'revision_requested_sessions' | 'rejected_sessions' | 'approved_duration_minutes') =>
+          sorted.reduce((total, g) => total + g[key], 0);
+        const totals = {
+          total_sessions: sum('total_sessions'),
+          approved_sessions: sum('approved_sessions'),
+          pending_sessions: sum('pending_sessions'),
+          revision_requested_sessions: sum('revision_requested_sessions'),
+          rejected_sessions: sum('rejected_sessions'),
+          approved_duration_minutes: sum('approved_duration_minutes'),
+        };
+        return ok({ period: req.params.period, group_by: groupBy, groups: sorted, totals });
       },
     ],
     ['get', /^\/admin\/payroll\/preview$/, (req) => (requireRole('admin'), ok(payroll(req.params.period ?? '')))],
@@ -493,7 +520,7 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
         const tutorId = tutorIdOf(user);
         const rows = inPeriod(req.params.period ?? '').filter((s) => assignmentView(s.assignment_id).tutor_id === tutorId);
         const p = payroll(req.params.period ?? '', tutorId);
-        return ok({ period: req.params.period, status_counts: statusCounts(rows), honor: { estimated_amount: p.total_estimated_amount, is_demo_assumption: p.is_demo_assumption, demo_label: p.demo_label } });
+        return ok({ period: req.params.period, status_counts: statusCounts(rows), honor: { estimated_amount: p.total_estimated_amount, is_demo_assumption: p.is_demo_assumption } });
       },
     ],
     [

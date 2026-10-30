@@ -10,7 +10,7 @@
 - Admin/Tutor login dengan username + password; Orang Tua login dengan ID Akses Orang Tua acak/rahasia tanpa password. Kode akses adalah credential, bukan ID publik.
 - Browser memakai opaque session cookie HttpOnly/SameSite, Secure di production, origin allowlist dan CSRF protection. Baseline menggunakan server-side session store PostgreSQL (mis. `express-session` + store PostgreSQL); jangan memakai default MemoryStore untuk production atau menyimpan session credential di localStorage.
 - Modul anomaly mengklasifikasikan dugaan duplikasi/pola anomali setelah data tersimpan. Validasi dasar tetap deterministik; temuan tidak mengubah status/honor tanpa review Admin.
-- Aturan honor deterministik di backend; demo memakai Rp50.000 per sesi dari seed tarif dengan label simulasi.
+- Aturan honor deterministik di backend; demo memakai Rp50.000 per sesi dari seed tarif; UI menandainya dengan badge "Tarif demo" (D-20).
 
 ## 2. Diagram arsitektur
 

@@ -14,7 +14,7 @@ Untuk development sekarang, gunakan visual baseline yang netral dan mudah digant
 - Form menggunakan label persisten, tanda wajib/opsional, validasi di dekat field, pesan sukses hanya setelah server memastikan penyimpanan, dan pencegahan double submit.
 - Aksi yang berdampak (approve/reject, minta revisi, nonaktifkan data, rotasi ID akses, ekspor yang mengganti isi tab bulan) perlu konfirmasi yang sepadan.
 - Hindari dashboard penuh kartu/warna; gunakan hierarki tipografi, spacing konsisten dan tabel yang dapat dipindai.
-- Semua nilai dummy—khususnya honor Rp50.000/sesi—harus diberi label simulasi.
+- Nominal dari tarif demo ditandai badge kecil "Tarif demo" di halaman Honor (D-20).
 
 ## 3. Sistem visual yang menunggu keputusan tim
 
@@ -72,7 +72,7 @@ KPI relevan: tutor aktif, siswa aktif, sesi periode, pending verification, sesi 
 ## 8. Honor Tutor dan Honor Saya
 
 - Bedakan total estimasi, jumlah sesi approved, sesi yang belum disetujui, dan rincian nilai per sesi.
-- Tarif demo Rp50.000 per sesi ditampilkan dengan label **Simulasi — bukan tarif resmi UMKM**.
+- Nominal dari tarif demo ditandai badge kecil **"Tarif demo"** di samping nominal (D-20); tanpa alert/label panjang di dashboard.
 - Nominal selalu dari backend; frontend tidak menghitung ulang.
 - Jangan tampilkan status pembayaran aktual pada MVP.
 

@@ -13,7 +13,6 @@ export type SessionStatusCounts = z.infer<typeof sessionStatusCountsSchema>;
 const honorEstimateSchema = z.object({
   estimated_amount: moneyStringSchema,
   is_demo_assumption: z.boolean(),
-  demo_label: z.string().nullable(),
 });
 
 /** `GET /admin/dashboard/summary`. */

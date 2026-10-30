@@ -90,6 +90,15 @@ export function RecapPage() {
             getRowId={(row) => row.key_id}
             isFetching={recap.isFetching}
             empty={<EmptyState title="Belum ada sesi" description={`Belum ada sesi untuk ${formatPeriod(period)}.`} />}
+            footer={[
+              'Total',
+              recap.data.totals.total_sessions,
+              recap.data.totals.approved_sessions,
+              recap.data.totals.pending_sessions,
+              recap.data.totals.revision_requested_sessions,
+              recap.data.totals.rejected_sessions,
+              formatDuration(recap.data.totals.approved_duration_minutes),
+            ]}
           />
         )}
       </Card>

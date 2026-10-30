@@ -247,6 +247,16 @@ export const tutorRateSchema = z.object({
 });
 export type TutorRate = z.infer<typeof tutorRateSchema>;
 
+/**
+ * Respons `POST /admin/tutor-rates`. `applied_to_approved_sessions` = jumlah sesi approved
+ * yang sebelumnya TANPA snapshot tarif (disetujui sebelum tarif dibuat) dan kini memakai
+ * tarif ini. Snapshot yang sudah ada tidak pernah ditimpa.
+ */
+export const tutorRateCreatedSchema = tutorRateSchema.extend({
+  applied_to_approved_sessions: z.number().int().min(0),
+});
+export type TutorRateCreated = z.infer<typeof tutorRateCreatedSchema>;
+
 export const createTutorRateRequestSchema = z
   .strictObject({
     assignment_id: uuidSchema,

@@ -48,7 +48,6 @@ export async function getAdminDashboardSummary(ctx: ServiceContext, period: Peri
     honor: {
       estimated_amount: payroll.total_estimated_amount,
       is_demo_assumption: payroll.is_demo_assumption,
-      demo_label: payroll.demo_label,
     },
   };
 }
@@ -68,7 +67,6 @@ export async function getTutorDashboardSummary(
     honor: {
       estimated_amount: payroll.total_estimated_amount,
       is_demo_assumption: payroll.is_demo_assumption,
-      demo_label: payroll.demo_label,
     },
   };
 }

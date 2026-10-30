@@ -1,23 +1,93 @@
 import { eq } from 'drizzle-orm';
 import { Decimal } from 'decimal.js';
-import {
-  DEMO_RATE_LABEL,
-  type PayrollPreviewResponse,
-  type PayrollRateLine,
-  type PayrollTutorSummary,
-  type Period,
+import type {
+  PayrollPreviewResponse,
+  PayrollRateLine,
+  PayrollSessionLine,
+  PayrollTutorSummary,
+  Period,
+  SessionStatus,
 } from '@mumtaz/contracts';
 import { tutorAssignments } from '../db/schema.js';
 import { money } from '../lib/format.js';
 import type { ServiceContext } from './context.js';
-import { sessionsInPeriod } from './attendance/session-query.js';
+import { sessionsInPeriod, type SessionView } from './attendance/session-query.js';
+
+/** Sesi masuk nominal hanya bila approved DAN punya tarif snapshot yang lengkap. */
+function pricedSnapshot(row: SessionView): { rate: Decimal; isDemo: boolean } | null {
+  if (row.status !== 'approved' || row.rate_amount_snapshot === null || row.rate_is_demo_snapshot === null) return null;
+  return { rate: new Decimal(row.rate_amount_snapshot), isDemo: row.rate_is_demo_snapshot };
+}
+
+function toSessionLine(row: SessionView): PayrollSessionLine {
+  const priced = pricedSnapshot(row);
+  return {
+    session_id: row.id,
+    lesson_date: row.lesson_date,
+    student_name: row.student_name,
+    subject_name: row.subject_name,
+    duration_minutes: row.duration_minutes,
+    status: row.status as SessionStatus,
+    rate_amount: priced ? money(priced.rate) : null,
+    is_demo_assumption: priced ? priced.isDemo : null,
+    // Tarif per sesi (rate_type `per_session`): nilai sesi = tarif snapshot.
+    amount: priced ? money(priced.rate) : null,
+    counted: priced !== null,
+  };
+}
+
+function summarizeTutor(tutorId: string, tutorName: string, rows: SessionView[]): PayrollTutorSummary {
+  const lines = new Map<string, { rate: Decimal; isDemo: boolean; sessionIds: string[] }>();
+  const count = (status: SessionStatus) => rows.filter((row) => row.status === status).length;
+  let amount = new Decimal(0);
+
+  for (const row of rows) {
+    const priced = pricedSnapshot(row);
+    if (!priced) continue;
+    const key = `${priced.rate.toFixed()}|${priced.isDemo}`;
+    const line = lines.get(key) ?? { rate: priced.rate, isDemo: priced.isDemo, sessionIds: [] };
+    line.sessionIds.push(row.id);
+    lines.set(key, line);
+    amount = amount.plus(priced.rate);
+  }
+
+  const rateLines: PayrollRateLine[] = [...lines.values()]
+    .sort((a, b) => a.rate.comparedTo(b.rate) || Number(a.isDemo) - Number(b.isDemo))
+    .map((line) => ({
+      rate_amount: money(line.rate),
+      is_demo_assumption: line.isDemo,
+      sessions: line.sessionIds.length,
+      subtotal: money(line.rate.times(line.sessionIds.length)),
+      session_ids: [...line.sessionIds].sort(),
+    }));
+  const pricedCount = rateLines.reduce((sum, line) => sum + line.sessions, 0);
+
+  return {
+    tutor_id: tutorId,
+    tutor_name: tutorName,
+    approved_sessions: count('approved'),
+    pending_sessions: count('pending'),
+    revision_requested_sessions: count('revision_requested'),
+    rejected_sessions: count('rejected'),
+    estimated_amount: money(amount),
+    rate_lines: rateLines,
+    approved_sessions_without_rate: count('approved') - pricedCount,
+    is_demo_assumption: rateLines.some((line) => line.is_demo_assumption),
+    sessions: rows
+      .map(toSessionLine)
+      .sort((a, b) => a.lesson_date.localeCompare(b.lesson_date) || a.session_id.localeCompare(b.session_id)),
+  };
+}
 
 /**
- * Estimasi honor (docs/03 §9):
- * - hanya sesi `approved` yang menghasilkan nominal;
- * - nominal dari `rate_amount_snapshot` yang disimpan saat approve (tidak ada angka hard-code);
- * - aritmetika `decimal.js` (bukan floating point);
- * - sesi approved tanpa tarif tidak diberi nominal palsu, melainkan warning.
+ * Estimasi honor (docs/03 §9) — service yang SAMA untuk Admin (`Honor Tutor`) dan
+ * Tutor (`Honor Saya`, difilter ke tutor login):
+ * - periode berbasis `lesson_date`;
+ * - hanya sesi `approved` dengan tarif snapshot yang menghasilkan nominal;
+ * - nominal dari `rate_amount_snapshot` (bukan angka hard-code), aritmetika `decimal.js`;
+ * - sesi approved tanpa tarif tidak diberi nominal palsu, melainkan warning;
+ * - setiap tutor membawa rincian sesi sehingga total dapat ditelusuri ke sesi sumbernya.
+ * Ini estimasi, bukan catatan pembayaran.
  */
 export async function getPayrollPreview(
   ctx: ServiceContext,
@@ -30,87 +100,30 @@ export async function getPayrollPreview(
     options.tutorId ? eq(tutorAssignments.tutor_id, options.tutorId) : undefined,
   );
 
-  type Accumulator = Omit<PayrollTutorSummary, 'estimated_amount' | 'rate_lines'> & {
-    amount: Decimal;
-    lines: Map<string, { rate: Decimal; is_demo: boolean; session_ids: string[] }>;
-  };
-  const byTutor = new Map<string, Accumulator>();
-
+  const byTutor = new Map<string, { name: string; rows: SessionView[] }>();
   for (const row of rows) {
-    const acc =
-      byTutor.get(row.tutor_id) ??
-      ({
-        tutor_id: row.tutor_id,
-        tutor_name: row.tutor_name,
-        approved_sessions: 0,
-        pending_sessions: 0,
-        revision_requested_sessions: 0,
-        rejected_sessions: 0,
-        approved_sessions_without_rate: 0,
-        is_demo_assumption: false,
-        amount: new Decimal(0),
-        lines: new Map(),
-      } satisfies Accumulator);
-
-    switch (row.status) {
-      case 'approved': {
-        acc.approved_sessions += 1;
-        if (row.rate_amount_snapshot === null || row.rate_is_demo_snapshot === null) {
-          acc.approved_sessions_without_rate += 1;
-          break;
-        }
-        const rate = new Decimal(row.rate_amount_snapshot);
-        const lineKey = `${rate.toFixed()}|${row.rate_is_demo_snapshot}`;
-        const line = acc.lines.get(lineKey) ?? { rate, is_demo: row.rate_is_demo_snapshot, session_ids: [] };
-        line.session_ids.push(row.id);
-        acc.lines.set(lineKey, line);
-        acc.amount = acc.amount.plus(rate);
-        acc.is_demo_assumption ||= row.rate_is_demo_snapshot;
-        break;
-      }
-      case 'pending':
-        acc.pending_sessions += 1;
-        break;
-      case 'revision_requested':
-        acc.revision_requested_sessions += 1;
-        break;
-      case 'rejected':
-        acc.rejected_sessions += 1;
-        break;
-    }
-    byTutor.set(row.tutor_id, acc);
+    const group = byTutor.get(row.tutor_id) ?? { name: row.tutor_name, rows: [] };
+    group.rows.push(row);
+    byTutor.set(row.tutor_id, group);
   }
 
-  let total = new Decimal(0);
-  const warnings: string[] = [];
-  const tutors: PayrollTutorSummary[] = [...byTutor.values()]
-    .sort((a, b) => a.tutor_name.localeCompare(b.tutor_name) || a.tutor_id.localeCompare(b.tutor_id))
-    .map(({ amount, lines, ...summary }) => {
-      total = total.plus(amount);
-      if (summary.approved_sessions_without_rate > 0) {
-        warnings.push(
-          `${summary.tutor_name}: ${summary.approved_sessions_without_rate} sesi approved belum memiliki tarif; nominal tidak dihitung.`,
-        );
-      }
-      const rateLines: PayrollRateLine[] = [...lines.values()]
-        .sort((a, b) => a.rate.comparedTo(b.rate))
-        .map((line) => ({
-          rate_amount: money(line.rate),
-          is_demo_assumption: line.is_demo,
-          sessions: line.session_ids.length,
-          subtotal: money(line.rate.times(line.session_ids.length)),
-          session_ids: [...line.session_ids].sort(),
-        }));
-      return { ...summary, estimated_amount: money(amount), rate_lines: rateLines };
-    });
+  const tutors = [...byTutor.entries()]
+    .map(([tutorId, group]) => summarizeTutor(tutorId, group.name, group.rows))
+    .sort((a, b) => a.tutor_name.localeCompare(b.tutor_name) || a.tutor_id.localeCompare(b.tutor_id));
 
-  const isDemo = tutors.some((tutor) => tutor.is_demo_assumption);
+  const total = tutors.reduce((sum, tutor) => sum.plus(tutor.estimated_amount), new Decimal(0));
+  const warnings = tutors
+    .filter((tutor) => tutor.approved_sessions_without_rate > 0)
+    .map(
+      (tutor) =>
+        `${tutor.tutor_name}: ${tutor.approved_sessions_without_rate} sesi approved belum memiliki tarif; nominal tidak dihitung. Tambahkan tarif di Master Data → Tarif Honor.`,
+    );
+
   return {
     period,
     tutors,
     total_estimated_amount: money(total),
-    is_demo_assumption: isDemo,
-    demo_label: isDemo ? DEMO_RATE_LABEL : null,
+    is_demo_assumption: tutors.some((tutor) => tutor.is_demo_assumption),
     warnings,
   };
 }

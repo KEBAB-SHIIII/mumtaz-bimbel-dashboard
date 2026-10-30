@@ -24,10 +24,15 @@ export const recapGroupSchema = z.object({
 });
 export type RecapGroup = z.infer<typeof recapGroupSchema>;
 
+/** Total periode (dihitung backend; frontend tidak menjumlah ulang). */
+export const recapTotalsSchema = recapGroupSchema.omit({ key_id: true, key_label: true, session_ids: true });
+export type RecapTotals = z.infer<typeof recapTotalsSchema>;
+
 /** `GET /admin/recap`. */
 export const recapResponseSchema = z.object({
   period: periodSchema,
   group_by: recapGroupBySchema,
   groups: z.array(recapGroupSchema),
+  totals: recapTotalsSchema,
 });
 export type RecapResponse = z.infer<typeof recapResponseSchema>;

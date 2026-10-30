@@ -334,3 +334,10 @@ Schema Zod di `packages/contracts/src/` adalah bentuk implementasi kontrak ini. 
 - Batas atas durasi submit/revisi dapat dikonfigurasi lewat `ATTENDANCE_MAX_DURATION_MINUTES` (default 1440 = batas teknis kontrak). Melebihi batas → `422` field `duration_minutes`. Ini konfigurasi teknis, bukan aturan UMKM (O-12); durasi di atas `ANOMALY_DURATION_OUTLIER_MINUTES` tetap diterima dan hanya menjadi finding.
 - UI Tutor: detail sesi (waktu submit/verifikasi, alasan revisi/penolakan) dan form revisi untuk sesi `revision_requested` (`PATCH /tutor/me/attendance/:id`). Temuan anomali tidak ditampilkan ke Tutor.
 - UI Admin: status analisis **tidak ditampilkan** (keputusan owner) — Admin cukup melihat temuan anomali. `anomaly_analysis_status` tetap dipakai backend (resume worker, filter API `anomaly_status`) dan frontend memperbarui daftar/detail otomatis (polling 5 detik) selama ada analisis `pending` agar temuan baru muncul tanpa reload.
+
+### Detail implementasi Phase 07 — rekap & honor
+
+- `GET /admin/payroll/preview` dan `GET /tutor/me/payroll` (service sama, scope sesuai role): setiap tutor membawa `sessions[]` — semua sesi tutor pada periode (`lesson_date`), urut tanggal, dengan `status`, `rate_amount`/`is_demo_assumption` dari snapshot, `amount`, dan `counted`. Hanya sesi `approved` dengan snapshot tarif yang `counted=true`; Σ `amount` sesi `counted` = `estimated_amount` (dapat ditelusuri). Field `demo_label` dihapus (D-20); gunakan `is_demo_assumption`.
+- `GET /admin/recap` menambah `totals` (jumlah per status + durasi approved untuk seluruh periode), dihitung backend.
+- `POST /admin/tutor-rates` → `201 { ...TutorRate, applied_to_approved_sessions }`. Sesi approved milik assignment tersebut yang snapshot tarifnya masih kosong (di-approve sebelum tarif ada) dan `lesson_date`-nya dalam masa berlaku tarif baru diisi snapshot-nya dalam transaksi yang sama. Snapshot yang sudah ada tidak pernah ditimpa.
+- `GET /admin/dashboard/summary` & `GET /tutor/dashboard/summary`: `honor` = `{ estimated_amount, is_demo_assumption }`.

@@ -97,7 +97,7 @@ Jika model belum dikonfigurasi, gunakan fake detector hanya pada development/tes
 1. Admin memilih periode `YYYY-MM` di `Rekap` atau `Honor Tutor`.
 2. Backend memfilter sesi memakai `lesson_date`, bukan `submitted_at`/`reviewed_at`.
 3. Rekap menampilkan jumlah sesi per status, serta durasi approved; drill-down mengarah ke sesi sumber.
-4. Honor menggunakan hanya sesi approved dan tarif yang sesuai. Pada development, seed rate Rp50.000 per sesi dipakai untuk semua assignment demo dan semua UI terkait wajib berlabel `Simulasi — bukan tarif resmi UMKM`.
+4. Honor menggunakan hanya sesi approved dan tarif yang sesuai. Pada development, seed rate Rp50.000 per sesi dipakai untuk semua assignment demo dan nominalnya ditandai badge "Tarif demo" di halaman Honor (D-20).
 5. Tutor melihat hasil yang sama dari endpoint terpisah dengan scope dirinya sendiri.
 6. Status pembayaran aktual bukan scope MVP.
 

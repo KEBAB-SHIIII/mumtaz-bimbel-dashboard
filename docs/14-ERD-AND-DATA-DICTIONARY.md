@@ -256,7 +256,7 @@ Server memastikan assignment milik tutor login, masih valid untuk tanggal sesi, 
 | `assignment_id` | UUID FK → `tutor_assignments.id` NOT NULL | Konteks assignment tarif. |
 | `rate_type` | VARCHAR CHECK `per_session` untuk MVP saat ini | Rumus demo yang disepakati untuk development. Jangan mengasumsikan aturan tarif resmi UMKM. |
 | `rate_amount` | NUMERIC NOT NULL | Nominal IDR, bukan floating point. |
-| `is_demo_assumption` | BOOLEAN NOT NULL DEFAULT false | Jika true, UI harus menampilkan label tarif simulasi. |
+| `is_demo_assumption` | BOOLEAN NOT NULL DEFAULT false | Jika true, UI halaman Honor menandai nominal dengan badge "Tarif demo" (D-20). |
 | `effective_from` | DATE NOT NULL | Tanggal mulai berlaku. |
 | `effective_to` | DATE NULL | Tanggal akhir; NULL berarti masih berlaku. |
 | `created_at`, `updated_at` | TIMESTAMPTZ | Metadata. |

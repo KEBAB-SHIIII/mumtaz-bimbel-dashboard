@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router';
 import { StatusBadge } from '../../../components/ui/badge';
-import { DemoRateNotice, EmptyState, ErrorState, LoadingState } from '../../../components/ui/feedback';
+import { EmptyState, ErrorState, LoadingState } from '../../../components/ui/feedback';
 import { Card, PageHeader, StatCard } from '../../../components/ui/layout-primitives';
 import { PeriodSelector } from '../../../components/ui/period-selector';
 import { formatDuration, formatLessonDate, formatPeriod, formatRupiah } from '../../../lib/format';
@@ -43,7 +43,6 @@ export function AdminDashboardPage() {
           <StatCard
             label="Estimasi honor (sesi disetujui)"
             value={formatRupiah(summary.data.honor.estimated_amount)}
-            hint={<DemoRateNotice label={summary.data.honor.demo_label} />}
           />
         </dl>
       )}

@@ -1,13 +1,14 @@
-import { asc, count, eq } from 'drizzle-orm';
+import { and, asc, count, eq, gte, isNull, lte } from 'drizzle-orm';
 import type {
   CreateTutorRateRequest,
   Paginated,
   RateListQuery,
   RateType,
   TutorRate,
+  TutorRateCreated,
   UpdateTutorRateRequest,
 } from '@mumtaz/contracts';
-import { tutorAssignments, tutorRates } from '../../db/schema.js';
+import { lessonSessions, tutorAssignments, tutorRates } from '../../db/schema.js';
 import { iso, money } from '../../lib/format.js';
 import { notFound, validationFailed } from '../../lib/http-error.js';
 import { pageOffset, paginated } from '../../lib/pagination.js';
@@ -46,8 +47,16 @@ export async function getRate(ctx: ServiceContext, id: string): Promise<TutorRat
   return toRate(row);
 }
 
-/** Periode tarif yang overlap untuk assignment sama ditolak exclusion constraint (409). */
-export async function createRate(ctx: ServiceContext, input: CreateTutorRateRequest): Promise<TutorRate> {
+/**
+ * Membuat tarif. Periode yang overlap untuk assignment sama ditolak exclusion constraint (409).
+ *
+ * Worst case yang ditangani: sesi yang di-approve SEBELUM tarifnya ada menyimpan snapshot
+ * kosong dan tidak akan pernah masuk honor. Dalam transaksi yang sama, sesi approved milik
+ * assignment ini yang snapshot-nya masih kosong dan `lesson_date`-nya dalam masa berlaku
+ * tarif diisi snapshot dari tarif baru. Snapshot yang sudah terisi TIDAK pernah ditimpa,
+ * sehingga histori honor yang sudah dihitung tetap konsisten.
+ */
+export async function createRate(ctx: ServiceContext, input: CreateTutorRateRequest): Promise<TutorRateCreated> {
   const [assignment] = await ctx.db
     .select({ id: tutorAssignments.id })
     .from(tutorAssignments)
@@ -56,12 +65,34 @@ export async function createRate(ctx: ServiceContext, input: CreateTutorRateRequ
   if (!assignment) {
     throw validationFailed([{ field: 'assignment_id', message: 'Penugasan tidak ditemukan' }]);
   }
-  const [row] = await ctx.db
-    .insert(tutorRates)
-    .values({ ...input, effective_to: input.effective_to ?? null })
-    .returning();
-  if (!row) throw new Error('Insert tarif gagal');
-  return toRate(row);
+  return ctx.db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(tutorRates)
+      .values({ ...input, effective_to: input.effective_to ?? null })
+      .returning();
+    if (!row) throw new Error('Insert tarif gagal');
+
+    const backfilled = await tx
+      .update(lessonSessions)
+      .set({
+        rate_type_snapshot: row.rate_type,
+        rate_amount_snapshot: row.rate_amount,
+        rate_is_demo_snapshot: row.is_demo_assumption,
+        updated_at: ctx.now(),
+      })
+      .where(
+        and(
+          eq(lessonSessions.assignment_id, row.assignment_id),
+          eq(lessonSessions.status, 'approved'),
+          isNull(lessonSessions.rate_amount_snapshot),
+          gte(lessonSessions.lesson_date, row.effective_from),
+          row.effective_to ? lte(lessonSessions.lesson_date, row.effective_to) : undefined,
+        ),
+      )
+      .returning({ id: lessonSessions.id });
+
+    return { ...toRate(row), applied_to_approved_sessions: backfilled.length };
+  });
 }
 
 /**

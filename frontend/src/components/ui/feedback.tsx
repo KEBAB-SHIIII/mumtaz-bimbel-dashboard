@@ -1,6 +1,5 @@
-import { CircleAlert, FlaskConical, Inbox, Info, LoaderCircle, RotateCcw, TriangleAlert } from 'lucide-react';
+import { CircleAlert, Inbox, Info, LoaderCircle, RotateCcw, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { DEMO_RATE_LABEL } from '@mumtaz/contracts';
 import { toApiError } from '../../lib/api-error';
 import { cn } from '../../lib/cn';
 import { Button } from './button';
@@ -63,16 +62,5 @@ export function InlineAlert({ tone = 'info', title, children }: { tone?: AlertTo
         {children && <div className="text-muted">{children}</div>}
       </div>
     </div>
-  );
-}
-
-/** Label wajib untuk nominal demo (CLAUDE.md §2.7). */
-export function DemoRateNotice({ label = DEMO_RATE_LABEL }: { label?: string | null }) {
-  if (!label) return null;
-  return (
-    <p className="inline-flex items-center gap-1.5 rounded-md bg-info/10 px-2.5 py-1 text-xs font-medium text-info">
-      <FlaskConical aria-hidden className="size-3.5" />
-      {label}
-    </p>
   );
 }

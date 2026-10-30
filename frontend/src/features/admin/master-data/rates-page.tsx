@@ -3,7 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { DEMO_RATE_LABEL, createTutorRateRequestSchema, updateTutorRateRequestSchema, type TutorRate } from '@mumtaz/contracts';
+import { createTutorRateRequestSchema, updateTutorRateRequestSchema, type TutorRate } from '@mumtaz/contracts';
 import { DemoBadge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { DataTable } from '../../../components/ui/data-table';
@@ -14,7 +14,7 @@ import { Card, DescriptionList } from '../../../components/ui/layout-primitives'
 import { toApiError } from '../../../lib/api-error';
 import { formatLessonDate, formatRupiah } from '../../../lib/format';
 import { queryKeys } from '../../../lib/query-keys';
-import { createMasterData, updateMasterData } from '../api';
+import { createTutorRate, updateMasterData } from '../api';
 import { applyServerErrors, hasFieldErrors, stripEmpty, validateWith } from '../../../lib/form';
 import { CheckboxField, MASTER_PAGE_SIZE, MasterToolbar, useMasterList, useMasterOptions } from './master-data-shared';
 
@@ -39,7 +39,18 @@ function useAssignmentLabels() {
   return { items, labelOf };
 }
 
-function RateFormDialog({ rate, open, onClose }: { rate: TutorRate | null; open: boolean; onClose: () => void }) {
+function RateFormDialog({
+  rate,
+  open,
+  onClose,
+  onCreated,
+}: {
+  rate: TutorRate | null;
+  open: boolean;
+  onClose: () => void;
+  /** Jumlah sesi approved tanpa tarif yang kini memakai tarif baru. */
+  onCreated: (appliedToApprovedSessions: number) => void;
+}) {
   const queryClient = useQueryClient();
   const isEdit = rate !== null;
   const { items: assignments, labelOf } = useAssignmentLabels();
@@ -55,8 +66,19 @@ function RateFormDialog({ rate, open, onClose }: { rate: TutorRate | null; open:
   const { errors } = form.formState;
 
   const mutation = useMutation({
-    mutationFn: (body: object) => (isEdit ? updateMasterData('tutor-rates', rate.id, body) : createMasterData('tutor-rates', body)),
-    onSuccess: () => {
+    mutationFn: async (body: object) => {
+      if (isEdit) {
+        await updateMasterData('tutor-rates', rate.id, body);
+        return null;
+      }
+      return createTutorRate(body);
+    },
+    onSuccess: (created) => {
+      if (created) {
+        onCreated(created.applied_to_approved_sessions);
+        // Snapshot sesi bisa berubah → honor & dashboard ikut diperbarui.
+        void queryClient.invalidateQueries({ queryKey: ['admin'] });
+      }
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.masterDataAll('tutor-rates') });
       onClose();
     },
@@ -119,7 +141,7 @@ function RateFormDialog({ rate, open, onClose }: { rate: TutorRate | null; open:
             <FormField id="rate-effective_from" label="Berlaku mulai" required error={errors.effective_from?.message}>
               <Input id="rate-effective_from" type="date" aria-invalid={Boolean(errors.effective_from)} aria-describedby={describedBy('rate-effective_from', errors.effective_from?.message)} {...form.register('effective_from')} />
             </FormField>
-            <CheckboxField id="rate-is_demo_assumption" label="Tarif demo (simulasi)" description={`UI akan menampilkan label "${DEMO_RATE_LABEL}".`} {...form.register('is_demo_assumption')} />
+            <CheckboxField id="rate-is_demo_assumption" label="Tarif demo" description='Nominal honor dari tarif ini ditandai badge "Tarif demo" (belum tarif resmi UMKM).' {...form.register('is_demo_assumption')} />
           </>
         )}
         <FormField id="rate-effective_to" label="Berlaku sampai" hint={effectiveToHint} error={errors.effective_to?.message}>
@@ -135,6 +157,7 @@ export function RatesPage() {
   const { labelOf } = useAssignmentLabels();
   const [editing, setEditing] = useState<TutorRate | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [appliedCount, setAppliedCount] = useState<number | null>(null);
 
   const columns: ColumnDef<TutorRate, unknown>[] = [
     { id: 'assignment', header: 'Penugasan', cell: ({ row }) => labelOf(row.original.assignment_id) },
@@ -169,9 +192,13 @@ export function RatesPage() {
 
   return (
     <>
-      <InlineAlert tone="info" title={DEMO_RATE_LABEL}>
-        Tarif resmi UMKM belum diketahui. Tarif bertanda demo dipakai untuk simulasi honor.
-      </InlineAlert>
+      {appliedCount !== null && (
+        <InlineAlert tone="success" title="Tarif disimpan">
+          {appliedCount > 0
+            ? `${appliedCount} sesi yang sudah disetujui sebelumnya tanpa tarif kini memakai tarif ini dan masuk estimasi honor.`
+            : 'Tidak ada sesi disetujui tanpa tarif yang terdampak.'}
+        </InlineAlert>
+      )}
       <MasterToolbar createLabel="Tambah tarif" onCreate={() => { setEditing(null); setFormOpen(true); }} />
       <Card>
         {query.isPending ? (
@@ -190,7 +217,7 @@ export function RatesPage() {
           />
         )}
       </Card>
-      <RateFormDialog key={editing?.id ?? 'new'} rate={editing} open={formOpen} onClose={() => setFormOpen(false)} />
+      <RateFormDialog key={editing?.id ?? 'new'} rate={editing} open={formOpen} onClose={() => setFormOpen(false)} onCreated={setAppliedCount} />
     </>
   );
 }

@@ -12,6 +12,7 @@ import {
   studentSchema,
   subjectSchema,
   tutorAssignmentSchema,
+  tutorRateCreatedSchema,
   tutorRateSchema,
   tutorSchema,
   type AdminAttendanceListQuery,
@@ -105,4 +106,10 @@ export async function rotateParentAccessCode(id: string) {
 export async function reviewAnomalyFinding(id: string, input: AnomalyReviewRequest) {
   const { data } = await apiClient.patch<unknown>(`/admin/anomalies/${encodeURIComponent(id)}/review`, input);
   return anomalyFindingSchema.parse(data);
+}
+
+/** Membuat tarif; respons menyebut berapa sesi approved tanpa tarif yang kini memakai tarif ini. */
+export async function createTutorRate(body: object) {
+  const { data } = await apiClient.post<unknown>('/admin/tutor-rates', body);
+  return tutorRateCreatedSchema.parse(data);
 }

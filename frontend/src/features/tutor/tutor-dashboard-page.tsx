@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, NotebookPen } from 'lucide-react';
 import { Link } from 'react-router';
-import { DemoRateNotice, ErrorState, InlineAlert, LoadingState } from '../../components/ui/feedback';
+import { ErrorState, InlineAlert, LoadingState } from '../../components/ui/feedback';
 import { PageHeader, StatCard } from '../../components/ui/layout-primitives';
 import { PeriodSelector } from '../../components/ui/period-selector';
 import { useCurrentUser } from '../auth/session';
@@ -53,7 +53,6 @@ export function TutorDashboardPage() {
             <StatCard
               label="Estimasi honor"
               value={formatRupiah(summary.data.honor.estimated_amount)}
-              hint={<DemoRateNotice label={summary.data.honor.demo_label} />}
             />
           </dl>
         </>

@@ -37,7 +37,7 @@ Konten:
 - sesi `pending`, `approved`, `revision_requested`, dan `rejected`;
 - working default O-15: `approved` dan `rejected` terminal tanpa reopen/edit bebas pada MVP, tetapi kebijakan ini belum dikonfirmasi owner.
 - jumlah temuan anomali yang belum direview;
-- estimasi honor dari sesi approved, dengan label tarif dummy bila memakai seed Rp50.000/sesi;
+- estimasi honor dari sesi approved (penanda tarif demo hanya di halaman Honor, D-20);
 - daftar sesi terbaru dan tindakan admin yang perlu dilakukan.
 
 Jangan menampilkan angka pendapatan/laba bimbel karena sumber data pemasukan tidak termasuk scope.
@@ -93,7 +93,7 @@ Konten:
 - detail sesi sumber kalkulasi;
 - badge/peringatan **Tarif Demo** saat nominal masih simulasi.
 
-**Aturan development:** gunakan dummy rate **Rp50.000 per sesi** untuk assignment demo. Nilai harus berasal dari `tutor_rates`/seed konfigurasi, bukan angka yang tersebar atau hard-coded di kalkulator. Beri label `Simulasi — bukan tarif resmi UMKM`. Hanya sesi `approved` yang masuk estimasi. Jangan tampilkan status sudah dibayar karena payment tracking tidak termasuk MVP.
+**Aturan development:** gunakan dummy rate **Rp50.000 per sesi** untuk assignment demo. Nilai harus berasal dari `tutor_rates`/seed konfigurasi, bukan angka yang tersebar atau hard-coded di kalkulator. Nominal dari tarif demo ditandai badge kecil "Tarif demo" (D-20). Hanya sesi `approved` yang masuk estimasi. Jangan tampilkan status sudah dibayar karena payment tracking tidak termasuk MVP.
 
 ### 2.5 Master Data
 
@@ -106,7 +106,7 @@ Master Data adalah data referensi, bukan daftar transaksi absensi. Submenu:
 | Orang Tua/Wali | Profil wali, relasi anak, dan aksi generate/rotasi ID Akses Orang Tua | `users`, `parent_students`; hubungkan orang tua dengan siswa. Kode akses acak ditampilkan sekali saat dibuat/dirotasi, disimpan sebagai digest; jangan tampilkan ulang digest/kode lama |
 | Mata Pelajaran | Daftar mata pelajaran | `subjects`; tambah/edit/nonaktifkan |
 | Penugasan Tutor | Tutor + siswa + mapel + tanggal berlaku | `tutor_assignments`; menentukan opsi pada Form Tutor |
-| Tarif Honor | Tarif per sesi dan masa berlaku | `tutor_rates`; dibutuhkan untuk kalkulasi demo Rp50.000/sesi dengan label simulasi; tarif resmi belum diketahui |
+| Tarif Honor | Tarif per sesi dan masa berlaku | `tutor_rates`; dibutuhkan untuk kalkulasi demo Rp50.000/sesi (ditandai "Tarif demo"); tarif resmi belum diketahui |
 
 Gunakan soft deactivation untuk record yang sudah direferensikan sesi. Jangan hard-delete tutor/siswa atau menulis ulang histori. Untuk Tutor, bedakan status operasional (`tutors.is_active`, menentukan kelayakan penugasan/submit baru) dengan akses login (`users.is_active`, menentukan apakah akun boleh login). Perubahan status pada UI harus menyatakan efeknya dengan jelas. Jika `student_links` parent diubah, tampilkan konfirmasi bahwa akses progres anak yang dilepas akan langsung dicabut.
 

@@ -94,7 +94,7 @@ Detail isi per tab ada di `15-DASHBOARD-TABS.md`.
 - Data Absensi Admin, detail, persetujuan/revisi/penolakan, dan timestamp keputusan.
 - Riwayat Mengajar Tutor dan Progress Anak berbasis data sesi yang sama, dengan filter akses masing-masing.
 - Filter bulan dan rekap memakai `lesson_date`.
-- Honor per sesi dengan data tarif dummy Rp50.000/sesi, dari `tutor_rates` dan diberi label simulasi; hanya sesi approved dihitung.
+- Honor per sesi dengan data tarif dummy Rp50.000/sesi, dari `tutor_rates` dan ditandai badge "Tarif demo" (D-20); hanya sesi approved dihitung.
 - Anomaly module sebagai sumber temuan yang perlu diperiksa Admin, termasuk kandidat duplikasi; proses AI tidak boleh menggagalkan penyimpanan sesi.
 - Ekspor laporan absensi bulanan langsung ke Google Sheets dengan delapan header mentah. Ekspor mencakup semua status review; ekspor ulang memperbarui tab bulan terkait.
 - Proteksi akses, error/loading/empty states, dan tests alur inti.
@@ -136,7 +136,7 @@ Detail isi per tab ada di `15-DASHBOARD-TABS.md`.
 - [ ] Tutor tidak bisa memalsukan identitas atau mengirim assignment milik tutor lain.
 - [ ] Admin dapat melihat semua sesi, meninjau anomaly, dan memutuskan status.
 - [ ] Anomaly/AI finding tidak mengubah status sesi/honor secara otomatis.
-- [ ] Honor demo Rp50.000 per sesi hanya untuk sesi approved dan selalu diberi label simulasi.
+- [ ] Honor demo Rp50.000 per sesi hanya untuk sesi approved dan nominalnya ditandai badge "Tarif demo" (D-20).
 - [ ] Orang Tua hanya melihat sesi approved dan anak yang terhubung.
 - [ ] Rekap bulanan memakai `lesson_date`.
 - [ ] Ekspor Google Sheets berisi tepat delapan kolom mentah dengan urutan benar, menggunakan row filter yang telah dikonfirmasi (semua status review), dan re-export tidak menambah duplikasi.

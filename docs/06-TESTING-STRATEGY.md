@@ -9,7 +9,7 @@ Tes membuktikan aturan akses, validasi data, periode, verifikasi manual, klasifi
 - Validator submit form: field wajib, durasi bukan integer/tidak positif, tanggal tidak valid, assignment nonaktif, dan tutor tidak sesuai assignment.
 - Mapping sesi → row ekspor delapan kolom; `no` berurutan, tanggal/durasi konsisten, tanpa field tambahan.
 - Period filter `YYYY-MM` memakai `lesson_date`, termasuk sesi yang baru disubmit pada bulan berikutnya.
-- Payroll: hanya sesi approved; tarif dummy Rp50.000 per sesi dibaca dari `tutor_rates`; hasil decimal-safe dan diberi flag/label simulasi.
+- Payroll: hanya sesi approved; tarif dummy Rp50.000 per sesi dibaca dari `tutor_rates`; hasil decimal-safe dengan flag `is_demo_assumption` (UI: badge "Tarif demo").
 - Retry `PATCH` revisi: jika respons pertama hilang dan sesi sudah `pending` dengan payload editable yang identik, server mengembalikan sesi yang sama tanpa mengubah timestamp atau menjadwalkan analisis ulang kedua kali; state/payload berbeda menghasilkan `409 SESSION_STATE_CONFLICT`.
 - State transition: pending → approved/revision_requested/rejected; tutor hanya memperbaiki sesi miliknya yang revision_requested; setelah revisi kembali pending, `submitted_at` diperbarui, metadata review dibersihkan, finding lama menjadi `superseded`; sesi approved/rejected tidak dapat dibuka ulang pada baseline working default O-15; jika keputusan ini berubah, update state-machine tests.
 - Anomaly service membentuk/menilai kandidat duplikasi berdasarkan atribut sesi dan dapat mengembalikan `suspected_duplicate` dengan referensi sesi pembanding.
