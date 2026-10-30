@@ -335,10 +335,10 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
       /^\/admin\/attendance$/,
       (req) => {
         requireRole('admin');
-        const { status, tutor_id, student_id, subject_id, search } = req.params;
+        const { status, anomaly_status, tutor_id, student_id, subject_id, search } = req.params;
         const rows = inPeriod(req.params.period ?? '')
           .map(toListItem)
-          .filter((i) => (!status || i.status === status) && (!tutor_id || i.tutor_id === tutor_id) && (!student_id || i.student_id === student_id) && (!subject_id || i.subject_id === subject_id))
+          .filter((i) => (!status || i.status === status) && (!anomaly_status || i.anomaly_analysis_status === anomaly_status) && (!tutor_id || i.tutor_id === tutor_id) && (!student_id || i.student_id === student_id) && (!subject_id || i.subject_id === subject_id))
           .filter((i) => !search || [i.tutor_name, i.student_name, i.subject_name].some((v) => matches(v, search)))
           .sort((a, b) => b.lesson_date.localeCompare(a.lesson_date) || b.submitted_at.localeCompare(a.submitted_at));
         return ok(paginate(rows, req.params));
@@ -561,10 +561,49 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
       (req) => {
         const tutorId = tutorIdOf(requireRole('tutor'));
         const rows = inPeriod(req.params.period ?? '')
-          .filter((s) => assignmentView(s.assignment_id).tutor_id === tutorId && (!req.params.status || s.status === req.params.status))
+          .filter((s) => {
+            const a = assignmentView(s.assignment_id);
+            return a.tutor_id === tutorId && (!req.params.status || s.status === req.params.status) && (!req.params.student_id || a.student_id === req.params.student_id);
+          })
           .sort((a, b) => b.lesson_date.localeCompare(a.lesson_date))
           .map(toTutorSession);
         return ok(paginate(rows, req.params));
+      },
+    ],
+    [
+      'patch',
+      /^\/tutor\/me\/attendance\/([^/]+)$/,
+      (req, [id]) => {
+        const tutorId = tutorIdOf(requireRole('tutor'));
+        const session = sessions.find((s) => s.id === id);
+        if (!session || assignmentView(session.assignment_id).tutor_id !== tutorId) throw new DemoError(404, 'NOT_FOUND', 'Sesi tidak ditemukan');
+        if (session.status !== 'revision_requested') {
+          throw new DemoError(409, 'SESSION_STATE_CONFLICT', 'Sesi hanya dapat direvisi saat berstatus revision_requested');
+        }
+        const assignment = assignmentRows.find((a) => a.id === req.body.assignment_id);
+        if (!assignment || assignment.tutor_id !== tutorId || !assignment.is_active) {
+          throw new DemoError(422, 'VALIDATION_FAILED', 'Validasi gagal', [{ field: 'assignment_id', message: 'Penugasan tidak valid atau tidak aktif untuk tutor ini' }]);
+        }
+        const timestamp = now().toISOString();
+        Object.assign(session, {
+          assignment_id: assignment.id,
+          lesson_date: String(req.body.lesson_date),
+          duration_minutes: Number(req.body.duration_minutes),
+          learning_material: String(req.body.learning_material),
+          learning_notes: typeof req.body.learning_notes === 'string' ? req.body.learning_notes : null,
+          next_focus: typeof req.body.next_focus === 'string' ? req.body.next_focus : null,
+          status: 'pending',
+          anomaly_analysis_status: 'pending',
+          submitted_at: timestamp,
+          updated_at: timestamp,
+          reviewed_by_user_id: null,
+          reviewed_at: null,
+          admin_note: null,
+        });
+        for (const flag of flags.filter((f) => f.lesson_session_id === session.id && f.review_status !== 'superseded')) {
+          Object.assign(flag, { review_status: 'superseded', review_note: 'superseded_by_revision' });
+        }
+        return ok({ session: toTutorSession(session) });
       },
     ],
     ['get', /^\/tutor\/me\/payroll$/, (req) => ok(payroll(req.params.period ?? '', tutorIdOf(requireRole('tutor'))))],

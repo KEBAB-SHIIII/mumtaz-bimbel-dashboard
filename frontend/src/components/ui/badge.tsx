@@ -1,7 +1,5 @@
 import {
   CircleCheck,
-  CircleDashed,
-  CircleSlash,
   CircleX,
   Clock,
   FlaskConical,
@@ -10,7 +8,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { AnomalyAnalysisStatus, SessionStatus } from '@mumtaz/contracts';
+import type { SessionStatus } from '@mumtaz/contracts';
 import { cn } from '../../lib/cn';
 
 type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info';
@@ -46,23 +44,6 @@ export const SESSION_STATUS_LABELS = Object.fromEntries(
 
 export function StatusBadge({ status }: { status: SessionStatus }) {
   const config = SESSION_STATUS[status];
-  return (
-    <Badge tone={config.tone} icon={config.icon}>
-      {config.label}
-    </Badge>
-  );
-}
-
-const ANALYSIS_STATUS: Record<AnomalyAnalysisStatus, { label: string; tone: Tone; icon: LucideIcon }> = {
-  pending: { label: 'Analisis menunggu', tone: 'neutral', icon: CircleDashed },
-  completed: { label: 'Analisis selesai', tone: 'neutral', icon: CircleCheck },
-  failed: { label: 'Analisis gagal', tone: 'warning', icon: TriangleAlert },
-  not_evaluated: { label: 'Tidak dianalisis', tone: 'neutral', icon: CircleSlash },
-};
-
-/** Status proses analisis anomali — terpisah dari status review sesi. */
-export function AnalysisBadge({ status }: { status: AnomalyAnalysisStatus }) {
-  const config = ANALYSIS_STATUS[status];
   return (
     <Badge tone={config.tone} icon={config.icon}>
       {config.label}

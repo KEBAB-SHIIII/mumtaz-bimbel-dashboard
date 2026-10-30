@@ -15,6 +15,7 @@ import { usePeriodParam } from '../../../lib/period';
 import { queryKeys } from '../../../lib/query-keys';
 import { useSearchState } from '../../../lib/use-search-state';
 import { fetchAdminAttendance, fetchMasterData, type AttendanceFilters } from '../api';
+import { ANALYSIS_POLL_MS } from './analysis-polling';
 import { AttendanceDetailDialog } from './attendance-detail-dialog';
 
 const PAGE_SIZE = 20;
@@ -55,6 +56,9 @@ export function AttendancePage() {
     queryKey: queryKeys.admin.attendance(filters),
     queryFn: () => fetchAdminAttendance(filters),
     placeholderData: keepPreviousData,
+    // Tidak ditampilkan ke Admin; hanya agar temuan baru muncul otomatis setelah analisis selesai.
+    refetchInterval: (query) =>
+      query.state.data?.items.some((item) => item.anomaly_analysis_status === 'pending') ? ANALYSIS_POLL_MS : false,
   });
 
   const hasFilters = FILTER_KEYS.some((key) => values[key]);

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DURATION_MINUTES_TECHNICAL_MAX } from '@mumtaz/contracts';
 
 // Nilai kosong di .env ("KEY=") diperlakukan sebagai tidak diset.
 const optionalString = z.preprocess(
@@ -49,6 +50,13 @@ export const envSchema = z
     AUTH_RATE_LIMIT_MAX: positiveInt(5),
     AUTH_RATE_LIMIT_WINDOW_MINUTES: positiveInt(15),
     SEED_TUTOR_PASSWORD: optionalString,
+
+    /**
+     * Batas atas durasi sesi (menit) yang diterima saat submit/revisi. Default = batas teknis
+     * kontrak (24 jam); batas bisnis UMKM belum ditetapkan (O-12). Durasi di atas ambang
+     * anomali tetap diterima dan hanya menjadi finding (lihat ANOMALY_DURATION_OUTLIER_MINUTES).
+     */
+    ATTENDANCE_MAX_DURATION_MINUTES: z.coerce.number().int().min(1).max(DURATION_MINUTES_TECHNICAL_MAX).default(DURATION_MINUTES_TECHNICAL_MAX),
 
     GOOGLE_SHEETS_EXPORT_ENABLED: booleanFlag,
     GOOGLE_SHEETS_SPREADSHEET_ID: optionalString,

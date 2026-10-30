@@ -2,7 +2,7 @@
 
 Blueprint capstone Asah untuk membantu Bimbel Mumtaz Sampit memindahkan pencatatan sesi les tutor ke aplikasi, melakukan review absensi, membuat rekap bulanan, menghitung estimasi honor, dan menampilkan riwayat pembelajaran anak.
 
-> **Status:** Phase 01–05 selesai: fondasi monorepo, shared contracts + fixture, backend core (database, auth, role guard, master data, absensi, rekap, honor), frontend shell tiga role, dan modul anomali (rule engine + Gemini + review Admin). Alur revisi Tutor di UI (Phase 06) dan ekspor Google Sheets (Phase 08) belum dibangun. Data dan akun contoh sintetis. Tarif Rp50.000 per sesi adalah nilai demo, bukan tarif resmi UMKM.
+> **Status:** Phase 01–06 selesai: fondasi monorepo, shared contracts + fixture, backend core (database, auth, role guard, master data, absensi, rekap, honor), frontend shell tiga role, modul anomali (rule engine + Gemini + review Admin), dan alur submission–review end-to-end termasuk revisi oleh Tutor. Rekap/honor lanjutan (Phase 07) dan ekspor Google Sheets (Phase 08) belum dibangun. Data dan akun contoh sintetis. Tarif Rp50.000 per sesi adalah nilai demo, bukan tarif resmi UMKM.
 
 ## Menjalankan secara lokal
 

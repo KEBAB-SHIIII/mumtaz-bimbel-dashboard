@@ -175,6 +175,8 @@ export type AdminAttendanceListQuery = z.infer<typeof adminAttendanceListQuerySc
 export const tutorAttendanceListQuerySchema = paginationQuerySchema.extend({
   period: periodSchema,
   status: sessionStatusSchema.optional(),
+  /** Filter siswa (docs/15 §3.3); tetap dibatasi ke sesi milik tutor login. */
+  student_id: uuidSchema.optional(),
 });
 export type TutorAttendanceListQuery = z.infer<typeof tutorAttendanceListQuerySchema>;
 

@@ -8,7 +8,7 @@ Menyediakan rekap bulanan dan estimasi honor yang transparan, dihitung di backen
 
 - Gunakan tarif demo **Rp50.000 per sesi** untuk seluruh assignment pada seed development.
 - Simpan rate di `tutor_rates`: `rate_type='per_session'`, `rate_amount=50000`, `is_demo_assumption=true`.
-- Semua UI yang memakai rate demo harus menampilkan `Simulasi — bukan tarif resmi UMKM`.
+- Semua UI yang memakai rate demo harus menampilkan `Simulasi — bukan tarif resmi UMKM` apus aja bikin bingung.
 - Jangan hard-code Rp50.000 ke rumus atau komponen UI. Kalkulator membaca data tarif dan snapshot dari database.
 - Hanya sesi `approved` yang dihitung. `pending`, `revision_requested`, dan `rejected` ditampilkan terpisah serta tidak masuk total honor.
 - Honor adalah estimasi berdasarkan sesi disetujui, bukan catatan pembayaran aktual.

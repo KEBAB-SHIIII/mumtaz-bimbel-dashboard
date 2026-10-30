@@ -6,6 +6,7 @@ import {
   tutorAssignmentOptionSchema,
   tutorDashboardSummarySchema,
   tutorSessionSchema,
+  type ReviseAttendanceRequest,
   type SessionStatus,
   type SubmitAttendanceRequest,
 } from '@mumtaz/contracts';
@@ -31,6 +32,7 @@ export async function submitAttendance(input: SubmitAttendanceRequest) {
 export interface TutorAttendanceFilters {
   period: string;
   status?: SessionStatus | undefined;
+  student_id?: string | undefined;
   page: number;
   page_size: number;
 }
@@ -39,6 +41,12 @@ export async function fetchTutorAttendance(filters: TutorAttendanceFilters) {
   const params = Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== undefined));
   const { data } = await apiClient.get<unknown>('/tutor/me/attendance', { params });
   return paginatedSchema(tutorSessionSchema).parse(data);
+}
+
+/** `PATCH /tutor/me/attendance/:id` — hanya sesi milik sendiri berstatus `revision_requested`. */
+export async function reviseAttendance(id: string, input: ReviseAttendanceRequest) {
+  const { data } = await apiClient.patch<unknown>(`/tutor/me/attendance/${encodeURIComponent(id)}`, input);
+  return z.object({ session: tutorSessionSchema }).parse(data).session;
 }
 
 export async function fetchTutorPayroll(period: string) {

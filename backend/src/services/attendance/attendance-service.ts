@@ -84,19 +84,27 @@ async function findingsFor(db: DbOrTx, sessionIds: string[]): Promise<FlagRow[]>
 // ---------------------------------------------------------------------------
 
 /**
- * Assignment harus milik tutor login, aktif, siswanya aktif, dan berlaku pada
- * `lesson_date`. Tanggal masa depan menurut Asia/Jakarta ditolak (O-14, provisional).
+ * Aturan domain payload sesi (submit & revisi):
+ * - assignment milik tutor login, aktif, siswanya aktif, dan berlaku pada `lesson_date`;
+ * - tanggal masa depan menurut Asia/Jakarta ditolak (O-14, provisional);
+ * - durasi tidak melebihi `ATTENDANCE_MAX_DURATION_MINUTES` (konfigurasi, O-12).
  */
-async function assertAssignmentUsable(
+async function assertPayloadValid(
   ctx: ServiceContext,
   db: DbOrTx,
   tutorId: string,
-  assignmentId: string,
-  lessonDate: string,
+  input: Pick<SubmitAttendanceRequest, 'assignment_id' | 'lesson_date' | 'duration_minutes'>,
 ): Promise<void> {
+  const { assignment_id: assignmentId, lesson_date: lessonDate } = input;
   const details: ErrorDetail[] = [];
   if (isFutureLessonDate(lessonDate, ctx.now())) {
     details.push({ field: 'lesson_date', message: 'Tanggal les tidak boleh di masa depan (Asia/Jakarta)' });
+  }
+  if (input.duration_minutes > ctx.attendance.maxDurationMinutes) {
+    details.push({
+      field: 'duration_minutes',
+      message: `Durasi maksimal ${ctx.attendance.maxDurationMinutes} menit`,
+    });
   }
 
   const [assignment] = await db
@@ -237,7 +245,7 @@ export async function submitAttendance(
   if (!tutor.tutorActive) {
     throw new HttpError(403, 'FORBIDDEN', 'Profil tutor nonaktif; tidak dapat mengirim sesi baru');
   }
-  await assertAssignmentUsable(ctx, ctx.db, tutor.tutorId, input.assignment_id, input.lesson_date);
+  await assertPayloadValid(ctx, ctx.db, tutor.tutorId, input);
 
   const now = ctx.now();
   try {
@@ -275,6 +283,7 @@ export async function listTutorAttendance(
     eq(tutorAssignments.tutor_id, tutorId),
     lessonDateInPeriod(query.period),
     query.status ? eq(lessonSessions.status, query.status) : undefined,
+    query.student_id ? eq(tutorAssignments.student_id, query.student_id) : undefined,
   );
   const [rows, [total]] = await Promise.all([
     selectSessionView(ctx.db)
@@ -313,7 +322,7 @@ export async function reviseAttendance(
       throw stateConflict('Sesi hanya dapat direvisi saat berstatus revision_requested');
     }
 
-    await assertAssignmentUsable(ctx, tx, tutorId, input.assignment_id, input.lesson_date);
+    await assertPayloadValid(ctx, tx, tutorId, input);
 
     const now = ctx.now();
     const updated = await tx

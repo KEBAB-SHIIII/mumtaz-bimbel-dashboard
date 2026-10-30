@@ -2,15 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
-import { renderApp, useDemoBackend } from '../test/render';
-
-async function loginStaff(username: string, password: string) {
-  const user = userEvent.setup();
-  await user.type(await screen.findByLabelText(/^Username/), username);
-  await user.type(screen.getByLabelText(/^Password/), password);
-  await user.click(screen.getByRole('button', { name: 'Masuk' }));
-  return user;
-}
+import { choosePeriod, loginStaff, renderApp, useDemoBackend } from '../test/render';
 
 const navLinks = async () =>
   within(await screen.findByRole('navigation', { name: 'Navigasi utama' }))
@@ -77,9 +69,7 @@ describe('halaman berbasis periode', () => {
 
     await screen.findByRole('table');
     // Default periode = bulan berjalan; set eksplisit ke Okt 2026.
-    const period = screen.getByLabelText('Periode');
-    await user.clear(period);
-    await user.type(period, '2026-10');
+    await choosePeriod('2026-10');
     await waitFor(() => expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(10)); // header + 9
 
     await user.click(screen.getByRole('button', { name: 'Bulan berikutnya' }));
@@ -92,11 +82,9 @@ describe('halaman berbasis periode', () => {
     renderApp('/login');
     const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
     await user.click(await screen.findByRole('link', { name: 'Honor Tutor' }));
-    const period = await screen.findByLabelText('Periode');
-    await user.clear(period);
-    await user.type(period, '2026-10');
+    await choosePeriod('2026-10');
     expect((await screen.findAllByText('Simulasi — bukan tarif resmi UMKM')).length).toBeGreaterThan(0);
-    expect(screen.getByText('Farhan')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Farhan' })).toBeInTheDocument();
   });
 });
 
@@ -106,9 +94,7 @@ describe('Admin: keputusan review', () => {
     renderApp('/login');
     const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
     await user.click(await screen.findByRole('link', { name: 'Data Absensi' }));
-    const period = await screen.findByLabelText('Periode');
-    await user.clear(period);
-    await user.type(period, '2026-10');
+    await choosePeriod('2026-10');
     await user.selectOptions(screen.getByLabelText('Status'), 'pending');
 
     const detailButtons = await screen.findAllByRole('button', { name: /Lihat detail sesi/ });
@@ -135,9 +121,7 @@ describe('Admin: review temuan anomali', () => {
     renderApp('/login');
     const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
     await user.click(await screen.findByRole('link', { name: 'Data Absensi' }));
-    const period = await screen.findByLabelText('Periode');
-    await user.clear(period);
-    await user.type(period, '2026-10');
+    await choosePeriod('2026-10');
 
     // s10: durasi 240 menit dengan temuan duration_outlier.
     await user.click(await screen.findByRole('button', { name: /Lihat detail sesi Citra 12 Okt 2026/ }));
@@ -202,9 +186,7 @@ describe('Orang Tua: Progress Anak', () => {
     await user.type(await screen.findByLabelText(/ID Akses Orang Tua/), 'MUMTAZ-DEMO-PARENT-ACCESS-ONLY');
     await user.click(screen.getByRole('button', { name: 'Masuk' }));
     await user.click(await screen.findByRole('link', { name: 'Riwayat Pembelajaran' }));
-    const period = await screen.findByLabelText('Periode');
-    await user.clear(period);
-    await user.type(period, '2026-10');
+    await choosePeriod('2026-10');
 
     expect(await screen.findByText(/Penjumlahan dan pengurangan/)).toBeInTheDocument();
     expect(screen.getByText(/Perkalian dasar/)).toBeInTheDocument();

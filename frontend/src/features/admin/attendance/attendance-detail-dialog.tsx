@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, CircleX, PencilLine } from 'lucide-react';
 import { useState } from 'react';
 import type { AdminAttendanceDetail, SessionDecision, SessionDecisionRequest } from '@mumtaz/contracts';
-import { AnalysisBadge, StatusBadge } from '../../../components/ui/badge';
+import { StatusBadge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { ConfirmDialog, Modal } from '../../../components/ui/dialog';
 import { ErrorState, InlineAlert, LoadingState } from '../../../components/ui/feedback';
@@ -12,6 +12,7 @@ import { toApiError } from '../../../lib/api-error';
 import { formatDuration, formatLessonDate, formatTimestamp } from '../../../lib/format';
 import { queryKeys } from '../../../lib/query-keys';
 import { decideAttendance, fetchAdminAttendanceDetail } from '../api';
+import { ANALYSIS_POLL_MS } from './analysis-polling';
 import { FindingList } from './finding-list';
 
 const DECISIONS: Record<SessionDecision, { title: string; label: string; description: string; tone: 'primary' | 'danger'; noteRequired: boolean }> = {
@@ -47,9 +48,8 @@ function toDecisionRequest(decision: SessionDecision, note: string): SessionDeci
 function DetailBody({ detail }: { detail: AdminAttendanceDetail }) {
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap gap-2">
+      <div>
         <StatusBadge status={detail.status} />
-        <AnalysisBadge status={detail.anomaly_analysis_status} />
       </div>
       <DescriptionList
         items={[
@@ -82,6 +82,7 @@ export function AttendanceDetailDialog({ sessionId, onClose }: { sessionId: stri
     queryKey: queryKeys.admin.attendanceDetail(sessionId ?? ''),
     queryFn: () => fetchAdminAttendanceDetail(sessionId ?? ''),
     enabled: sessionId !== null,
+    refetchInterval: (query) => (query.state.data?.anomaly_analysis_status === 'pending' ? ANALYSIS_POLL_MS : false),
   });
 
   const mutation = useMutation({

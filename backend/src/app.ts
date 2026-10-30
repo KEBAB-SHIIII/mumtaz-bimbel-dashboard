@@ -38,7 +38,12 @@ const NO_ANOMALY_QUEUE: AnomalyQueue = { enqueue: () => undefined };
  * diuji offline (PGlite + session store yang sama dengan production).
  */
 export function createApp({ env, db, sessionStore, logger, anomalyQueue = NO_ANOMALY_QUEUE, now = () => new Date() }: AppDependencies) {
-  const ctx: ServiceContext = { db, now, parentAccessCodePepper: env.PARENT_ACCESS_CODE_PEPPER };
+  const ctx: ServiceContext = {
+    db,
+    now,
+    parentAccessCodePepper: env.PARENT_ACCESS_CODE_PEPPER,
+    attendance: { maxDurationMinutes: env.ATTENDANCE_MAX_DURATION_MINUTES },
+  };
   const sessionConfig = buildSessionConfig(env);
   const limiters = createAuthRateLimiters({
     max: env.AUTH_RATE_LIMIT_MAX,

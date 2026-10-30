@@ -305,3 +305,36 @@ describe('Progress Anak (Orang Tua)', () => {
     expect(summary.status).toBe(403);
   });
 });
+
+describe('batas durasi configurable (ATTENDANCE_MAX_DURATION_MINUTES, O-12)', () => {
+  it('durasi di atas batas konfigurasi → 422 pada field duration_minutes, sesi tidak tersimpan', async () => {
+    const strict = await createTestApp({ env: { ATTENDANCE_MAX_DURATION_MINUTES: '120' } });
+    try {
+      const tutor = await as.tutorA(strict.app);
+      const res = await tutor.post('/tutor/attendance', { ...validSubmitRequest, client_submission_id: uuid(400), duration_minutes: 150 });
+      expect(res.status).toBe(422);
+      expect(res.body.error.details).toEqual([{ field: 'duration_minutes', message: 'Durasi maksimal 120 menit' }]);
+      await tutor.post('/tutor/attendance', { ...validSubmitRequest, client_submission_id: uuid(401), duration_minutes: 120 }).expect(201);
+    } finally {
+      await strict.close();
+    }
+  });
+
+  it('default menerima durasi panjang (di atas ambang anomali) — hanya menjadi finding, bukan ditolak', async () => {
+    const res = await tutorA.post('/tutor/attendance', { ...validSubmitRequest, client_submission_id: uuid(402), duration_minutes: 300, lesson_date: '2026-10-21' });
+    expect(res.status).toBe(201);
+  });
+});
+
+describe('riwayat Tutor — filter siswa', () => {
+  it('student_id mempersempit hasil, tetap hanya sesi milik tutor login', async () => {
+    const res = await tutorA.get(`/tutor/me/attendance?period=2026-10&student_id=${STUDENT_IDS.murid2}&page_size=100`).expect(200);
+    const items = paginatedSchema(tutorSessionSchema).parse(res.body).items;
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.every((item) => item.student_name === 'Bima' && item.tutor_name === 'Farhan')).toBe(true);
+
+    // Siswa yang tidak diajar tutor ini → kosong (bukan data tutor lain).
+    const other = await tutorA.get(`/tutor/me/attendance?period=2026-10&student_id=${STUDENT_IDS.murid3}`).expect(200);
+    expect(other.body.total).toBe(0);
+  });
+});

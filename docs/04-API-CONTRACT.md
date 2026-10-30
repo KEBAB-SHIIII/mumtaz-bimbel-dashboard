@@ -327,3 +327,10 @@ Schema Zod di `packages/contracts/src/` adalah bentuk implementasi kontrak ini. 
 - Payload ke Gemini dipseudonimkan (alias S/A/T/P/M, tanggal, durasi); tanpa nama, materi/catatan, kontak, atau kode akses. Output divalidasi Zod secara ketat: setiap kandidat wajib diklasifikasikan, referensi tak dikenal → `failed` (tidak ada hasil parsial). Error transien 429/5xx di-retry sekali dalam batas waktu yang sama.
 - Hasil ditulis kondisional terhadap payload yang dianalisis; revisi di tengah analisis membuat hasil lama dibuang.
 - `PATCH /admin/anomalies/:id/review` → `200 AnomalyFinding`. Body `{ review_status: confirmed_anomaly|false_positive|resolved, review_note }` (note wajib). Temuan `superseded` → `409 SESSION_STATE_CONFLICT`. Tidak mengubah `lesson_sessions.status` atau honor.
+
+### Detail implementasi Phase 06 — submission & review end-to-end
+
+- `GET /tutor/me/attendance` menerima `student_id` (filter siswa, docs/15 §3.3); tetap dibatasi ke sesi milik tutor login.
+- Batas atas durasi submit/revisi dapat dikonfigurasi lewat `ATTENDANCE_MAX_DURATION_MINUTES` (default 1440 = batas teknis kontrak). Melebihi batas → `422` field `duration_minutes`. Ini konfigurasi teknis, bukan aturan UMKM (O-12); durasi di atas `ANOMALY_DURATION_OUTLIER_MINUTES` tetap diterima dan hanya menjadi finding.
+- UI Tutor: detail sesi (waktu submit/verifikasi, alasan revisi/penolakan) dan form revisi untuk sesi `revision_requested` (`PATCH /tutor/me/attendance/:id`). Temuan anomali tidak ditampilkan ke Tutor.
+- UI Admin: status analisis **tidak ditampilkan** (keputusan owner) — Admin cukup melihat temuan anomali. `anomaly_analysis_status` tetap dipakai backend (resume worker, filter API `anomaly_status`) dan frontend memperbarui daftar/detail otomatis (polling 5 detik) selama ada analisis `pending` agar temuan baru muncul tanpa reload.
