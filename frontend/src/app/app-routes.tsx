@@ -8,10 +8,8 @@ import { NotFoundPage } from './not-found-page';
 // Code splitting per halaman: tiap role hanya mengunduh halamannya sendiri.
 const AttendancePage = lazy(() => import('../features/admin/attendance/attendance-page').then((m) => ({ default: m.AttendancePage })));
 const AdminDashboardPage = lazy(() => import('../features/admin/dashboard/admin-dashboard-page').then((m) => ({ default: m.AdminDashboardPage })));
-const AssignmentsPage = lazy(() => import('../features/admin/master-data/assignments-page').then((m) => ({ default: m.AssignmentsPage })));
 const MasterDataLayout = lazy(() => import('../features/admin/master-data/master-data-shared').then((m) => ({ default: m.MasterDataLayout })));
 const ParentsPage = lazy(() => import('../features/admin/master-data/parents-page').then((m) => ({ default: m.ParentsPage })));
-const RatesPage = lazy(() => import('../features/admin/master-data/rates-page').then((m) => ({ default: m.RatesPage })));
 const StudentsPage = lazy(() => import('../features/admin/master-data/students-page').then((m) => ({ default: m.StudentsPage })));
 const SubjectsPage = lazy(() => import('../features/admin/master-data/subjects-page').then((m) => ({ default: m.SubjectsPage })));
 const TutorsPage = lazy(() => import('../features/admin/master-data/tutors-page').then((m) => ({ default: m.TutorsPage })));
@@ -47,8 +45,6 @@ export function AppRoutes() {
           <Route path="siswa" element={<StudentsPage />} />
           <Route path="orang-tua" element={<ParentsPage />} />
           <Route path="mapel" element={<SubjectsPage />} />
-          <Route path="penugasan" element={<AssignmentsPage />} />
-          <Route path="tarif" element={<RatesPage />} />
         </Route>
       </Route>
 

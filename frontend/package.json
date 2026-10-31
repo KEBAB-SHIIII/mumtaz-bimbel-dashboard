@@ -8,8 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
-    "test": "vitest run",
-    "dev:demo": "vite --mode demo"
+    "test": "vitest run"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.10",

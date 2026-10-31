@@ -12,7 +12,7 @@ import { toApiError } from '../../lib/api-error';
 import { formatLessonDate } from '../../lib/format';
 import { applyServerErrors, hasFieldErrors, validateWith } from '../../lib/form';
 import { queryKeys } from '../../lib/query-keys';
-import { fetchTutorAssignments, submitAttendance } from './api';
+import { fetchAttendanceOptions, submitAttendance } from './api';
 import {
   ATTENDANCE_SERVER_FIELDS,
   AttendanceFields,
@@ -30,7 +30,7 @@ export function AttendanceFormPage() {
   const queryClient = useQueryClient();
   const [submissionId, setSubmissionId] = useState(() => crypto.randomUUID());
   const [savedDate, setSavedDate] = useState<string | null>(null);
-  const assignments = useQuery({ queryKey: queryKeys.tutor.assignments, queryFn: fetchTutorAssignments });
+  const options = useQuery({ queryKey: queryKeys.tutor.attendanceOptions, queryFn: fetchAttendanceOptions });
   const form = useForm<AttendanceFormValues>({ defaultValues: EMPTY_ATTENDANCE_VALUES });
 
   const mutation = useMutation({
@@ -55,8 +55,8 @@ export function AttendanceFormPage() {
     if (payload) mutation.mutate(payload);
   });
 
-  if (assignments.isPending) return <LoadingState />;
-  if (assignments.isError) return <ErrorState error={assignments.error} onRetry={() => void assignments.refetch()} />;
+  if (options.isPending) return <LoadingState />;
+  if (options.isError) return <ErrorState error={options.error} onRetry={() => void options.refetch()} />;
 
   return (
     <>
@@ -69,9 +69,9 @@ export function AttendanceFormPage() {
         </InlineAlert>
       )}
 
-      {assignments.data.length === 0 ? (
+      {options.data.students.length === 0 || options.data.subjects.length === 0 ? (
         <Card>
-          <EmptyState title="Belum ada penugasan aktif" description="Hubungi Admin untuk mendapatkan penugasan siswa dan mata pelajaran." />
+          <EmptyState title="Belum ada murid atau mata pelajaran" description="Hubungi Admin untuk menambahkan data murid dan mata pelajaran di Master Data." />
         </Card>
       ) : (
         <Card>
@@ -81,7 +81,7 @@ export function AttendanceFormPage() {
                 <InlineAlert tone="danger" title="Absensi belum tersimpan">{toApiError(mutation.error).message}</InlineAlert>
               </div>
             )}
-            <AttendanceFields form={form} assignments={assignments.data} tutorName={user.full_name} idPrefix="attendance" />
+            <AttendanceFields form={form} options={options.data} tutorName={user.full_name} idPrefix="attendance" />
             <div className="flex justify-end md:col-span-2">
               <Button type="submit" loading={mutation.isPending} icon={<Send aria-hidden className="size-4" />}>
                 Kirim absensi

@@ -10,10 +10,9 @@ const statusCountsFields = {
   rejected_sessions: z.number().int().min(0),
 };
 
-/** Rincian per nilai tarif snapshot, agar nominal dapat ditelusuri ke sesi. */
+/** Rincian per nilai tarif snapshot (tarif tunggal per sesi, D-24), agar nominal dapat ditelusuri ke sesi. */
 export const payrollRateLineSchema = z.object({
   rate_amount: moneyStringSchema,
-  is_demo_assumption: z.boolean(),
   sessions: z.number().int().min(1),
   subtotal: moneyStringSchema,
   session_ids: z.array(uuidSchema),
@@ -33,7 +32,6 @@ export const payrollSessionLineSchema = z.object({
   status: sessionStatusSchema,
   /** Tarif snapshot saat approve; `null` bila belum approved atau tarif tidak ada. */
   rate_amount: moneyStringSchema.nullable(),
-  is_demo_assumption: z.boolean().nullable(),
   /** Nilai sesi yang dihitung; `null` bila tidak masuk total. */
   amount: moneyStringSchema.nullable(),
   counted: z.boolean(),
@@ -49,7 +47,6 @@ export const payrollTutorSummarySchema = z.object({
   rate_lines: z.array(payrollRateLineSchema),
   /** Sesi approved tanpa tarif valid: tidak diberi nominal palsu, tampilkan warning. */
   approved_sessions_without_rate: z.number().int().min(0),
-  is_demo_assumption: z.boolean(),
   /** Rincian sesi (urut tanggal les); total = Σ `amount` dari sesi `counted`. */
   sessions: z.array(payrollSessionLineSchema),
 });
@@ -60,8 +57,6 @@ export const payrollPreviewResponseSchema = z.object({
   period: periodSchema,
   tutors: z.array(payrollTutorSummarySchema),
   total_estimated_amount: moneyStringSchema,
-  /** Ada nominal dari tarif demo → UI menampilkan badge "Tarif demo" (keputusan owner, CLAUDE.md §2.7). */
-  is_demo_assumption: z.boolean(),
   warnings: z.array(z.string()),
 });
 export type PayrollPreviewResponse = z.infer<typeof payrollPreviewResponseSchema>;

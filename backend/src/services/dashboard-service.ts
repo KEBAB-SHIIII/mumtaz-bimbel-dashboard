@@ -6,7 +6,7 @@ import type {
   SessionStatusCounts,
   TutorDashboardSummary,
 } from '@mumtaz/contracts';
-import { anomalyFlags, lessonSessions, students, tutorAssignments, tutors, users } from '../db/schema.js';
+import { anomalyFlags, lessonSessions, students, tutors, users } from '../db/schema.js';
 import type { ServiceContext } from './context.js';
 import { lessonDateInPeriod, sessionsInPeriod, type SessionView } from './attendance/session-query.js';
 import { assertParentLinked } from './parent-service.js';
@@ -45,10 +45,7 @@ export async function getAdminDashboardSummary(ctx: ServiceContext, period: Peri
     total_sessions: rows.length,
     status_counts: statusCounts(rows),
     anomaly_findings_pending_review: pendingFindings?.value ?? 0,
-    honor: {
-      estimated_amount: payroll.total_estimated_amount,
-      is_demo_assumption: payroll.is_demo_assumption,
-    },
+    honor: { estimated_amount: payroll.total_estimated_amount },
   };
 }
 
@@ -58,16 +55,13 @@ export async function getTutorDashboardSummary(
   period: Period,
 ): Promise<TutorDashboardSummary> {
   const [rows, payroll] = await Promise.all([
-    sessionsInPeriod(ctx.db, period, eq(tutorAssignments.tutor_id, tutorId)),
+    sessionsInPeriod(ctx.db, period, eq(lessonSessions.tutor_id, tutorId)),
     getPayrollPreview(ctx, period, { tutorId }),
   ]);
   return {
     period,
     status_counts: statusCounts(rows),
-    honor: {
-      estimated_amount: payroll.total_estimated_amount,
-      is_demo_assumption: payroll.is_demo_assumption,
-    },
+    honor: { estimated_amount: payroll.total_estimated_amount },
   };
 }
 
@@ -82,7 +76,7 @@ export async function getParentDashboardSummary(
   const rows = await sessionsInPeriod(
     ctx.db,
     period,
-    and(eq(tutorAssignments.student_id, studentId), eq(lessonSessions.status, 'approved')),
+    and(eq(lessonSessions.student_id, studentId), eq(lessonSessions.status, 'approved')),
   );
   return {
     period,

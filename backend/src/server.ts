@@ -4,10 +4,12 @@ import { EnvValidationError, integrationStatus, parseEnv } from './config/env.js
 import { createSessionStore } from './config/session.js';
 import { createDatabase } from './db/client.js';
 import { createAnomalyDetector } from './integrations/anomaly/create-detector.js';
+import { createSheetsExporter } from './integrations/google-sheets/sheets-api-exporter.js';
 import { safeErrorMessage } from './lib/db-errors.js';
 import { createLogger } from './lib/logger.js';
 import { analyzeSession, listPendingAnalysis } from './services/anomaly/anomaly-service.js';
 import { AnomalyWorker } from './services/anomaly/anomaly-worker.js';
+import { expireStaleRuns } from './services/exports/attendance-export-service.js';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -36,7 +38,8 @@ function main() {
     logger,
   );
 
-  const app = createApp({ env, db: database.db, sessionStore, logger, anomalyQueue: anomalyWorker });
+  const sheetsExporter = createSheetsExporter(env, logger);
+  const app = createApp({ env, db: database.db, sessionStore, logger, anomalyQueue: anomalyWorker, sheetsExporter });
   const integrations = integrationStatus(env);
 
   const server = app.listen(env.PORT, () => {
@@ -44,9 +47,13 @@ function main() {
       port: env.PORT,
       prefix: env.API_PREFIX,
       node_env: env.NODE_ENV,
-      google_sheets_export: integrations.googleSheetsExport,
+      google_sheets_export: sheetsExporter ? integrations.googleSheetsExport : 'disabled',
       anomaly_provider: integrations.anomalyProvider,
     });
+    // Run ekspor yang tertinggal `running` akibat restart tidak boleh mengunci periode.
+    expireStaleRuns(database.db, new Date())
+      .then((count) => count > 0 && logger.warn('sheets_export_stale_runs_expired', { count }))
+      .catch((error: unknown) => logger.error('sheets_export_expire_failed', { error_message: safeErrorMessage(error) }));
     // Restart tidak boleh membuat status analisis menggantung.
     anomalyWorker
       .resume(() => listPendingAnalysis(database.db))

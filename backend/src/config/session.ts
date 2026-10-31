@@ -2,11 +2,11 @@ import connectPgSimple from 'connect-pg-simple';
 import session from 'express-session';
 import type { Pool } from 'pg';
 import type { SessionStorePool } from '../db/client.js';
-import type { Env } from './env.js';
+import { isHttpsOrigin, type Env } from './env.js';
 
 /**
  * Konfigurasi session (docs/03 §2.1, docs/04 §1): cookie opaque HttpOnly,
- * SameSite=Lax, Secure di production; idle timeout bergulir; store PostgreSQL
+ * SameSite=Lax, Secure bila origin HTTPS; idle timeout bergulir; store PostgreSQL
  * `app_sessions` (bukan MemoryStore).
  */
 export const SESSION_COOKIE_NAME = 'mumtaz.sid';
@@ -42,7 +42,8 @@ export function buildSessionConfig(env: Env): SessionConfig {
     cookie: {
       httpOnly: true,
       sameSite: 'lax',
-      secure: env.NODE_ENV === 'production',
+      // Mengikuti protokol origin, bukan NODE_ENV: production di http://localhost tetap bisa login.
+      secure: isHttpsOrigin(env.FRONTEND_ORIGIN),
       path: '/',
       maxAge: env.SESSION_IDLE_TIMEOUT_MINUTES * 60 * 1000,
     },

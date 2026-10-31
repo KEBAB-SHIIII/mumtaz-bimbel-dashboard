@@ -1,11 +1,13 @@
 /**
  * FAKE API BACKEND (in-memory) — data SINTETIS dari `@mumtaz/contracts/fixtures`.
- * Dipakai mode demo (`VITE_API_MODE=demo`) dan test UI. Bentuk respons mengikuti
+ * KHUSUS TEST UI (tidak ikut build aplikasi). Bentuk respons mengikuti
  * docs/04 (diverifikasi test terhadap schema kontrak). Bukan data Neon.
  */
 import {
   isDateInPeriod,
   normalizeParentAccessCode,
+  sheetTitleForPeriod,
+  spreadsheetUrl,
   type AdminAttendanceDetail,
   type AdminAttendanceListItem,
   type AnomalyFinding,
@@ -15,19 +17,16 @@ import {
   type PayrollPreviewResponse,
   type RecapResponse,
   type SessionStatus,
+  type SheetExportRun,
   type Student,
   type Subject,
   type Tutor,
-  type TutorAssignment,
-  type TutorRate,
   type TutorSession,
 } from '@mumtaz/contracts';
 import {
   TEST_ONLY_CREDENTIALS,
   fixtureAnomalyFlags,
-  fixtureAssignments,
   fixtureParentStudents,
-  fixtureRates,
   fixtureSessions,
   fixtureStudents,
   fixtureSubjects,
@@ -36,7 +35,7 @@ import {
   type FixtureLessonSession,
 } from '@mumtaz/contracts/fixtures';
 
-export interface DemoRequest {
+export interface FakeRequest {
   method: string;
   path: string;
   params: Record<string, string>;
@@ -44,14 +43,15 @@ export interface DemoRequest {
   csrfHeader: string | undefined;
 }
 
-export interface DemoResponse {
+export interface FakeResponse {
   status: number;
   data: unknown;
 }
 
 const FIXED_TIMESTAMP = '2026-09-01T00:00:00.000Z';
+const DEMO_SPREADSHEET_ID = 'demo-spreadsheet-id';
 
-class DemoError extends Error {
+class FakeError extends Error {
   constructor(
     readonly status: number,
     readonly code: ErrorCode,
@@ -62,14 +62,14 @@ class DemoError extends Error {
   }
 }
 
-const ok = (data: unknown, status = 200): DemoResponse => ({ status, data });
+const ok = (data: unknown, status = 200): FakeResponse => ({ status, data });
 
 function demoId(prefix: string, n: number) {
   return `00000000-0000-4000-${prefix}-${String(n).padStart(12, '0')}`;
 }
 
-/** State in-memory; `createDemoBackend()` membuat salinan bersih (mis. per test). */
-export function createDemoBackend(options: { now?: () => Date } = {}) {
+/** State in-memory; `createFakeBackend()` membuat salinan bersih (mis. per test). */
+export function createFakeBackend(options: { now?: () => Date } = {}) {
   const now = options.now ?? (() => new Date());
   let counter = 1000;
   const nextId = (prefix: string) => demoId(prefix, (counter += 1));
@@ -97,10 +97,12 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
   const students: Student[] = fixtureStudents.map((s) => ({ ...s, created_at: FIXED_TIMESTAMP, updated_at: FIXED_TIMESTAMP }));
   const subjects: Subject[] = fixtureSubjects.map((s) => ({ ...s, created_at: FIXED_TIMESTAMP, updated_at: FIXED_TIMESTAMP }));
   let links = fixtureParentStudents.map((l) => ({ ...l }));
-  const assignmentRows = fixtureAssignments.map((a) => ({ ...a }));
-  const rates: TutorRate[] = fixtureRates.map((r) => ({ ...r, created_at: FIXED_TIMESTAMP, updated_at: FIXED_TIMESTAMP }));
   const sessions: FixtureLessonSession[] = fixtureSessions.map((s) => ({ ...s }));
   const flags = fixtureAnomalyFlags.map((f) => ({ ...f }));
+  /** Spreadsheet demo in-memory: judul tab → jumlah baris data (tanpa header). */
+  const sheetTabs = new Map<string, number>();
+  const exportRuns: SheetExportRun[] = [];
+  let failNextExport = false;
 
   let csrfToken = 'demo-csrf-anonymous';
   let currentUserId: string | null = null;
@@ -108,33 +110,18 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
   // --- helpers ---------------------------------------------------------------
 
   const tutorName = (tutorId: string) => tutors.find((t) => t.id === tutorId)?.full_name ?? '';
-  const assignmentView = (id: string): TutorAssignment => {
-    const a = assignmentRows.find((row) => row.id === id);
-    if (!a) throw new DemoError(404, 'NOT_FOUND', 'Penugasan tidak ditemukan');
-    return {
-      ...a,
-      tutor_name: tutorName(a.tutor_id),
-      student_name: students.find((s) => s.id === a.student_id)?.full_name ?? '',
-      subject_name: subjects.find((s) => s.id === a.subject_id)?.name ?? '',
-      created_at: FIXED_TIMESTAMP,
-      updated_at: FIXED_TIMESTAMP,
-    };
-  };
-
   const core = (s: FixtureLessonSession) => {
-    const a = assignmentView(s.assignment_id);
-    const student = students.find((st) => st.id === a.student_id);
+    const student = students.find((st) => st.id === s.student_id);
     return {
       id: s.id,
-      assignment_id: s.assignment_id,
-      tutor_id: a.tutor_id,
-      tutor_name: a.tutor_name,
-      student_id: a.student_id,
-      student_name: a.student_name,
+      tutor_id: s.tutor_id,
+      tutor_name: tutorName(s.tutor_id),
+      student_id: s.student_id,
+      student_name: student?.full_name ?? '',
       grade: student?.grade ?? '',
       school_name: student?.school_name ?? '',
-      subject_id: a.subject_id,
-      subject_name: a.subject_name,
+      subject_id: s.subject_id,
+      subject_name: subjects.find((su) => su.id === s.subject_id)?.name ?? '',
       lesson_date: s.lesson_date,
       duration_minutes: s.duration_minutes,
     };
@@ -199,7 +186,7 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
 
   const requireUser = (): AuthUser => {
     const user = users.find((u) => u.id === currentUserId);
-    if (!user || !user.is_active) throw new DemoError(401, 'UNAUTHENTICATED', 'Sesi tidak valid atau sudah berakhir');
+    if (!user || !user.is_active) throw new FakeError(401, 'UNAUTHENTICATED', 'Sesi tidak valid atau sudah berakhir');
     const tutor = tutors.find((t) => t.user_id === user.id);
     return {
       id: user.id,
@@ -212,7 +199,7 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
 
   const requireRole = (role: AuthUser['role']) => {
     const user = requireUser();
-    if (user.role !== role) throw new DemoError(403, 'FORBIDDEN', 'Anda tidak memiliki akses ke resource ini');
+    if (user.role !== role) throw new FakeError(403, 'FORBIDDEN', 'Anda tidak memiliki akses ke resource ini');
     return user;
   };
 
@@ -228,10 +215,10 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
 
   /** Fake payroll: approved × snapshot (nilai fixture bilangan bulat rupiah). */
   const payroll = (period: string, tutorId?: string): PayrollPreviewResponse => {
-    const rows = inPeriod(period).filter((s) => !tutorId || assignmentView(s.assignment_id).tutor_id === tutorId);
+    const rows = inPeriod(period).filter((s) => !tutorId || s.tutor_id === tutorId);
     const byTutor = new Map<string, FixtureLessonSession[]>();
     for (const row of rows) {
-      const id = assignmentView(row.assignment_id).tutor_id;
+      const id = row.tutor_id;
       byTutor.set(id, [...(byTutor.get(id) ?? []), row]);
     }
     let total = 0;
@@ -240,7 +227,6 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
       const priced = own.filter((s) => s.status === 'approved' && s.rate_amount_snapshot !== null);
       const amount = priced.reduce((sum, s) => sum + Number(s.rate_amount_snapshot), 0);
       total += amount;
-      const isDemo = priced.some((s) => s.rate_is_demo_snapshot === true);
       return {
         tutor_id: id,
         tutor_name: tutorName(id),
@@ -250,10 +236,9 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
         rejected_sessions: counts.rejected,
         estimated_amount: String(amount),
         rate_lines: priced.length
-          ? [{ rate_amount: priced[0]?.rate_amount_snapshot ?? '0', is_demo_assumption: isDemo, sessions: priced.length, subtotal: String(amount), session_ids: priced.map((s) => s.id).sort() }]
+          ? [{ rate_amount: priced[0]?.rate_amount_snapshot ?? '0', sessions: priced.length, subtotal: String(amount), session_ids: priced.map((s) => s.id).sort() }]
           : [],
         approved_sessions_without_rate: counts.approved - priced.length,
-        is_demo_assumption: isDemo,
         sessions: [...own]
           .sort((a, b) => a.lesson_date.localeCompare(b.lesson_date) || a.id.localeCompare(b.id))
           .map((s) => {
@@ -267,25 +252,32 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
               duration_minutes: s.duration_minutes,
               status: s.status,
               rate_amount: counted ? s.rate_amount_snapshot : null,
-              is_demo_assumption: counted ? s.rate_is_demo_snapshot : null,
               amount: counted ? s.rate_amount_snapshot : null,
               counted,
             };
           }),
       };
     });
-    return { period, tutors: tutorsOut, total_estimated_amount: String(total), is_demo_assumption: tutorsOut.some((t) => t.is_demo_assumption), warnings: [] };
+    return { period, tutors: tutorsOut, total_estimated_amount: String(total), warnings: [] };
   };
 
-  const requireCsrf = (req: DemoRequest) => {
+  const requireCsrf = (req: FakeRequest) => {
     if (req.method !== 'get' && req.csrfHeader !== csrfToken) {
-      throw new DemoError(403, 'CSRF_INVALID', 'Permintaan tidak dapat diverifikasi. Muat ulang halaman lalu coba lagi.');
+      throw new FakeError(403, 'CSRF_INVALID', 'Permintaan tidak dapat diverifikasi. Muat ulang halaman lalu coba lagi.');
     }
+  };
+
+  /** Murid & mapel pilihan Tutor harus ada dan aktif (tanpa penugasan). */
+  const validateChoice = (body: Record<string, unknown>) => {
+    const details: { field: string; message: string }[] = [];
+    if (!students.some((st) => st.id === body.student_id && st.is_active)) details.push({ field: 'student_id', message: 'Murid tidak ditemukan atau tidak aktif' });
+    if (!subjects.some((su) => su.id === body.subject_id && su.is_active)) details.push({ field: 'subject_id', message: 'Mata pelajaran tidak ditemukan atau tidak aktif' });
+    if (details.length > 0) throw new FakeError(422, 'VALIDATION_FAILED', 'Validasi gagal', details);
   };
 
   // --- routes ------------------------------------------------------------------
 
-  type Handler = (req: DemoRequest, match: string[]) => DemoResponse;
+  type Handler = (req: FakeRequest, match: string[]) => FakeResponse;
   const routes: [string, RegExp, Handler][] = [
     ['get', /^\/health$/, () => ok({ status: 'ok' })],
     ['get', /^\/auth\/csrf$/, () => ok({ csrf_token: csrfToken })],
@@ -296,7 +288,7 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
       (req) => {
         const user = users.find((u) => u.username === String(req.body.username ?? '').toLowerCase() && u.role !== 'parent');
         if (!user || passwords.get(user.id) !== req.body.password || !user.is_active) {
-          throw new DemoError(401, 'UNAUTHENTICATED', 'Kredensial tidak valid');
+          throw new FakeError(401, 'UNAUTHENTICATED', 'Kredensial tidak valid');
         }
         currentUserId = user.id;
         csrfToken = `demo-csrf-${user.id}`;
@@ -309,7 +301,7 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
       (req) => {
         const id = parentCodes.get(normalizeParentAccessCode(String(req.body.access_code ?? '')));
         const user = users.find((u) => u.id === id);
-        if (!user || !user.is_active) throw new DemoError(401, 'UNAUTHENTICATED', 'Kredensial tidak valid');
+        if (!user || !user.is_active) throw new FakeError(401, 'UNAUTHENTICATED', 'Kredensial tidak valid');
         currentUserId = user.id;
         csrfToken = `demo-csrf-${user.id}`;
         return ok({ user: requireUser(), csrf_token: csrfToken });
@@ -342,7 +334,7 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
           total_sessions: rows.length,
           status_counts: statusCounts(rows),
           anomaly_findings_pending_review: flags.filter((f) => f.review_status === 'pending_review' && ids.has(f.lesson_session_id)).length,
-          honor: { estimated_amount: p.total_estimated_amount, is_demo_assumption: p.is_demo_assumption },
+          honor: { estimated_amount: p.total_estimated_amount },
         });
       },
     ],
@@ -366,7 +358,7 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
       (_req, [id]) => {
         requireRole('admin');
         const s = sessions.find((row) => row.id === id);
-        if (!s) throw new DemoError(404, 'NOT_FOUND', 'Sesi tidak ditemukan');
+        if (!s) throw new FakeError(404, 'NOT_FOUND', 'Sesi tidak ditemukan');
         return ok(toDetail(s));
       },
     ],
@@ -376,21 +368,18 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
       (req, [id]) => {
         const admin = requireRole('admin');
         const s = sessions.find((row) => row.id === id);
-        if (!s) throw new DemoError(404, 'NOT_FOUND', 'Sesi tidak ditemukan');
-        if (s.status !== 'pending') throw new DemoError(409, 'SESSION_STATE_CONFLICT', 'Hanya sesi berstatus pending yang dapat diputuskan');
+        if (!s) throw new FakeError(404, 'NOT_FOUND', 'Sesi tidak ditemukan');
+        if (s.status !== 'pending') throw new FakeError(409, 'SESSION_STATE_CONFLICT', 'Hanya sesi berstatus pending yang dapat diputuskan');
         const decision = req.body.decision as SessionStatus;
         const note = typeof req.body.admin_note === 'string' ? req.body.admin_note.trim() : '';
-        if (decision !== 'approved' && !note) throw new DemoError(422, 'VALIDATION_FAILED', 'Validasi gagal', [{ field: 'admin_note', message: 'Wajib diisi' }]);
-        const rate = rates.find((r) => r.assignment_id === s.assignment_id && r.effective_from <= s.lesson_date && (!r.effective_to || r.effective_to >= s.lesson_date));
+        if (decision !== 'approved' && !note) throw new FakeError(422, 'VALIDATION_FAILED', 'Validasi gagal', [{ field: 'admin_note', message: 'Wajib diisi' }]);
         Object.assign(s, {
           status: decision,
           admin_note: note || null,
           reviewed_by_user_id: admin.id,
           reviewed_at: now().toISOString(),
           updated_at: now().toISOString(),
-          ...(decision === 'approved' && rate
-            ? { rate_type_snapshot: rate.rate_type, rate_amount_snapshot: rate.rate_amount, rate_is_demo_snapshot: rate.is_demo_assumption }
-            : {}),
+          ...(decision === 'approved' ? { rate_amount_snapshot: '50000' } : {}),
         });
         return ok(toDetail(s));
       },
@@ -401,14 +390,14 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
       (req, [id]) => {
         const admin = requireRole('admin');
         const flag = flags.find((f) => f.id === id);
-        if (!flag) throw new DemoError(404, 'NOT_FOUND', 'Temuan anomali tidak ditemukan');
+        if (!flag) throw new FakeError(404, 'NOT_FOUND', 'Temuan anomali tidak ditemukan');
         if (flag.review_status === 'superseded') {
-          throw new DemoError(409, 'SESSION_STATE_CONFLICT', 'Temuan sudah digantikan oleh revisi sesi dan tidak dapat direview');
+          throw new FakeError(409, 'SESSION_STATE_CONFLICT', 'Temuan sudah digantikan oleh revisi sesi dan tidak dapat direview');
         }
         const status = req.body.review_status;
         const note = typeof req.body.review_note === 'string' ? req.body.review_note.trim() : '';
         if ((status !== 'confirmed_anomaly' && status !== 'false_positive' && status !== 'resolved') || !note) {
-          throw new DemoError(422, 'VALIDATION_FAILED', 'Validasi gagal');
+          throw new FakeError(422, 'VALIDATION_FAILED', 'Validasi gagal');
         }
         // Hanya temuan yang berubah; status sesi tidak disentuh.
         Object.assign(flag, { review_status: status, review_note: note, reviewed_by_user_id: admin.id, reviewed_at: now().toISOString() });
@@ -450,6 +439,68 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
         return ok({ period: req.params.period, group_by: groupBy, groups: sorted, totals });
       },
     ],
+    [
+      'post',
+      /^\/admin\/reports\/google-sheets\/attendance$/,
+      (req) => {
+        requireRole('admin');
+        const period = String(req.body.period ?? '');
+        if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) throw new FakeError(422, 'VALIDATION_FAILED', 'Validasi gagal');
+        // Semua status review ikut (O-08); tab periode diganti isinya.
+        const records = inPeriod(period).length;
+        const title = sheetTitleForPeriod(period);
+        const existing = sheetTabs.get(title) ?? 0;
+        if (records === 0 && existing > 0 && req.body.confirm_empty_replace !== true) {
+          throw new FakeError(
+            409,
+            'EMPTY_EXPORT_CONFIRMATION_REQUIRED',
+            `Tidak ada sesi pada periode ini, sedangkan tab ${title} berisi ${existing} baris. Konfirmasi untuk mengganti isinya dengan laporan kosong.`,
+          );
+        }
+        const timestamp = now().toISOString();
+        if (failNextExport) {
+          failNextExport = false;
+          const message = 'Akses ke spreadsheet ditolak. Pastikan service account memiliki akses Editor.';
+          exportRuns.unshift({
+            id: nextId('9e00'),
+            period,
+            spreadsheet_id: DEMO_SPREADSHEET_ID,
+            spreadsheet_url: spreadsheetUrl(DEMO_SPREADSHEET_ID),
+            sheet_title: title,
+            records_exported: 0,
+            status: 'failed',
+            safe_error_message: message,
+            started_at: timestamp,
+            completed_at: timestamp,
+          });
+          throw new FakeError(503, 'INTEGRATION_UNAVAILABLE', message);
+        }
+        sheetTabs.set(title, records);
+        const run: SheetExportRun = {
+          id: nextId('9e00'),
+          period,
+          spreadsheet_id: DEMO_SPREADSHEET_ID,
+          spreadsheet_url: spreadsheetUrl(DEMO_SPREADSHEET_ID),
+          sheet_title: title,
+          records_exported: records,
+          status: 'succeeded',
+          safe_error_message: null,
+          started_at: timestamp,
+          completed_at: timestamp,
+        };
+        exportRuns.unshift(run);
+        const { safe_error_message: _error, started_at: _started, ...exported } = run;
+        return ok({ export: exported });
+      },
+    ],
+    [
+      'get',
+      /^\/admin\/reports\/google-sheets\/attendance\/history$/,
+      (req) => {
+        requireRole('admin');
+        return ok(paginate(exportRuns.filter((run) => !req.params.period || run.period === req.params.period), req.params));
+      },
+    ],
     ['get', /^\/admin\/payroll\/preview$/, (req) => (requireRole('admin'), ok(payroll(req.params.period ?? '')))],
 
     // Admin — Master Data (list + create/update ringkas)
@@ -457,8 +508,38 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
     ['get', /^\/admin\/students$/, (req) => (requireRole('admin'), ok(paginate(students.filter((s) => matches(s.full_name, req.params.search)), req.params)))],
     ['get', /^\/admin\/subjects$/, (req) => (requireRole('admin'), ok(paginate(subjects.filter((s) => matches(s.name, req.params.search)), req.params)))],
     ['get', /^\/admin\/parents$/, (req) => (requireRole('admin'), ok(paginate(users.filter((u) => u.role === 'parent' && matches(u.full_name, req.params.search)).map(toParent), req.params)))],
-    ['get', /^\/admin\/tutor-assignments$/, (req) => (requireRole('admin'), ok(paginate(assignmentRows.map((a) => assignmentView(a.id)), req.params)))],
-    ['get', /^\/admin\/tutor-rates$/, (req) => (requireRole('admin'), ok(paginate(rates.filter((r) => !req.params.assignment_id || r.assignment_id === req.params.assignment_id), req.params)))],
+    [
+      'post',
+      /^\/admin\/tutors$/,
+      (req) => {
+        requireRole('admin');
+        const username = String(req.body.username ?? '');
+        if (users.some((u) => u.username === username)) {
+          throw new FakeError(409, 'CONFLICT', 'Konflik data', [{ field: 'username', message: 'Username sudah dipakai' }]);
+        }
+        const userId = nextId('8001');
+        const user = { id: userId, full_name: String(req.body.full_name), username, email: null, role: 'tutor' as const, is_active: true };
+        users.push(user);
+        const timestamp = now().toISOString();
+        const tutor: Tutor = { id: nextId('8002'), user_id: userId, full_name: user.full_name, username, phone: typeof req.body.phone === 'string' ? req.body.phone : null, is_active: true, login_active: true, created_at: timestamp, updated_at: timestamp };
+        tutors.push(tutor);
+        const temporaryPassword = `Fake-${String(counter).padStart(4, '0')}-Pass`;
+        passwords.set(userId, temporaryPassword);
+        return ok({ tutor, temporary_password: temporaryPassword }, 201);
+      },
+    ],
+    [
+      'post',
+      /^\/admin\/tutors\/([^/]+)\/reset-password$/,
+      (_req, [id]) => {
+        requireRole('admin');
+        const tutor = tutors.find((t) => t.id === id);
+        if (!tutor) throw new FakeError(404, 'NOT_FOUND', 'Tutor tidak ditemukan');
+        const temporaryPassword = `Fake-${String((counter += 1)).padStart(4, '0')}-Pass`;
+        passwords.set(tutor.user_id, temporaryPassword);
+        return ok({ tutor, temporary_password: temporaryPassword });
+      },
+    ],
     [
       'post',
       /^\/admin\/students$/,
@@ -475,7 +556,7 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
       (req, [id]) => {
         requireRole('admin');
         const student = students.find((s) => s.id === id);
-        if (!student) throw new DemoError(404, 'NOT_FOUND', 'Siswa tidak ditemukan');
+        if (!student) throw new FakeError(404, 'NOT_FOUND', 'Siswa tidak ditemukan');
         Object.assign(student, req.body, { updated_at: now().toISOString() });
         return ok(student);
       },
@@ -487,7 +568,7 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
         requireRole('admin');
         const name = String(req.body.name);
         if (subjects.some((s) => s.name.toLowerCase() === name.toLowerCase())) {
-          throw new DemoError(409, 'CONFLICT', 'Nama mata pelajaran sudah ada', [{ field: 'name', message: 'Nama mata pelajaran sudah ada' }]);
+          throw new FakeError(409, 'CONFLICT', 'Nama mata pelajaran sudah ada', [{ field: 'name', message: 'Nama mata pelajaran sudah ada' }]);
         }
         const subject: Subject = { id: nextId('8004'), name, is_active: true, created_at: now().toISOString(), updated_at: now().toISOString() };
         subjects.push(subject);
@@ -506,7 +587,7 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
         const studentLinks = Array.isArray(req.body.student_links) ? (req.body.student_links as { student_id: string; relationship?: string | null }[]) : [];
         links = [...links, ...studentLinks.map((l) => ({ parent_user_id: id, student_id: l.student_id, relationship: l.relationship ?? null }))];
         const user = users.find((u) => u.id === id);
-        if (!user) throw new DemoError(500, 'INTERNAL_ERROR', 'Gagal');
+        if (!user) throw new FakeError(500, 'INTERNAL_ERROR', 'Gagal');
         return ok({ parent: toParent(user), access_code: code }, 201);
       },
     ],
@@ -518,30 +599,20 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
       (req) => {
         const user = requireRole('tutor');
         const tutorId = tutorIdOf(user);
-        const rows = inPeriod(req.params.period ?? '').filter((s) => assignmentView(s.assignment_id).tutor_id === tutorId);
+        const rows = inPeriod(req.params.period ?? '').filter((s) => s.tutor_id === tutorId);
         const p = payroll(req.params.period ?? '', tutorId);
-        return ok({ period: req.params.period, status_counts: statusCounts(rows), honor: { estimated_amount: p.total_estimated_amount, is_demo_assumption: p.is_demo_assumption } });
+        return ok({ period: req.params.period, status_counts: statusCounts(rows), honor: { estimated_amount: p.total_estimated_amount } });
       },
     ],
     [
       'get',
-      /^\/tutor\/me\/assignments$/,
+      /^\/tutor\/attendance-options$/,
       () => {
-        const tutorId = tutorIdOf(requireRole('tutor'));
-        const items = assignmentRows
-          .filter((a) => a.tutor_id === tutorId && a.is_active)
-          .map((a) => {
-            const student = students.find((s) => s.id === a.student_id);
-            const subject = subjects.find((s) => s.id === a.subject_id);
-            return {
-              assignment_id: a.id,
-              student: { id: a.student_id, full_name: student?.full_name ?? '', grade: student?.grade ?? '', school_name: student?.school_name ?? '' },
-              subject: { id: a.subject_id, name: subject?.name ?? '' },
-              start_date: a.start_date,
-              end_date: a.end_date,
-            };
-          });
-        return ok({ items });
+        requireRole('tutor');
+        return ok({
+          students: students.filter((st) => st.is_active).map(({ id, full_name, grade, school_name }) => ({ id, full_name, grade, school_name })).sort((x, y) => x.full_name.localeCompare(y.full_name)),
+          subjects: subjects.filter((su) => su.is_active).map(({ id, name }) => ({ id, name })).sort((x, y) => x.name.localeCompare(y.name)),
+        });
       },
     ],
     [
@@ -553,15 +624,14 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
         const existing = sessions.find((s) => s.client_submission_id === body.client_submission_id);
         const response = (s: FixtureLessonSession) => ({ session: { id: s.id, client_submission_id: s.client_submission_id, status: s.status, anomaly_analysis_status: s.anomaly_analysis_status, submitted_at: s.submitted_at } });
         if (existing) return ok(response(existing), 201);
-        const assignment = assignmentRows.find((a) => a.id === body.assignment_id);
-        if (!assignment || assignment.tutor_id !== tutorId || !assignment.is_active) {
-          throw new DemoError(422, 'VALIDATION_FAILED', 'Validasi gagal', [{ field: 'assignment_id', message: 'Penugasan tidak valid atau tidak aktif untuk tutor ini' }]);
-        }
+        validateChoice(body);
         const timestamp = now().toISOString();
         const session: FixtureLessonSession = {
           id: nextId('8000'),
           client_submission_id: String(body.client_submission_id),
-          assignment_id: assignment.id,
+          tutor_id: tutorId,
+          student_id: String(body.student_id),
+          subject_id: String(body.subject_id),
           lesson_date: String(body.lesson_date),
           duration_minutes: Number(body.duration_minutes),
           learning_material: String(body.learning_material),
@@ -569,9 +639,7 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
           next_focus: typeof body.next_focus === 'string' ? body.next_focus : null,
           status: 'pending',
           anomaly_analysis_status: 'pending',
-          rate_type_snapshot: null,
           rate_amount_snapshot: null,
-          rate_is_demo_snapshot: null,
           reviewed_by_user_id: null,
           submitted_at: timestamp,
           reviewed_at: null,
@@ -588,10 +656,7 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
       (req) => {
         const tutorId = tutorIdOf(requireRole('tutor'));
         const rows = inPeriod(req.params.period ?? '')
-          .filter((s) => {
-            const a = assignmentView(s.assignment_id);
-            return a.tutor_id === tutorId && (!req.params.status || s.status === req.params.status) && (!req.params.student_id || a.student_id === req.params.student_id);
-          })
+          .filter((s) => s.tutor_id === tutorId && (!req.params.status || s.status === req.params.status) && (!req.params.student_id || s.student_id === req.params.student_id))
           .sort((a, b) => b.lesson_date.localeCompare(a.lesson_date))
           .map(toTutorSession);
         return ok(paginate(rows, req.params));
@@ -603,17 +668,15 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
       (req, [id]) => {
         const tutorId = tutorIdOf(requireRole('tutor'));
         const session = sessions.find((s) => s.id === id);
-        if (!session || assignmentView(session.assignment_id).tutor_id !== tutorId) throw new DemoError(404, 'NOT_FOUND', 'Sesi tidak ditemukan');
+        if (!session || session.tutor_id !== tutorId) throw new FakeError(404, 'NOT_FOUND', 'Sesi tidak ditemukan');
         if (session.status !== 'revision_requested') {
-          throw new DemoError(409, 'SESSION_STATE_CONFLICT', 'Sesi hanya dapat direvisi saat berstatus revision_requested');
+          throw new FakeError(409, 'SESSION_STATE_CONFLICT', 'Sesi hanya dapat direvisi saat berstatus revision_requested');
         }
-        const assignment = assignmentRows.find((a) => a.id === req.body.assignment_id);
-        if (!assignment || assignment.tutor_id !== tutorId || !assignment.is_active) {
-          throw new DemoError(422, 'VALIDATION_FAILED', 'Validasi gagal', [{ field: 'assignment_id', message: 'Penugasan tidak valid atau tidak aktif untuk tutor ini' }]);
-        }
+        validateChoice(req.body);
         const timestamp = now().toISOString();
         Object.assign(session, {
-          assignment_id: assignment.id,
+          student_id: String(req.body.student_id),
+          subject_id: String(req.body.subject_id),
           lesson_date: String(req.body.lesson_date),
           duration_minutes: Number(req.body.duration_minutes),
           learning_material: String(req.body.learning_material),
@@ -639,7 +702,7 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
       /^\/tutor\/me\/password$/,
       (req) => {
         const user = requireRole('tutor');
-        if (passwords.get(user.id) !== req.body.current_password) throw new DemoError(401, 'UNAUTHENTICATED', 'Kredensial tidak valid');
+        if (passwords.get(user.id) !== req.body.current_password) throw new FakeError(401, 'UNAUTHENTICATED', 'Kredensial tidak valid');
         passwords.set(user.id, String(req.body.new_password));
         csrfToken = `demo-csrf-${user.id}-rotated`;
         return ok({ csrf_token: csrfToken });
@@ -665,9 +728,9 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
 
   const linkedApproved = (parentId: string, studentId: string, period: string) => {
     if (!links.some((l) => l.parent_user_id === parentId && l.student_id === studentId)) {
-      throw new DemoError(403, 'FORBIDDEN', 'Anda tidak memiliki akses ke resource ini');
+      throw new FakeError(403, 'FORBIDDEN', 'Anda tidak memiliki akses ke resource ini');
     }
-    return inPeriod(period).filter((s) => s.status === 'approved' && assignmentView(s.assignment_id).student_id === studentId);
+    return inPeriod(period).filter((s) => s.status === 'approved' && s.student_id === studentId);
   };
 
   routes.push(
@@ -706,7 +769,19 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
   );
 
   return {
-    handle(req: DemoRequest): DemoResponse {
+    /** Hook test: sesi login dicabut server (mis. reset password / idle) → request berikutnya 401. */
+    revokeSession() {
+      currentUserId = null;
+    },
+    /** Hook test: isi tab spreadsheet demo seolah dari ekspor sebelumnya. */
+    seedSheetTab(title: string, dataRows: number) {
+      sheetTabs.set(title, dataRows);
+    },
+    /** Hook test: ekspor berikutnya gagal seperti Google menolak akses (503). */
+    failNextSheetExport() {
+      failNextExport = true;
+    },
+    handle(req: FakeRequest): FakeResponse {
       try {
         for (const [method, pattern, handler] of routes) {
           if (method !== req.method) continue;
@@ -716,9 +791,9 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
             return handler(req, match.slice(1).map(decodeURIComponent));
           }
         }
-        throw new DemoError(404, 'NOT_FOUND', 'Resource tidak tersedia di mode demo');
+        throw new FakeError(404, 'NOT_FOUND', 'Resource tidak tersedia di fake API');
       } catch (error) {
-        if (error instanceof DemoError) {
+        if (error instanceof FakeError) {
           return { status: error.status, data: { error: { code: error.code, message: error.message, ...(error.details ? { details: error.details } : {}) } } };
         }
         throw error;
@@ -727,4 +802,4 @@ export function createDemoBackend(options: { now?: () => Date } = {}) {
   };
 }
 
-export type DemoBackend = ReturnType<typeof createDemoBackend>;
+export type FakeBackend = ReturnType<typeof createFakeBackend>;

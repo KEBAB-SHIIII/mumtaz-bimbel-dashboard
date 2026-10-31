@@ -6,7 +6,7 @@ Dokumen ini menjadi acuan skema Neon PostgreSQL + Drizzle untuk MVP. Nama implem
 
 - Setiap submit tutor membuat satu record `lesson_sessions` dengan status awal `pending`.
 - Admin memeriksa sesi sebelum sesi dihitung ke estimasi honor.
-- Tarif demo saat development adalah **Rp50.000 per sesi**. Ini data dummy yang dapat diganti melalui Master Data, bukan tarif resmi UMKM.
+- Honor memakai **tarif tunggal Rp50.000 per sesi** dari konfigurasi `HONOR_RATE_PER_SESSION` (D-24), dikunci ke `lesson_sessions.rate_amount_snapshot` saat sesi disetujui. Tidak ada tabel penugasan atau tarif; Tutor memilih murid & mapel sendiri.
 - Materi pembelajaran disimpan di database dan dipakai di Riwayat Mengajar serta Progress Anak. Materi tidak masuk ekspor standar delapan kolom.
 - Modul anomali mengklasifikasikan kandidat anomali, termasuk dugaan duplikasi. Hasil AI tidak otomatis menolak sesi atau mengubah honor.
 - Ekspor Google Sheets hanya dilakukan atas permintaan Admin, per bulan, memakai delapan kolom mentah yang diminta UMKM.
@@ -20,12 +20,10 @@ erDiagram
     USERS ||--o{ PARENT_STUDENTS : "akun orang tua"
     STUDENTS ||--o{ PARENT_STUDENTS : "terhubung ke wali"
 
-    TUTORS ||--o{ TUTOR_ASSIGNMENTS : "menerima penugasan"
-    STUDENTS ||--o{ TUTOR_ASSIGNMENTS : "diajar melalui penugasan"
-    SUBJECTS ||--o{ TUTOR_ASSIGNMENTS : "mata pelajaran"
 
-    TUTOR_ASSIGNMENTS ||--o{ TUTOR_RATES : "tarif berlaku"
-    TUTOR_ASSIGNMENTS ||--o{ LESSON_SESSIONS : "memiliki sesi"
+    TUTORS ||--o{ LESSON_SESSIONS : "mencatat sesi"
+    STUDENTS ||--o{ LESSON_SESSIONS : "diajar dalam sesi"
+    SUBJECTS ||--o{ LESSON_SESSIONS : "mata pelajaran sesi"
     USERS o|--o{ LESSON_SESSIONS : "mereview"
 
     LESSON_SESSIONS ||--o{ ANOMALY_FLAGS : "memiliki temuan"
@@ -75,32 +73,12 @@ erDiagram
         timestamptz created_at
         timestamptz updated_at
     }
-    TUTOR_ASSIGNMENTS {
-        uuid id PK
-        uuid tutor_id FK
-        uuid student_id FK
-        uuid subject_id FK
-        date start_date
-        date end_date
-        boolean is_active
-        timestamptz created_at
-        timestamptz updated_at
-    }
-    TUTOR_RATES {
-        uuid id PK
-        uuid assignment_id FK
-        string rate_type
-        numeric rate_amount
-        boolean is_demo_assumption
-        date effective_from
-        date effective_to
-        timestamptz created_at
-        timestamptz updated_at
-    }
     LESSON_SESSIONS {
         uuid id PK
         uuid client_submission_id UK
-        uuid assignment_id FK
+        uuid tutor_id FK
+        uuid student_id FK
+        uuid subject_id FK
         date lesson_date
         int duration_minutes
         string learning_material
@@ -108,9 +86,7 @@ erDiagram
         text next_focus
         string status
         string anomaly_analysis_status
-        string rate_type_snapshot
         numeric rate_amount_snapshot
-        boolean rate_is_demo_snapshot
         uuid reviewed_by_user_id FK
         timestamptz submitted_at
         timestamptz reviewed_at
@@ -152,12 +128,12 @@ erDiagram
 
 - Dashboard bukan tabel. Ketiga role membaca data yang sama melalui endpoint dengan filter akses masing-masing.
 - `lesson_sessions` adalah transaksi utama: satu baris per sesi les yang disubmit.
-- `tutor_assignments` mengikat tutor, siswa, dan mapel; tutor hanya dapat submit dari assignment miliknya yang valid.
+- `lesson_sessions` merujuk langsung `tutors`, `students`, dan `subjects`: Tutor memilih murid dan mapel aktif sendiri saat absen (tanpa penugasan, D-24).
 - `parent_students` membatasi siswa yang boleh dilihat akun orang tua.
 - `users.username` dan `users.password_hash` digunakan untuk login Admin/Tutor. Orang tua hanya menggunakan `parent_access_code` yang menjadi kode rahasia akses; database menyimpan digest-nya, bukan kode mentah.
 - Kode akses orang tua bukan `users.id`, ID siswa, NPM publik, nomor telepon, atau kode berurutan. Kode harus acak, sulit ditebak, hanya dibagikan privat, dapat dirotasi, dan dilindungi rate limit.
-- `tutor_rates` menyimpan tarif demo Rp50.000 per sesi untuk data seed; `is_demo_assumption=true` membuat UI memberi label nominal simulasi. Submenu Tarif Honor diperlukan untuk konfigurasi development, sedangkan tarif resmi UMKM masih belum diketahui.
-- `lesson_sessions.rate_amount_snapshot` ditetapkan saat sesi disetujui, menggunakan rate yang masa berlakunya mencakup `lesson_date`; snapshot menjaga histori honor tidak berubah saat tarif diganti.
+- Tidak ada tabel tarif. Tarif honor tunggal per sesi (`HONOR_RATE_PER_SESSION`) berasal dari konfigurasi; tarif resmi UMKM masih O-01.
+- `lesson_sessions.rate_amount_snapshot` ditetapkan saat sesi disetujui dari tarif konfigurasi; snapshot menjaga histori honor tidak berubah saat tarif konfigurasi diganti.
 - `anomaly_flags` menyimpan hasil klasifikasi/indikasi anomali, termasuk `suspected_duplicate`. Status proses agregat disimpan di `lesson_sessions.anomaly_analysis_status`; `anomaly_flags.review_status` memiliki nilai `pending_review`, `confirmed_anomaly`, `false_positive`, `resolved`, dan `superseded` (khusus ditetapkan sistem saat Tutor merevisi payload). Temuan tidak mengganti `lesson_sessions.status` dan harus ditinjau Admin.
 - `sheet_export_runs` mencatat tindakan ekspor Admin. Tidak ada status sinkronisasi per sesi karena Sheets bukan tujuan submit live.
 - `no` pada tampilan dan ekspor adalah nomor urut sementara, bukan ID stabil. ID internal selalu UUID.
@@ -186,10 +162,10 @@ Constraint role harus memaksa credential sesuai jenis akun: Admin/Tutor wajib pu
 
 | Kolom | Tipe/constraint | Tujuan dan layar |
 |---|---|---|
-| `id` | UUID PK | ID profil tutor yang dirujuk assignment. |
+| `id` | UUID PK | ID profil tutor yang dirujuk sesi. |
 | `user_id` | UUID FK → `users.id`, UNIQUE NOT NULL | Akun login tutor. |
 | `phone` | VARCHAR nullable | Kontak operasional jika diperlukan. |
-| `is_active` | BOOLEAN DEFAULT true | Status operasional tutor: hanya tutor aktif bisa menerima assignment baru/submit sesi baru. Jika profil tutor dinonaktifkan tetapi akun `users.is_active` tetap aktif, akses histori sendiri dapat dipertahankan sampai akun login dinonaktifkan. |
+| `is_active` | BOOLEAN DEFAULT true | Status operasional tutor: hanya tutor aktif bisa submit sesi baru. Jika profil tutor dinonaktifkan tetapi akun `users.is_active` tetap aktif, akses histori sendiri dapat dipertahankan sampai akun login dinonaktifkan. |
 | `created_at`, `updated_at` | TIMESTAMPTZ | Metadata perubahan. |
 
 **Tab:** Master Data → Tutor; Dashboard Admin; Data Absensi/Rekap/Honor melalui relasi; Profil Tutor.
@@ -202,7 +178,7 @@ Constraint role harus memaksa credential sesuai jenis akun: Admin/Tutor wajib pu
 | `full_name` | VARCHAR NOT NULL | Nama di form, absensi, rekap, dan progres. |
 | `grade` | VARCHAR NOT NULL | Kelas siswa. |
 | `school_name` | VARCHAR NOT NULL | Asal sekolah. |
-| `is_active` | BOOLEAN DEFAULT true | Mengontrol assignment/session baru. Histori yang sudah disimpan tetap dipertahankan; relasi orang tua aktif tetap dapat melihat sesi approved historis. |
+| `is_active` | BOOLEAN DEFAULT true | Mengontrol sesi baru (pilihan Form Absensi). Histori yang sudah disimpan tetap dipertahankan; relasi orang tua aktif tetap dapat melihat sesi approved historis. |
 | `created_at`, `updated_at` | TIMESTAMPTZ | Metadata. |
 
 **Tab:** Master Data → Siswa; Form Tutor auto-fill kelas/sekolah; Data Absensi, Rekap, Progress Anak.
@@ -226,52 +202,20 @@ PK gabungan (`parent_user_id`, `student_id`) mencegah relasi ganda. Satu akun pa
 |---|---|---|
 | `id` | UUID PK | ID mapel. |
 | `name` | VARCHAR UNIQUE NOT NULL | Nama mapel. |
-| `is_active` | BOOLEAN DEFAULT true | Mengontrol pemakaian untuk assignment baru. |
+| `is_active` | BOOLEAN DEFAULT true | Mengontrol pilihan mapel di Form Absensi. |
 | `created_at`, `updated_at` | TIMESTAMPTZ | Metadata. |
 
 **Tab:** Master Data → Mata Pelajaran; Form Tutor, Data Absensi, Rekap, dan Progress Anak.
 
-### 3.6 `tutor_assignments` — penugasan tutor-siswa-mapel
-
-| Kolom | Tipe/constraint | Tujuan dan layar |
-|---|---|---|
-| `id` | UUID PK | Referensi assignment dari form. |
-| `tutor_id` | UUID FK → `tutors.id` NOT NULL | Tutor yang mengajar. |
-| `student_id` | UUID FK → `students.id` NOT NULL | Siswa yang diajar. |
-| `subject_id` | UUID FK → `subjects.id` NOT NULL | Mapel yang ditugaskan. |
-| `start_date` | DATE NOT NULL | Awal assignment. |
-| `end_date` | DATE NULL | Akhir assignment jika sudah ada. |
-| `is_active` | BOOLEAN DEFAULT true | Mengontrol opsi submit baru. |
-| `created_at`, `updated_at` | TIMESTAMPTZ | Metadata. |
-
-Server memastikan assignment milik tutor login, masih valid untuk tanggal sesi, dan menghubungkan siswa/mapel yang benar.
-
-**Tab:** Master Data → Penugasan; pilihan siswa/mapel di Form Tutor; seluruh layar berbasis sesi.
-
-### 3.7 `tutor_rates` — tarif honor
-
-| Kolom | Tipe/constraint | Tujuan dan layar |
-|---|---|---|
-| `id` | UUID PK | ID tarif. |
-| `assignment_id` | UUID FK → `tutor_assignments.id` NOT NULL | Konteks assignment tarif. |
-| `rate_type` | VARCHAR CHECK `per_session` untuk MVP saat ini | Rumus demo yang disepakati untuk development. Jangan mengasumsikan aturan tarif resmi UMKM. |
-| `rate_amount` | NUMERIC NOT NULL | Nominal IDR, bukan floating point. |
-| `is_demo_assumption` | BOOLEAN NOT NULL DEFAULT false | Jika true, UI halaman Honor menandai nominal dengan badge "Tarif demo" (D-20). |
-| `effective_from` | DATE NOT NULL | Tanggal mulai berlaku. |
-| `effective_to` | DATE NULL | Tanggal akhir; NULL berarti masih berlaku. |
-| `created_at`, `updated_at` | TIMESTAMPTZ | Metadata. |
-
-Untuk seed/demo, setiap assignment aktif menggunakan `rate_type='per_session'`, `rate_amount=50000`, dan `is_demo_assumption=true`. Nilai ini dikelola lewat data tarif/seed, bukan di-hard-code di rumus service. Jika UMKM kemudian menetapkan formula berbeda, update model, aturan dan tests sebelum mengubah kalkulasi.
-
-**Tab:** Master Data → Tarif Honor; Honor Tutor dan Honor Saya.
-
-### 3.8 `lesson_sessions` — catatan pertemuan/absensi
+### 3.6 `lesson_sessions` — catatan pertemuan/absensi
 
 | Kolom | Tipe/constraint | Tujuan dan layar |
 |---|---|---|
 | `id` | UUID PK | ID stabil sesi, dipakai relasi dan audit internal. |
 | `client_submission_id` | UUID UNIQUE NOT NULL | Idempotency key dari frontend, dipakai ulang pada retry submit yang sama agar network retry/double click tidak membuat sesi kedua. Berbeda dari deteksi anomaly untuk dua submit berbeda. |
-| `assignment_id` | UUID FK → `tutor_assignments.id` NOT NULL | Menentukan tutor, siswa, dan mapel. |
+| `tutor_id` | UUID FK → `tutors.id` NOT NULL | Tutor yang mencatat sesi (dari session login, bukan dari body). |
+| `student_id` | UUID FK → `students.id` NOT NULL | Murid yang dipilih Tutor (harus aktif saat submit). |
+| `subject_id` | UUID FK → `subjects.id` NOT NULL | Mata pelajaran yang dipilih Tutor (harus aktif saat submit). |
 | `lesson_date` | DATE NOT NULL | Tanggal sesi; dasar semua filter bulan. |
 | `duration_minutes` | INTEGER NOT NULL | Durasi konsisten dalam menit. |
 | `learning_material` | VARCHAR NOT NULL | Materi; muncul di detail Riwayat Mengajar dan Progress Anak. |
@@ -279,9 +223,7 @@ Untuk seed/demo, setiap assignment aktif menggunakan `rate_type='per_session'`, 
 | `next_focus` | TEXT NULL | Fokus belajar berikutnya. |
 | `status` | CHECK `pending`, `approved`, `revision_requested`, `rejected`; default `pending` | Siklus review admin. |
 | `anomaly_analysis_status` | CHECK `pending`, `completed`, `failed`, `not_evaluated`; default `pending` | Status agregat analisis untuk sesi. Ini sumber status proses yang otoritatif; tabel `anomaly_flags` hanya menyimpan finding yang dihasilkan. |
-| `rate_type_snapshot` | VARCHAR NULL | Jenis tarif sesi saat ditetapkan untuk honor. Saat MVP: `per_session`. |
-| `rate_amount_snapshot` | NUMERIC NULL | Tarif per sesi yang digunakan untuk estimasi honor. |
-| `rate_is_demo_snapshot` | BOOLEAN NULL | Menandai bila nominal pada snapshot masih tarif demo. |
+| `rate_amount_snapshot` | NUMERIC NULL | Tarif tunggal per sesi (`HONOR_RATE_PER_SESSION`) yang dikunci saat sesi disetujui; NULL untuk sesi belum approved. |
 | `reviewed_by_user_id` | UUID FK → `users.id` NULL | Admin yang meninjau payload sesi saat ini; direset ke NULL saat Tutor mengirim revisi payload baru. Full audit history tidak disimpan pada baseline. |
 | `submitted_at` | TIMESTAMPTZ NOT NULL | Waktu submit payload sesi yang saat ini tersimpan; diperbarui saat Tutor mengirim revisi. Baseline tidak menyimpan seluruh sejarah submit. |
 | `reviewed_at` | TIMESTAMPTZ NULL | Waktu review terakhir atas payload saat ini; direset ke NULL ketika payload direvisi oleh Tutor. |
@@ -292,7 +234,7 @@ Saat submit, `status='pending'`. Ketika sesi `revision_requested` direvisi, `sub
 
 **Tab:** Form Absensi, Riwayat Mengajar, Data Absensi, Rekap, Honor Tutor, Honor Saya, Progress Anak (field publik yang disetujui).
 
-### 3.9 `anomaly_flags` — hasil deteksi/klasifikasi anomali
+### 3.7 `anomaly_flags` — hasil deteksi/klasifikasi anomali
 
 | Kolom | Tipe/constraint | Tujuan dan layar |
 |---|---|---|
@@ -337,17 +279,16 @@ Anomaly module mengklasifikasikan dugaan duplikasi/pola anomali. Validasi strukt
 - Unique index untuk `users.username` saat tidak NULL dan `users.parent_access_code_hash` saat tidak NULL; `email` unik jika diisi.
 - Role credential check: `admin`/`tutor` membutuhkan `username` dan `password_hash`; `parent` membutuhkan `parent_access_code_hash`.
 - FK dan constraint unique untuk relasi orang tua-anak, nama mapel, dan ID yang relevan.
-- Index pada `lesson_sessions.lesson_date`, `lesson_sessions.status`, `tutor_assignments.tutor_id`, `tutor_assignments.student_id`, serta kombinasi yang mendukung query laporan bulanan.
+- Index pada `lesson_sessions.lesson_date`, `lesson_sessions.status`, `lesson_sessions(tutor_id, lesson_date)`, `lesson_sessions(student_id, lesson_date)`, serta kombinasi yang mendukung query laporan bulanan.
 - Index pada `anomaly_flags.lesson_session_id` dan status review; `sheet_export_runs.period` serta `started_at`.
 - Gunakan soft deactivation untuk master data yang sudah digunakan. Hindari cascade delete sesi historis.
-- Cegah overlap periode tarif untuk assignment yang sama.
 - `client_submission_id` harus unique dan wajib pada submit awal. Frontend membuat UUID sekali untuk submission dan menggunakan ulang pada retry; backend mengembalikan record sesi yang sama untuk key/body yang sama dan `409` bila key sama dipakai untuk payload berbeda. UI tetap mencegah double-click.
 
 ### 4.1 Implementasi (Phase 03, `backend/src/db/schema.ts` + `backend/drizzle/`)
 
-- **Anti-overlap via exclusion constraint** (`btree_gist`, migration `0001_overlap_constraints.sql`): `tutor_rates_no_overlap` (assignment sama, rentang `[effective_from, effective_to]` tidak boleh overlap) dan `tutor_assignments_active_no_overlap` (assignment aktif dengan tuple tutor+siswa+mapel sama tidak boleh overlap). Pelanggaran → API `409 CONFLICT`.
+- **Migration 0003–0004 (D-24)**: kolom `tutor_id/student_id/subject_id` diisi dari penugasan lama (data sesi dipertahankan), lalu tabel `tutor_assignments`/`tutor_rates` dan kolom `assignment_id`, `rate_type_snapshot`, `rate_is_demo_snapshot` dihapus. Extension `btree_gist` dari migration 0001 tetap terpasang (tidak lagi dipakai).
 - **`users.credential_version`** (kolom implementasi tambahan, `INTEGER DEFAULT 1`): dinaikkan saat password diganti, kode akses parent dirotasi, atau login dinonaktifkan. Session yang membawa versi lama otomatis dicabut pada request berikutnya.
-- **CHECK tambahan di `lesson_sessions`**: snapshot tarif all-or-nothing dan hanya untuk `approved`; `admin_note` wajib untuk `revision_requested`/`rejected`; status selain `pending` wajib punya `reviewed_by_user_id` + `reviewed_at`; `duration_minutes > 0`.
+- **CHECK tambahan di `lesson_sessions`**: snapshot tarif (jika ada) positif dan hanya untuk `approved`; `admin_note` wajib untuk `revision_requested`/`rejected`; status selain `pending` wajib punya `reviewed_by_user_id` + `reviewed_at`; `duration_minutes > 0`.
 - Uang `NUMERIC(12,2)`; semua FK `ON DELETE RESTRICT` (tidak ada cascade delete histori); nama mapel unik case-insensitive (`lower(name)`), email unik case-insensitive.
 - **`app_sessions`** (infrastruktur, bukan entitas domain): `sid VARCHAR PK`, `sess JSON`, `expire TIMESTAMP(6)` + index `expire` — kompatibel `connect-pg-simple`, dibuat lewat migration (`createTableIfMissing=false`).
 

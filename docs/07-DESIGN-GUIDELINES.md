@@ -80,7 +80,7 @@ KPI relevan: tutor aktif, siswa aktif, sesi periode, pending verification, sesi 
 
 ### Form Absensi
 
-Nama tutor auto dari login; siswa/mapel dari assignment tutor; kelas dan sekolah auto-fill; tanggal; durasi menit; materi wajib; catatan dan fokus opsional. Setelah submit sukses, status `Menunggu Verifikasi`. AI analysis status ditampilkan terpisah bila perlu.
+Nama tutor auto dari login; murid (kotak pencarian) dan mapel dipilih Tutor sendiri; kelas dan sekolah auto-fill; tanggal; durasi menit; materi wajib; catatan dan fokus opsional. Setelah submit sukses, status `Menunggu Verifikasi`. AI analysis status ditampilkan terpisah bila perlu.
 
 ### Riwayat Mengajar
 

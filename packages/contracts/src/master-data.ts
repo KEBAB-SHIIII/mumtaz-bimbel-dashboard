@@ -1,14 +1,11 @@
 import { z } from 'zod';
 import {
-  isoDateSchema,
   paginationQuerySchema,
-  positiveMoneyStringSchema,
   requiredText,
   timestampSchema,
   uuidSchema,
 } from './common.js';
-import { PASSWORD_MIN_LENGTH, usernameSchema } from './auth.js';
-import { rateTypeSchema } from './enums.js';
+import { usernameSchema } from './auth.js';
 
 // Batas panjang di file ini adalah guard teknis (VARCHAR), bukan aturan bisnis.
 const NAME_MAX = 120;
@@ -17,22 +14,6 @@ export const masterDataListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().max(100).optional(),
 });
 export type MasterDataListQuery = z.infer<typeof masterDataListQuerySchema>;
-
-/** Query string boolean (`true`/`false`) → boolean. */
-const queryBoolean = z.enum(['true', 'false']).transform((value) => value === 'true');
-
-export const assignmentListQuerySchema = masterDataListQuerySchema.extend({
-  tutor_id: uuidSchema.optional(),
-  student_id: uuidSchema.optional(),
-  subject_id: uuidSchema.optional(),
-  is_active: queryBoolean.optional(),
-});
-export type AssignmentListQuery = z.infer<typeof assignmentListQuerySchema>;
-
-export const rateListQuerySchema = paginationQuerySchema.extend({
-  assignment_id: uuidSchema.optional(),
-});
-export type RateListQuery = z.infer<typeof rateListQuerySchema>;
 
 export const idParamSchema = z.object({ id: uuidSchema });
 
@@ -62,7 +43,6 @@ export type Tutor = z.infer<typeof tutorSchema>;
 export const createTutorRequestSchema = z.strictObject({
   full_name: requiredText(NAME_MAX),
   username: usernameSchema,
-  initial_password: z.string().min(PASSWORD_MIN_LENGTH).max(256),
   phone: phoneSchema.optional(),
 });
 export type CreateTutorRequest = z.infer<typeof createTutorRequestSchema>;
@@ -75,6 +55,16 @@ export const updateTutorRequestSchema = z.strictObject({
   login_active: z.boolean().optional(),
 });
 export type UpdateTutorRequest = z.infer<typeof updateTutorRequestSchema>;
+
+/**
+ * Respons create/reset tutor: password sementara dikembalikan SEKALI saja (dibuat sistem,
+ * acak). Admin menyampaikannya ke Tutor secara privat; Tutor menggantinya di Profil.
+ */
+export const tutorCredentialIssuedSchema = z.object({
+  tutor: tutorSchema,
+  temporary_password: z.string().min(1),
+});
+export type TutorCredentialIssued = z.infer<typeof tutorCredentialIssuedSchema>;
 
 // --- Student -------------------------------------------------------------
 
@@ -180,100 +170,21 @@ export const updateSubjectRequestSchema = z.strictObject({
 });
 export type UpdateSubjectRequest = z.infer<typeof updateSubjectRequestSchema>;
 
-// --- Tutor assignment ----------------------------------------------------
-
-export const tutorAssignmentSchema = z.object({
-  id: uuidSchema,
-  tutor_id: uuidSchema,
-  tutor_name: z.string(),
-  student_id: uuidSchema,
-  student_name: z.string(),
-  subject_id: uuidSchema,
-  subject_name: z.string(),
-  start_date: isoDateSchema,
-  end_date: isoDateSchema.nullable(),
-  is_active: z.boolean(),
-  ...timestamps,
-});
-export type TutorAssignment = z.infer<typeof tutorAssignmentSchema>;
-
-export const createTutorAssignmentRequestSchema = z
-  .strictObject({
-    tutor_id: uuidSchema,
-    student_id: uuidSchema,
-    subject_id: uuidSchema,
-    start_date: isoDateSchema,
-    end_date: isoDateSchema.optional(),
-  })
-  .refine((body) => !body.end_date || body.end_date >= body.start_date, {
-    path: ['end_date'],
-    message: 'end_date tidak boleh sebelum start_date',
-  });
-export type CreateTutorAssignmentRequest = z.infer<typeof createTutorAssignmentRequestSchema>;
-
-/** Tuple tutor/siswa/mapel immutable; hanya end_date & is_active. */
-export const updateTutorAssignmentRequestSchema = z.strictObject({
-  end_date: isoDateSchema.nullable().optional(),
-  is_active: z.boolean().optional(),
-});
-export type UpdateTutorAssignmentRequest = z.infer<typeof updateTutorAssignmentRequestSchema>;
-
-/** `GET /tutor/me/assignments` — opsi Form Absensi + auto-fill kelas/sekolah. */
-export const tutorAssignmentOptionSchema = z.object({
-  assignment_id: uuidSchema,
-  student: z.object({
-    id: uuidSchema,
-    full_name: z.string(),
-    grade: z.string(),
-    school_name: z.string(),
-  }),
-  subject: z.object({ id: uuidSchema, name: z.string() }),
-  start_date: isoDateSchema,
-  end_date: isoDateSchema.nullable(),
-});
-export type TutorAssignmentOption = z.infer<typeof tutorAssignmentOptionSchema>;
-
-// --- Tutor rate ----------------------------------------------------------
-
-export const tutorRateSchema = z.object({
-  id: uuidSchema,
-  assignment_id: uuidSchema,
-  rate_type: rateTypeSchema,
-  rate_amount: z.string(),
-  is_demo_assumption: z.boolean(),
-  effective_from: isoDateSchema,
-  effective_to: isoDateSchema.nullable(),
-  ...timestamps,
-});
-export type TutorRate = z.infer<typeof tutorRateSchema>;
+// --- Opsi Form Absensi ---------------------------------------------------
 
 /**
- * Respons `POST /admin/tutor-rates`. `applied_to_approved_sessions` = jumlah sesi approved
- * yang sebelumnya TANPA snapshot tarif (disetujui sebelum tarif dibuat) dan kini memakai
- * tarif ini. Snapshot yang sudah ada tidak pernah ditimpa.
+ * `GET /tutor/attendance-options` — murid & mata pelajaran aktif yang boleh dipilih Tutor
+ * (tanpa penugasan; Tutor memilih sendiri). Kelas/sekolah dipakai untuk auto-fill form.
  */
-export const tutorRateCreatedSchema = tutorRateSchema.extend({
-  applied_to_approved_sessions: z.number().int().min(0),
+export const attendanceOptionsSchema = z.object({
+  students: z.array(
+    z.object({
+      id: uuidSchema,
+      full_name: z.string(),
+      grade: z.string(),
+      school_name: z.string(),
+    }),
+  ),
+  subjects: z.array(z.object({ id: uuidSchema, name: z.string() })),
 });
-export type TutorRateCreated = z.infer<typeof tutorRateCreatedSchema>;
-
-export const createTutorRateRequestSchema = z
-  .strictObject({
-    assignment_id: uuidSchema,
-    rate_type: rateTypeSchema,
-    rate_amount: positiveMoneyStringSchema,
-    is_demo_assumption: z.boolean(),
-    effective_from: isoDateSchema,
-    effective_to: isoDateSchema.optional(),
-  })
-  .refine((body) => !body.effective_to || body.effective_to >= body.effective_from, {
-    path: ['effective_to'],
-    message: 'effective_to tidak boleh sebelum effective_from',
-  });
-export type CreateTutorRateRequest = z.infer<typeof createTutorRateRequestSchema>;
-
-/** Tarif yang sudah dipakai tidak diubah nominal/jenis/mulai berlakunya; tutup periode. */
-export const updateTutorRateRequestSchema = z.strictObject({
-  effective_to: isoDateSchema.nullable().optional(),
-});
-export type UpdateTutorRateRequest = z.infer<typeof updateTutorRateRequestSchema>;
+export type AttendanceOptions = z.infer<typeof attendanceOptionsSchema>;

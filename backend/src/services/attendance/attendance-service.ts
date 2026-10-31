@@ -1,10 +1,11 @@
-import { and, asc, count, desc, eq, gte, ilike, inArray, isNull, lte, ne, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, ne, or, type SQL } from 'drizzle-orm';
 import {
   SUPERSEDED_BY_REVISION_NOTE,
   isFutureLessonDate,
   type AdminAttendanceDetail,
   type AdminAttendanceListItem,
   type AdminAttendanceListQuery,
+  type AttendanceOptions,
   type AnomalyAnalysisStatus,
   type AnomalyReviewStatus,
   type FindingType,
@@ -14,12 +15,11 @@ import {
   type SessionStatus,
   type SubmitAttendanceRequest,
   type SubmitAttendanceResponse,
-  type TutorAssignmentOption,
   type TutorAttendanceListQuery,
   type TutorSession,
 } from '@mumtaz/contracts';
 import type { DbOrTx } from '../../db/client.js';
-import { anomalyFlags, lessonSessions, students, subjects, tutorAssignments, tutorRates, tutors } from '../../db/schema.js';
+import { anomalyFlags, lessonSessions, students, subjects, tutors } from '../../db/schema.js';
 import { PG_UNIQUE_VIOLATION, isPgError } from '../../lib/db-errors.js';
 import { iso, isoOrNull } from '../../lib/format.js';
 import {
@@ -41,7 +41,6 @@ import { lessonDateInPeriod, selectSessionView, tutorUser, type SessionView } fr
 function coreFields(row: SessionView) {
   return {
     id: row.id,
-    assignment_id: row.assignment_id,
     tutor_id: row.tutor_id,
     tutor_name: row.tutor_name,
     student_id: row.student_id,
@@ -85,19 +84,17 @@ async function findingsFor(db: DbOrTx, sessionIds: string[]): Promise<FlagRow[]>
 
 /**
  * Aturan domain payload sesi (submit & revisi):
- * - assignment milik tutor login, aktif, siswanya aktif, dan berlaku pada `lesson_date`;
+ * - murid dan mata pelajaran yang dipilih Tutor harus ada dan aktif (tanpa penugasan, D-24);
  * - tanggal masa depan menurut Asia/Jakarta ditolak (O-14, provisional);
  * - durasi tidak melebihi `ATTENDANCE_MAX_DURATION_MINUTES` (konfigurasi, O-12).
  */
 async function assertPayloadValid(
   ctx: ServiceContext,
   db: DbOrTx,
-  tutorId: string,
-  input: Pick<SubmitAttendanceRequest, 'assignment_id' | 'lesson_date' | 'duration_minutes'>,
+  input: Pick<SubmitAttendanceRequest, 'student_id' | 'subject_id' | 'lesson_date' | 'duration_minutes'>,
 ): Promise<void> {
-  const { assignment_id: assignmentId, lesson_date: lessonDate } = input;
   const details: ErrorDetail[] = [];
-  if (isFutureLessonDate(lessonDate, ctx.now())) {
+  if (isFutureLessonDate(input.lesson_date, ctx.now())) {
     details.push({ field: 'lesson_date', message: 'Tanggal les tidak boleh di masa depan (Asia/Jakarta)' });
   }
   if (input.duration_minutes > ctx.attendance.maxDurationMinutes) {
@@ -107,28 +104,10 @@ async function assertPayloadValid(
     });
   }
 
-  const [assignment] = await db
-    .select({
-      tutor_id: tutorAssignments.tutor_id,
-      is_active: tutorAssignments.is_active,
-      start_date: tutorAssignments.start_date,
-      end_date: tutorAssignments.end_date,
-      student_active: students.is_active,
-    })
-    .from(tutorAssignments)
-    .innerJoin(students, eq(students.id, tutorAssignments.student_id))
-    .where(eq(tutorAssignments.id, assignmentId))
-    .limit(1);
-
-  // Assignment milik tutor lain diperlakukan sama dengan tidak ada (tidak membocorkan keberadaan).
-  if (!assignment || assignment.tutor_id !== tutorId || !assignment.is_active || !assignment.student_active) {
-    details.push({ field: 'assignment_id', message: 'Penugasan tidak valid atau tidak aktif untuk tutor ini' });
-  } else if (
-    lessonDate < assignment.start_date ||
-    (assignment.end_date !== null && lessonDate > assignment.end_date)
-  ) {
-    details.push({ field: 'lesson_date', message: 'Tanggal les di luar masa berlaku penugasan' });
-  }
+  const [student] = await db.select({ is_active: students.is_active }).from(students).where(eq(students.id, input.student_id)).limit(1);
+  if (!student?.is_active) details.push({ field: 'student_id', message: 'Murid tidak ditemukan atau tidak aktif' });
+  const [subject] = await db.select({ is_active: subjects.is_active }).from(subjects).where(eq(subjects.id, input.subject_id)).limit(1);
+  if (!subject?.is_active) details.push({ field: 'subject_id', message: 'Mata pelajaran tidak ditemukan atau tidak aktif' });
 
   if (details.length > 0) throw validationFailed(details);
 }
@@ -137,7 +116,8 @@ type EditableFields = Omit<SubmitAttendanceRequest, 'client_submission_id'>;
 
 function normalizeEditable(input: EditableFields) {
   return {
-    assignment_id: input.assignment_id,
+    student_id: input.student_id,
+    subject_id: input.subject_id,
     lesson_date: input.lesson_date,
     duration_minutes: input.duration_minutes,
     learning_material: input.learning_material,
@@ -149,7 +129,8 @@ function normalizeEditable(input: EditableFields) {
 function sameEditable(row: SessionView, input: EditableFields): boolean {
   const next = normalizeEditable(input);
   return (
-    row.assignment_id === next.assignment_id &&
+    row.student_id === next.student_id &&
+    row.subject_id === next.subject_id &&
     row.lesson_date === next.lesson_date &&
     row.duration_minutes === next.duration_minutes &&
     row.learning_material === next.learning_material &&
@@ -167,39 +148,21 @@ async function sessionViewById(db: DbOrTx, id: string): Promise<SessionView | un
 // Tutor
 // ---------------------------------------------------------------------------
 
-/** `GET /tutor/me/assignments`: hanya assignment aktif milik tutor login dengan siswa aktif. */
-export async function listTutorAssignmentOptions(ctx: ServiceContext, tutorId: string): Promise<TutorAssignmentOption[]> {
-  const rows = await ctx.db
-    .select({
-      assignment_id: tutorAssignments.id,
-      student_id: students.id,
-      student_name: students.full_name,
-      grade: students.grade,
-      school_name: students.school_name,
-      subject_id: subjects.id,
-      subject_name: subjects.name,
-      start_date: tutorAssignments.start_date,
-      end_date: tutorAssignments.end_date,
-    })
-    .from(tutorAssignments)
-    .innerJoin(students, eq(students.id, tutorAssignments.student_id))
-    .innerJoin(subjects, eq(subjects.id, tutorAssignments.subject_id))
-    .where(
-      and(
-        eq(tutorAssignments.tutor_id, tutorId),
-        eq(tutorAssignments.is_active, true),
-        eq(students.is_active, true),
-      ),
-    )
-    .orderBy(asc(students.full_name), asc(subjects.name));
-
-  return rows.map((row) => ({
-    assignment_id: row.assignment_id,
-    student: { id: row.student_id, full_name: row.student_name, grade: row.grade, school_name: row.school_name },
-    subject: { id: row.subject_id, name: row.subject_name },
-    start_date: row.start_date,
-    end_date: row.end_date,
-  }));
+/** `GET /tutor/attendance-options`: murid & mata pelajaran aktif yang dapat dipilih Tutor. */
+export async function listAttendanceOptions(ctx: ServiceContext): Promise<AttendanceOptions> {
+  const [studentRows, subjectRows] = await Promise.all([
+    ctx.db
+      .select({ id: students.id, full_name: students.full_name, grade: students.grade, school_name: students.school_name })
+      .from(students)
+      .where(eq(students.is_active, true))
+      .orderBy(asc(students.full_name), asc(students.id)),
+    ctx.db
+      .select({ id: subjects.id, name: subjects.name })
+      .from(subjects)
+      .where(eq(subjects.is_active, true))
+      .orderBy(asc(subjects.name), asc(subjects.id)),
+  ]);
+  return { students: studentRows, subjects: subjectRows };
 }
 
 function toSubmitResponse(row: SessionView): SubmitAttendanceResponse {
@@ -245,7 +208,7 @@ export async function submitAttendance(
   if (!tutor.tutorActive) {
     throw new HttpError(403, 'FORBIDDEN', 'Profil tutor nonaktif; tidak dapat mengirim sesi baru');
   }
-  await assertPayloadValid(ctx, ctx.db, tutor.tutorId, input);
+  await assertPayloadValid(ctx, ctx.db, input);
 
   const now = ctx.now();
   try {
@@ -253,6 +216,7 @@ export async function submitAttendance(
       .insert(lessonSessions)
       .values({
         client_submission_id: input.client_submission_id,
+        tutor_id: tutor.tutorId,
         ...normalizeEditable(input),
         status: 'pending',
         anomaly_analysis_status: 'pending',
@@ -280,10 +244,10 @@ export async function listTutorAttendance(
   query: TutorAttendanceListQuery,
 ): Promise<Paginated<TutorSession>> {
   const where = and(
-    eq(tutorAssignments.tutor_id, tutorId),
+    eq(lessonSessions.tutor_id, tutorId),
     lessonDateInPeriod(query.period),
     query.status ? eq(lessonSessions.status, query.status) : undefined,
-    query.student_id ? eq(tutorAssignments.student_id, query.student_id) : undefined,
+    query.student_id ? eq(lessonSessions.student_id, query.student_id) : undefined,
   );
   const [rows, [total]] = await Promise.all([
     selectSessionView(ctx.db)
@@ -291,11 +255,7 @@ export async function listTutorAttendance(
       .orderBy(desc(lessonSessions.lesson_date), desc(lessonSessions.submitted_at), asc(lessonSessions.id))
       .limit(query.page_size)
       .offset(pageOffset(query)),
-    ctx.db
-      .select({ value: count() })
-      .from(lessonSessions)
-      .innerJoin(tutorAssignments, eq(tutorAssignments.id, lessonSessions.assignment_id))
-      .where(where),
+    ctx.db.select({ value: count() }).from(lessonSessions).where(where),
   ]);
   return paginated(rows.map(toTutorSession), query, total?.value ?? 0);
 }
@@ -322,7 +282,7 @@ export async function reviseAttendance(
       throw stateConflict('Sesi hanya dapat direvisi saat berstatus revision_requested');
     }
 
-    await assertPayloadValid(ctx, tx, tutorId, input);
+    await assertPayloadValid(ctx, tx, input);
 
     const now = ctx.now();
     const updated = await tx
@@ -363,9 +323,9 @@ export async function listAdminAttendance(
 ): Promise<Paginated<AdminAttendanceListItem>> {
   const filters: (SQL | undefined)[] = [
     lessonDateInPeriod(query.period),
-    query.tutor_id ? eq(tutorAssignments.tutor_id, query.tutor_id) : undefined,
-    query.student_id ? eq(tutorAssignments.student_id, query.student_id) : undefined,
-    query.subject_id ? eq(tutorAssignments.subject_id, query.subject_id) : undefined,
+    query.tutor_id ? eq(lessonSessions.tutor_id, query.tutor_id) : undefined,
+    query.student_id ? eq(lessonSessions.student_id, query.student_id) : undefined,
+    query.subject_id ? eq(lessonSessions.subject_id, query.subject_id) : undefined,
     query.status ? eq(lessonSessions.status, query.status) : undefined,
     query.anomaly_status ? eq(lessonSessions.anomaly_analysis_status, query.anomaly_status) : undefined,
     query.search
@@ -409,11 +369,10 @@ function selectCount(db: DbOrTx) {
   return db
     .select({ value: count() })
     .from(lessonSessions)
-    .innerJoin(tutorAssignments, eq(tutorAssignments.id, lessonSessions.assignment_id))
-    .innerJoin(tutors, eq(tutors.id, tutorAssignments.tutor_id))
+    .innerJoin(tutors, eq(tutors.id, lessonSessions.tutor_id))
     .innerJoin(tutorUser, eq(tutorUser.id, tutors.user_id))
-    .innerJoin(students, eq(students.id, tutorAssignments.student_id))
-    .innerJoin(subjects, eq(subjects.id, tutorAssignments.subject_id));
+    .innerJoin(students, eq(students.id, lessonSessions.student_id))
+    .innerJoin(subjects, eq(subjects.id, lessonSessions.subject_id));
 }
 
 async function toAdminDetail(db: DbOrTx, row: SessionView): Promise<AdminAttendanceDetail> {
@@ -445,8 +404,9 @@ export async function getAdminAttendanceDetail(ctx: ServiceContext, id: string):
 
 /**
  * `PATCH /admin/attendance/:id/decision`. Hanya dari `pending` (approved/rejected
- * terminal — working default O-15). Approve menyimpan snapshot tarif yang berlaku
- * pada `lesson_date`; tanpa tarif → snapshot kosong (payroll memberi warning).
+ * terminal — working default O-15). Approve mengunci tarif tunggal per sesi dari konfigurasi
+ * (`HONOR_RATE_PER_SESSION`, D-24) ke `rate_amount_snapshot`, sehingga honor bulan lalu tidak
+ * berubah bila tarif konfigurasi diganti.
  */
 export async function decideAttendance(
   ctx: ServiceContext,
@@ -456,11 +416,7 @@ export async function decideAttendance(
 ): Promise<AdminAttendanceDetail> {
   return ctx.db.transaction(async (tx) => {
     const [locked] = await tx
-      .select({
-        status: lessonSessions.status,
-        assignment_id: lessonSessions.assignment_id,
-        lesson_date: lessonSessions.lesson_date,
-      })
+      .select({ status: lessonSessions.status })
       .from(lessonSessions)
       .where(eq(lessonSessions.id, sessionId))
       .for('update')
@@ -470,32 +426,7 @@ export async function decideAttendance(
       throw stateConflict('Hanya sesi berstatus pending yang dapat diputuskan');
     }
 
-    let snapshot = { rate_type_snapshot: null, rate_amount_snapshot: null, rate_is_demo_snapshot: null } as {
-      rate_type_snapshot: string | null;
-      rate_amount_snapshot: string | null;
-      rate_is_demo_snapshot: boolean | null;
-    };
-    if (input.decision === 'approved') {
-      const [rate] = await tx
-        .select()
-        .from(tutorRates)
-        .where(
-          and(
-            eq(tutorRates.assignment_id, locked.assignment_id),
-            lte(tutorRates.effective_from, locked.lesson_date),
-            or(isNull(tutorRates.effective_to), gte(tutorRates.effective_to, locked.lesson_date)),
-          ),
-        )
-        .orderBy(desc(tutorRates.effective_from))
-        .limit(1);
-      if (rate) {
-        snapshot = {
-          rate_type_snapshot: rate.rate_type,
-          rate_amount_snapshot: rate.rate_amount,
-          rate_is_demo_snapshot: rate.is_demo_assumption,
-        };
-      }
-    }
+    const snapshot = { rate_amount_snapshot: input.decision === 'approved' ? ctx.honor.ratePerSession : null };
 
     const now = ctx.now();
     await tx

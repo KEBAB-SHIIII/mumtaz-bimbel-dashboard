@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Eye, RotateCcw, Search } from 'lucide-react';
+import { ClipboardCheck, Eye, RotateCcw, Search } from 'lucide-react';
 import { useState } from 'react';
 import { sessionStatusSchema, type AdminAttendanceListItem } from '@mumtaz/contracts';
 import { FindingIndicator, SESSION_STATUS_LABELS, StatusBadge } from '../../../components/ui/badge';
@@ -63,7 +63,7 @@ export function AttendancePage() {
 
   const hasFilters = FILTER_KEYS.some((key) => values[key]);
 
-  // Delapan kolom inti UMKM + status review, indikator anomali, aksi (docs/15 §2.2).
+  // Delapan kolom inti UMKM + status review (dengan indikator temuan anomali) + aksi (docs/15 §2.2).
   const columns: ColumnDef<AdminAttendanceListItem, unknown>[] = [
     { id: 'no', header: 'No', cell: ({ row }) => rowNumber(row.index, page, PAGE_SIZE) },
     { accessorKey: 'tutor_name', header: 'Nama tutor' },
@@ -73,26 +73,39 @@ export function AttendancePage() {
     { accessorKey: 'subject_name', header: 'Mata pelajaran' },
     { id: 'lesson_date', header: 'Tanggal les', cell: ({ row }) => <span className="whitespace-nowrap">{formatLessonDate(row.original.lesson_date)}</span> },
     { id: 'duration', header: 'Durasi les', cell: ({ row }) => <span className="whitespace-nowrap">{formatDuration(row.original.duration_minutes)}</span> },
-    { id: 'status', header: 'Status review', cell: ({ row }) => <StatusBadge status={row.original.status} /> },
     {
-      id: 'findings',
-      header: 'Temuan anomali',
-      cell: ({ row }) => <FindingIndicator count={row.original.findings.filter((f) => f.review_status === 'pending_review').length} />,
+      id: 'status',
+      header: 'Status review',
+      // Temuan anomali ditaruh di bawah status agar tetap terlihat tanpa menggeser tabel.
+      cell: ({ row }) => {
+        const pendingFindings = row.original.findings.filter((f) => f.review_status === 'pending_review').length;
+        return (
+          <div className="flex flex-col items-start gap-1">
+            <StatusBadge status={row.original.status} />
+            {pendingFindings > 0 && <FindingIndicator count={pendingFindings} />}
+          </div>
+        );
+      },
     },
     {
       id: 'actions',
       header: () => <span className="sr-only">Aksi</span>,
-      cell: ({ row }) => (
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={<Eye aria-hidden className="size-4" />}
-          aria-label={`Lihat detail sesi ${row.original.student_name} ${formatLessonDate(row.original.lesson_date)}`}
-          onClick={() => setDetailId(row.original.id)}
-        >
-          Detail
-        </Button>
-      ),
+      meta: { stickyRight: true },
+      cell: ({ row }) => {
+        // Sesi menunggu verifikasi butuh keputusan Admin → aksi utama "Tinjau".
+        const needsReview = row.original.status === 'pending';
+        return (
+          <Button
+            variant={needsReview ? 'primary' : 'secondary'}
+            size="sm"
+            icon={needsReview ? <ClipboardCheck aria-hidden className="size-4" /> : <Eye aria-hidden className="size-4" />}
+            aria-label={`${needsReview ? 'Tinjau' : 'Lihat detail'} sesi ${row.original.student_name} ${formatLessonDate(row.original.lesson_date)}`}
+            onClick={() => setDetailId(row.original.id)}
+          >
+            {needsReview ? 'Tinjau' : 'Detail'}
+          </Button>
+        );
+      },
     },
   ];
 

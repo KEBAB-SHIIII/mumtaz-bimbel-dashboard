@@ -1,11 +1,9 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { FileSpreadsheet } from 'lucide-react';
 import { Link } from 'react-router';
 import { recapGroupBySchema, type RecapGroup, type RecapGroupBy } from '@mumtaz/contracts';
-import { Button } from '../../../components/ui/button';
 import { DataTable } from '../../../components/ui/data-table';
-import { EmptyState, ErrorState, InlineAlert, LoadingState } from '../../../components/ui/feedback';
+import { EmptyState, ErrorState, LoadingState } from '../../../components/ui/feedback';
 import { Select } from '../../../components/ui/field';
 import { Card, FilterBar, PageHeader } from '../../../components/ui/layout-primitives';
 import { PeriodSelector } from '../../../components/ui/period-selector';
@@ -14,6 +12,7 @@ import { usePeriodParam } from '../../../lib/period';
 import { queryKeys } from '../../../lib/query-keys';
 import { useSearchState } from '../../../lib/use-search-state';
 import { fetchRecap } from '../api';
+import { SheetsExportButton, SheetsExportDialog, SheetsExportHistory, SheetsExportResult, useSheetsExport } from './sheets-export';
 
 const GROUP_LABEL: Record<RecapGroupBy, string> = { tutor: 'Tutor', student: 'Siswa', subject: 'Mata pelajaran' };
 const DRILLDOWN_PARAM: Record<RecapGroupBy, string> = { tutor: 'tutor_id', student: 'student_id', subject: 'subject_id' };
@@ -22,6 +21,8 @@ export function RecapPage() {
   const [period, setPeriod] = usePeriodParam();
   const { values, update } = useSearchState(['group_by'] as const);
   const groupBy = recapGroupBySchema.safeParse(values.group_by).data ?? 'tutor';
+
+  const exporter = useSheetsExport();
 
   const recap = useQuery({
     queryKey: queryKeys.admin.recap(period, groupBy),
@@ -55,15 +56,14 @@ export function RecapPage() {
       <PageHeader
         title="Rekap"
         description={`Ringkasan sesi ${formatPeriod(period)} per ${GROUP_LABEL[groupBy].toLowerCase()} (berdasarkan tanggal les).`}
-        actions={
-          <Button variant="secondary" disabled icon={<FileSpreadsheet aria-hidden className="size-4" />} title="Belum tersedia">
-            Ekspor Absensi Bulanan ke Google Sheets
-          </Button>
-        }
+        actions={<SheetsExportButton exporter={exporter} period={period} />}
       />
-      <InlineAlert tone="info" title="Ekspor Google Sheets belum tersedia">
-        Fitur ekspor bulanan sedang disiapkan. Ekspor hanya dijalankan atas tindakan Admin dan berisi delapan kolom absensi.
-      </InlineAlert>
+      <SheetsExportResult exporter={exporter} />
+      <SheetsExportDialog
+        exporter={exporter}
+        // Total submission hanya ditampilkan bila rekap yang termuat memang periode dialog.
+        totalSessions={recap.data?.period === exporter.dialog?.period ? recap.data?.totals.total_sessions : undefined}
+      />
 
       <FilterBar>
         <PeriodSelector value={period} onChange={setPeriod} />
@@ -102,6 +102,8 @@ export function RecapPage() {
           />
         )}
       </Card>
+
+      <SheetsExportHistory exporter={exporter} />
     </>
   );
 }

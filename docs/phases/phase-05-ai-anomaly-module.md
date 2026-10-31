@@ -1,5 +1,7 @@
 # Phase 05 — Anomaly Screening dan Klasifikasi Dugaan Duplikasi
 
+> **Catatan D-24 (30 Okt 2026):** penugasan tutor dan tarif per penugasan sudah dihapus. Istilah *assignment/penugasan/tarif demo* di dokumen fase ini bersifat historis; Tutor kini memilih murid dan mapel sendiri dan honor memakai satu tarif tunggal dari konfigurasi. Lihat `docs/17` D-24.
+
 ## Tujuan
 
 Menyediakan temuan yang membantu Admin meninjau data bermasalah, terutama kandidat duplikasi atau pola tak wajar. AI/model memberi klasifikasi/indikasi, bukan keputusan final absensi atau honor.

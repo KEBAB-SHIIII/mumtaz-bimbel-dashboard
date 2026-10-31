@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { anomalyFindingSchema } from '@mumtaz/contracts';
-import { ASSIGNMENT_IDS, FINDING_IDS, SESSION_IDS, USER_IDS } from '@mumtaz/contracts/fixtures';
+import { FINDING_IDS, SESSION_IDS, USER_IDS, STUDENT_IDS, SUBJECT_IDS } from '@mumtaz/contracts/fixtures';
 import { lessonSessions } from '../src/db/schema.js';
 import { as, createTestApp, type TestApp, type TestClient } from './helpers/test-app.js';
 
@@ -48,7 +48,7 @@ describe('PATCH /admin/anomalies/:id/review', () => {
     const tutor = await as.tutorA(t.app);
     await tutor
       .patch(`/tutor/me/attendance/${SESSION_IDS.s09}`, {
-        assignment_id: ASSIGNMENT_IDS.tutorAMurid2BahasaInggris,
+        student_id: STUDENT_IDS.murid2, subject_id: SUBJECT_IDS.bahasaInggris,
         lesson_date: '2026-10-11',
         duration_minutes: 60,
         learning_material: 'Numbers 1–100',

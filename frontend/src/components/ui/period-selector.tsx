@@ -1,12 +1,26 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useId } from 'react';
-import { periodSchema } from '@mumtaz/contracts';
+import { periodSchema, type Period } from '@mumtaz/contracts';
 import { formatPeriod } from '../../lib/format';
-import { shiftPeriod } from '../../lib/period';
+import { currentPeriod, shiftPeriod } from '../../lib/period';
 import { Button } from './button';
-import { Input } from './field';
+import { Select } from './field';
 
-/** Pemilih bulan `YYYY-MM` (berbasis `lesson_date`). */
+/** Rentang pilihan: 2 tahun ke belakang s.d. akhir tahun depan, terbaru di atas. */
+function periodOptions(value: Period): Period[] {
+  const year = Number(currentPeriod().slice(0, 4));
+  const options: Period[] = [];
+  for (let period = `${year + 1}-12`; period >= `${year - 2}-01`; period = shiftPeriod(period, -1)) options.push(period);
+  // Periode di luar rentang (mis. dari URL) tetap dapat ditampilkan.
+  if (!options.includes(value)) options.push(value);
+  return options.sort().reverse();
+}
+
+/**
+ * Pemilih bulan `YYYY-MM` (berbasis `lesson_date`). Memakai `<select>` berlabel bahasa Indonesia
+ * ("Oktober 2026") — konsisten di semua browser, berbeda dengan `type="month"` yang mengikuti
+ * bahasa browser dan tidak didukung Safari desktop.
+ */
 export function PeriodSelector({ value, onChange }: { value: string; onChange: (period: string) => void }) {
   const id = useId();
   return (
@@ -18,23 +32,24 @@ export function PeriodSelector({ value, onChange }: { value: string; onChange: (
         <Button variant="secondary" size="md" aria-label="Bulan sebelumnya" className="px-2.5" onClick={() => onChange(shiftPeriod(value, -1))}>
           <ChevronLeft aria-hidden className="size-4" />
         </Button>
-        <Input
+        <Select
           id={id}
-          type="month"
           value={value}
-          aria-describedby={`${id}-label`}
           className="w-44"
           onChange={(event) => {
             if (periodSchema.safeParse(event.target.value).success) onChange(event.target.value);
           }}
-        />
+        >
+          {periodOptions(value).map((period) => (
+            <option key={period} value={period}>
+              {formatPeriod(period)}
+            </option>
+          ))}
+        </Select>
         <Button variant="secondary" size="md" aria-label="Bulan berikutnya" className="px-2.5" onClick={() => onChange(shiftPeriod(value, 1))}>
           <ChevronRight aria-hidden className="size-4" />
         </Button>
       </div>
-      <span id={`${id}-label`} className="sr-only">
-        {formatPeriod(value)}
-      </span>
     </div>
   );
 }

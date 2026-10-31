@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import {
+  attendanceOptionsSchema,
   paginatedSchema,
   payrollPreviewResponseSchema,
   submitAttendanceResponseSchema,
-  tutorAssignmentOptionSchema,
   tutorDashboardSummarySchema,
   tutorSessionSchema,
   type ReviseAttendanceRequest,
@@ -19,9 +19,10 @@ export async function fetchTutorDashboard(period: string) {
   return tutorDashboardSummarySchema.parse(data);
 }
 
-export async function fetchTutorAssignments() {
-  const { data } = await apiClient.get<unknown>('/tutor/me/assignments');
-  return z.object({ items: z.array(tutorAssignmentOptionSchema) }).parse(data).items;
+/** Murid & mata pelajaran aktif yang dapat dipilih Tutor di Form Absensi (tanpa penugasan). */
+export async function fetchAttendanceOptions() {
+  const { data } = await apiClient.get<unknown>('/tutor/attendance-options');
+  return attendanceOptionsSchema.parse(data);
 }
 
 export async function submitAttendance(input: SubmitAttendanceRequest) {

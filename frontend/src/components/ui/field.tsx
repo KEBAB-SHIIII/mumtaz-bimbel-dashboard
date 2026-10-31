@@ -1,4 +1,6 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOptions } from '@headlessui/react';
+import { Check, ChevronDown } from 'lucide-react';
+import { useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { cn } from '../../lib/cn';
 
 const CONTROL =
@@ -15,6 +17,73 @@ export function Select({ className, children, ...props }: SelectHTMLAttributes<H
     <select className={cn(CONTROL, 'h-10 pr-8', className)} {...props}>
       {children}
     </select>
+  );
+}
+
+export interface SearchSelectItem {
+  value: string;
+  label: string;
+  /** Keterangan kedua (mis. kelas & sekolah); ikut dicari. */
+  hint?: string;
+}
+
+interface SearchSelectProps {
+  id: string;
+  items: SearchSelectItem[];
+  /** Nilai terpilih (`''` = belum memilih). */
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  invalid?: boolean;
+  describedBy?: string | undefined;
+}
+
+/**
+ * Pilihan dengan pencarian (Headless UI Combobox): ketik untuk menyaring daftar panjang
+ * (mis. ratusan murid), panah/Enter untuk memilih. Hanya nilai dari daftar yang dapat dipilih.
+ */
+export function SearchSelect({ id, items, value, onChange, placeholder, invalid, describedBy }: SearchSelectProps) {
+  const [query, setQuery] = useState('');
+  const needle = query.trim().toLowerCase();
+  const filtered = needle ? items.filter((item) => `${item.label} ${item.hint ?? ''}`.toLowerCase().includes(needle)) : items;
+  const selected = items.find((item) => item.value === value) ?? null;
+
+  return (
+    <Combobox value={selected} onChange={(item: SearchSelectItem | null) => onChange(item?.value ?? '')} onClose={() => setQuery('')}>
+      <div className="relative">
+        <ComboboxInput
+          id={id}
+          className={cn(CONTROL, 'h-10 pr-9')}
+          placeholder={placeholder}
+          aria-invalid={invalid || undefined}
+          aria-describedby={describedBy}
+          autoComplete="off"
+          displayValue={(item: SearchSelectItem | null) => item?.label ?? ''}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <ComboboxButton aria-label="Tampilkan daftar pilihan" className="absolute inset-y-0 right-0 flex items-center px-2.5 text-muted">
+          <ChevronDown aria-hidden className="size-4" />
+        </ComboboxButton>
+        <ComboboxOptions
+          className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-surface py-1 text-sm shadow-md empty:invisible"
+        >
+          {filtered.length === 0 && <div className="px-3 py-2 text-muted">Tidak ada yang cocok</div>}
+          {filtered.map((item) => (
+            <ComboboxOption
+              key={item.value}
+              value={item}
+              className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 data-focus:bg-surface-muted"
+            >
+              <span>
+                <span className="font-medium text-text">{item.label}</span>
+                {item.hint && <span className="ml-2 text-xs text-muted">{item.hint}</span>}
+              </span>
+              {item.value === value && <Check aria-hidden className="size-4 shrink-0" />}
+            </ComboboxOption>
+          ))}
+        </ComboboxOptions>
+      </div>
+    </Combobox>
   );
 }
 

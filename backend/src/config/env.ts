@@ -23,6 +23,10 @@ const postgresUrl = z
 
 const PLACEHOLDER_PREFIX = 'replace';
 
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+export const isHttpsOrigin = (origin: string) => new URL(origin).protocol === 'https:';
+export const isLoopbackOrigin = (origin: string) => LOOPBACK_HOSTS.has(new URL(origin).hostname);
+
 export const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -34,6 +38,11 @@ export const envSchema = z
      * Default `0`: X-Forwarded-For diabaikan agar IP untuk rate limit tidak bisa dipalsukan.
      */
     TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
+    /**
+     * Folder hasil `vite build` frontend. Bila diisi, API ikut menyajikan SPA dari origin yang
+     * sama (satu service; cookie SameSite tetap first-party). Kosong = frontend di-host terpisah.
+     */
+    FRONTEND_DIST_DIR: optionalString,
 
     DATABASE_URL: postgresUrl,
     DATABASE_MIGRATION_URL: z.preprocess(
@@ -56,11 +65,16 @@ export const envSchema = z
      * kontrak (24 jam); batas bisnis UMKM belum ditetapkan (O-12). Durasi di atas ambang
      * anomali tetap diterima dan hanya menjadi finding (lihat ANOMALY_DURATION_OUTLIER_MINUTES).
      */
+    /** Tarif honor tunggal per sesi (rupiah, D-24); dikunci ke sesi saat disetujui. */
+    HONOR_RATE_PER_SESSION: positiveInt(50_000),
+
     ATTENDANCE_MAX_DURATION_MINUTES: z.coerce.number().int().min(1).max(DURATION_MINUTES_TECHNICAL_MAX).default(DURATION_MINUTES_TECHNICAL_MAX),
 
     GOOGLE_SHEETS_EXPORT_ENABLED: booleanFlag,
     GOOGLE_SHEETS_SPREADSHEET_ID: optionalString,
     GOOGLE_SERVICE_ACCOUNT_KEY_FILE: optionalString,
+    /** Batas waktu satu panggilan Google Sheets API (ms). */
+    GOOGLE_SHEETS_TIMEOUT_MS: positiveInt(20_000),
 
     GEMINI_API_KEY: optionalString,
     GEMINI_MODEL: optionalString,
@@ -103,6 +117,24 @@ export const envSchema = z
             message: 'Production membutuhkan secret acak minimal 32 karakter',
           });
         }
+      }
+      // Loopback (laptop owner) boleh HTTP; domain publik wajib HTTPS.
+      if (!isHttpsOrigin(env.FRONTEND_ORIGIN) && !isLoopbackOrigin(env.FRONTEND_ORIGIN)) {
+        ctx.addIssue({ code: 'custom', path: ['FRONTEND_ORIGIN'], message: 'Production wajib memakai origin HTTPS (kecuali localhost)' });
+      }
+      for (const key of ['DATABASE_URL', 'DATABASE_MIGRATION_URL'] as const) {
+        const value = env[key];
+        if (value && !/[?&]sslmode=(require|verify-ca|verify-full)\b/.test(value)) {
+          ctx.addIssue({ code: 'custom', path: [key], message: 'Production wajib memakai koneksi TLS (sslmode=require/verify-full)' });
+        }
+      }
+      const adminPassword = env.BOOTSTRAP_ADMIN_PASSWORD;
+      if (adminPassword && (adminPassword.length < 12 || adminPassword.startsWith(PLACEHOLDER_PREFIX))) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['BOOTSTRAP_ADMIN_PASSWORD'],
+          message: 'Production membutuhkan password Admin minimal 12 karakter (bukan placeholder)',
+        });
       }
       if (env.SEED_TUTOR_PASSWORD) {
         ctx.addIssue({

@@ -35,11 +35,12 @@ const durationMinutesSchema = z
 
 /**
  * Field editable sesi oleh Tutor. Validasi bentuk saja; aturan domain
- * (assignment milik tutor & aktif, tanggal tidak di masa depan menurut
+ * (murid & mata pelajaran aktif, tanggal tidak di masa depan menurut
  * Asia/Jakarta — O-14) diperiksa backend.
  */
 const editableSessionFields = {
-  assignment_id: uuidSchema,
+  student_id: uuidSchema,
+  subject_id: uuidSchema,
   lesson_date: isoDateSchema,
   duration_minutes: durationMinutesSchema,
   /** Working default O-09: wajib. */
@@ -80,7 +81,6 @@ export type SessionDecisionRequest = z.infer<typeof sessionDecisionRequestSchema
 /** Delapan kolom inti yang juga menjadi dasar ekspor. */
 const sessionCoreFields = {
   id: uuidSchema,
-  assignment_id: uuidSchema,
   tutor_id: uuidSchema,
   tutor_name: z.string(),
   student_id: uuidSchema,

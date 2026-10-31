@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { STUDENT_IDS, TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
-import { useDemoBackend } from '../../test/render';
+import { useFakeBackend } from '../render';
 import { toApiError } from '../../lib/api-error';
-import * as admin from '../admin/api';
-import { fetchSession, login, logout, parentAccess } from '../auth/api';
-import * as parent from '../parent/api';
-import * as tutor from '../tutor/api';
+import * as admin from '../../features/admin/api';
+import { fetchSession, login, logout, parentAccess } from '../../features/auth/api';
+import * as parent from '../../features/parent/api';
+import * as tutor from '../../features/tutor/api';
 
 /**
  * Fake API adapter wajib berbentuk sama dengan kontrak: setiap feature API
@@ -13,7 +13,7 @@ import * as tutor from '../tutor/api';
  */
 describe('fake API adapter mengikuti kontrak (data sintetis)', () => {
   it('Admin: semua endpoint baca lolos schema kontrak', async () => {
-    useDemoBackend();
+    useFakeBackend();
     expect(await fetchSession()).toBeNull();
     await login({ username: 'admin.demo', password: TEST_ONLY_CREDENTIALS.adminPassword });
 
@@ -26,30 +26,34 @@ describe('fake API adapter mengikuti kontrak (data sintetis)', () => {
     await admin.fetchAdminAttendanceDetail(first.id);
     const payroll = await admin.fetchPayrollPreview('2026-10');
     expect(payroll.total_estimated_amount).toBe('200000');
-    expect(payroll.is_demo_assumption).toBe(true);
     // Total dapat ditelusuri ke rincian sesi.
     const counted = payroll.tutors.flatMap((t) => t.sessions).filter((line) => line.counted);
     expect(counted.reduce((sum, line) => sum + Number(line.amount), 0)).toBe(200000);
     const recap = await admin.fetchRecap('2026-10', 'tutor');
     expect(recap.totals.total_sessions).toBe(9);
-    for (const entity of ['tutors', 'students', 'parents', 'subjects', 'tutor-assignments', 'tutor-rates'] as const) {
+    for (const entity of ['tutors', 'students', 'parents', 'subjects'] as const) {
       await admin.fetchMasterData(entity, { page: 1, page_size: 20 });
     }
+    const exported = await admin.exportAttendanceToSheets({ period: '2026-10', confirm_empty_replace: false });
+    expect(exported).toMatchObject({ sheet_title: 'Absensi 2026-10', records_exported: 9, status: 'succeeded' });
+    expect((await admin.fetchExportHistory({ page_size: 10 })).items).toHaveLength(1);
   });
 
   it('Tutor: endpoint milik sendiri lolos schema; submit idempoten', async () => {
-    useDemoBackend();
+    useFakeBackend();
     await login({ username: 'farhan', password: TEST_ONLY_CREDENTIALS.tutorPassword });
     await tutor.fetchTutorDashboard('2026-10');
-    const assignments = await tutor.fetchTutorAssignments();
-    expect(assignments).toHaveLength(2);
+    const options = await tutor.fetchAttendanceOptions();
+    expect(options.students).toHaveLength(12);
+    expect(options.subjects).toHaveLength(4);
     const history = await tutor.fetchTutorAttendance({ period: '2026-10', page: 1, page_size: 20 });
     expect(history.items.every((item) => item.tutor_name === 'Farhan')).toBe(true);
     await tutor.fetchTutorPayroll('2026-10');
 
     const body = {
       client_submission_id: '00000000-0000-4000-9000-000000000500',
-      assignment_id: assignments[0]?.assignment_id ?? '',
+      student_id: options.students[0]?.id ?? '',
+      subject_id: options.subjects[0]?.id ?? '',
       lesson_date: '2026-10-20',
       duration_minutes: 90,
       learning_material: 'Materi demo',
@@ -60,7 +64,7 @@ describe('fake API adapter mengikuti kontrak (data sintetis)', () => {
   });
 
   it('Orang Tua: hanya anak terhubung; anak lain → 403', async () => {
-    useDemoBackend();
+    useFakeBackend();
     await parentAccess({ access_code: 'MUMTAZ-DEMO-PARENT-ACCESS-ONLY' });
     const students = await parent.fetchParentStudents();
     expect(students.map((s) => s.id)).toEqual([STUDENT_IDS.murid1]);
@@ -73,7 +77,7 @@ describe('fake API adapter mengikuti kontrak (data sintetis)', () => {
   });
 
   it('meniru role guard dan CSRF backend', async () => {
-    useDemoBackend();
+    useFakeBackend();
     await login({ username: 'farhan', password: TEST_ONLY_CREDENTIALS.tutorPassword });
     const forbidden = await admin.fetchAdminDashboard('2026-10').catch((e: unknown) => e);
     expect(toApiError(forbidden).status).toBe(403);

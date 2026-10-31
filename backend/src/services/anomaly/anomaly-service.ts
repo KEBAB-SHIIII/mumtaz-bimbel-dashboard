@@ -1,7 +1,7 @@
 import { and, asc, eq, gte, lte, ne, or } from 'drizzle-orm';
 import { anomalyFindingCandidateSchema, type AnomalyFindingCandidate } from '@mumtaz/contracts';
 import type { Database } from '../../db/client.js';
-import { anomalyFlags, lessonSessions, tutorAssignments } from '../../db/schema.js';
+import { anomalyFlags, lessonSessions } from '../../db/schema.js';
 import { safeErrorMessage } from '../../lib/db-errors.js';
 import type { Logger } from '../../lib/logger.js';
 import {
@@ -21,15 +21,16 @@ export interface AnomalyServiceDeps {
   logger: Logger;
 }
 
+
+
 /** `stale` = payload sesi berubah (revisi) selama analisis; hasil lama dibuang. */
 export type AnalysisOutcome = 'completed' | 'failed' | 'not_evaluated' | 'skipped' | 'stale';
 
 const snapshotColumns = {
   id: lessonSessions.id,
-  assignment_id: lessonSessions.assignment_id,
-  tutor_id: tutorAssignments.tutor_id,
-  student_id: tutorAssignments.student_id,
-  subject_id: tutorAssignments.subject_id,
+  tutor_id: lessonSessions.tutor_id,
+  student_id: lessonSessions.student_id,
+  subject_id: lessonSessions.subject_id,
   lesson_date: lessonSessions.lesson_date,
   duration_minutes: lessonSessions.duration_minutes,
   submitted_at: lessonSessions.submitted_at,
@@ -49,7 +50,6 @@ async function loadTarget(db: Database, sessionId: string) {
   const [row] = await db
     .select({ ...snapshotColumns, anomaly_analysis_status: lessonSessions.anomaly_analysis_status })
     .from(lessonSessions)
-    .innerJoin(tutorAssignments, eq(tutorAssignments.id, lessonSessions.assignment_id))
     .where(eq(lessonSessions.id, sessionId))
     .limit(1);
   return row;
@@ -60,13 +60,12 @@ async function loadComparisonPool(db: Database, target: AnomalySessionSnapshot):
   const rows = await db
     .select(snapshotColumns)
     .from(lessonSessions)
-    .innerJoin(tutorAssignments, eq(tutorAssignments.id, lessonSessions.assignment_id))
     .where(
       and(
         ne(lessonSessions.id, target.id),
         gte(lessonSessions.lesson_date, shiftDate(target.lesson_date, -COMPARISON_WINDOW_DAYS)),
         lte(lessonSessions.lesson_date, shiftDate(target.lesson_date, COMPARISON_WINDOW_DAYS)),
-        or(eq(tutorAssignments.tutor_id, target.tutor_id), eq(tutorAssignments.student_id, target.student_id)),
+        or(eq(lessonSessions.tutor_id, target.tutor_id), eq(lessonSessions.student_id, target.student_id)),
       ),
     )
     .orderBy(asc(lessonSessions.submitted_at), asc(lessonSessions.id))

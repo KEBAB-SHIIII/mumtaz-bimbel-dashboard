@@ -46,14 +46,14 @@ Bangun aplikasi full-stack TypeScript untuk Bimbel Mumtaz Sampit: form absensi s
 - Validasi Zod di backend adalah otoritatif; validasi frontend hanya untuk UX.
 - Payroll dihitung di backend menggunakan decimal-safe arithmetic; nominal di UI hanya dari API.
 - Gunakan `lesson_date` untuk filter harian/bulanan; `duration_minutes` adalah integer menit.
-- Gunakan soft deactivation untuk master data yang direferensikan; jangan hard-delete histori. `users.is_active` mengontrol login; `tutors.is_active`/`students.is_active` mengontrol eligibility untuk assignment/sesi baru.
+- Gunakan soft deactivation untuk master data yang direferensikan; jangan hard-delete histori. `users.is_active` mengontrol login; `tutors.is_active`/`students.is_active` mengontrol eligibility untuk sesi baru (pilihan Form Absensi).
 - Gunakan komentar Bahasa Indonesia yang singkat hanya untuk alasan/aturan non-obvious; tidak perlu docstring panjang.
 - Semua halaman memiliki loading, empty, error, success, disabled/loading states; pesan error tidak memaparkan detail internal.
 - UI harus nyaman, ringkas, responsive, accessible, dan mengurangi input berulang dengan auto-fill Master Data.
 
 ## Honor demo
 
-- Seed menggunakan `rate_type='per_session'`, `rate_amount=50000`, `is_demo_assumption=true` untuk assignment demo.
+- Honor memakai tarif tunggal per sesi dari konfigurasi `HONOR_RATE_PER_SESSION` (default 50000), dikunci ke sesi saat approve (D-24); tidak ada tabel penugasan/tarif.
 - Hanya sesi `approved` masuk honor estimasi.
 - Jangan menyebarkan angka 50000 sebagai konstanta ke komponen/service; kalkulasi membaca `tutor_rates`/snapshot.
 - Tandai nominal dari tarif demo dengan badge kecil "Tarif demo" di halaman Honor (D-20); jangan memakai label panjang di dashboard/halaman lain.

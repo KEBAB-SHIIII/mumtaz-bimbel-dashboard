@@ -18,15 +18,13 @@ const TABS = [
   { to: 'siswa', label: 'Siswa' },
   { to: 'orang-tua', label: 'Orang Tua/Wali' },
   { to: 'mapel', label: 'Mata Pelajaran' },
-  { to: 'penugasan', label: 'Penugasan Tutor' },
-  { to: 'tarif', label: 'Tarif Honor' },
 ];
 
-/** Master Data: enam submenu (docs/15 §2.5). Data referensi, bukan transaksi. */
+/** Master Data: empat submenu (docs/15 §2.5). Data referensi, bukan transaksi; Tutor memilih murid & mapel sendiri saat absen. */
 export function MasterDataLayout() {
   return (
     <>
-      <PageHeader title="Master Data" description="Data referensi tutor, siswa, wali, mapel, penugasan, dan tarif. Data yang sudah dipakai dinonaktifkan, tidak dihapus." />
+      <PageHeader title="Master Data" description="Data referensi tutor, siswa, wali, dan mata pelajaran. Tutor memilih murid dan mapel sendiri saat mengisi absensi. Data yang sudah dipakai dinonaktifkan, tidak dihapus." />
       <nav aria-label="Submenu Master Data" className="-mb-2 overflow-x-auto border-b border-border">
         <ul className="flex gap-1">
           {TABS.map((tab) => (

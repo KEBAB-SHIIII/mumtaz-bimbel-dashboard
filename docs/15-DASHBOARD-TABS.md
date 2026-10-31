@@ -37,7 +37,7 @@ Konten:
 - sesi `pending`, `approved`, `revision_requested`, dan `rejected`;
 - working default O-15: `approved` dan `rejected` terminal tanpa reopen/edit bebas pada MVP, tetapi kebijakan ini belum dikonfirmasi owner.
 - jumlah temuan anomali yang belum direview;
-- estimasi honor dari sesi approved (penanda tarif demo hanya di halaman Honor, D-20);
+- estimasi honor dari sesi approved (tarif tunggal per sesi, D-24);
 - daftar sesi terbaru dan tindakan admin yang perlu dilakukan.
 
 Jangan menampilkan angka pendapatan/laba bimbel karena sumber data pemasukan tidak termasuk scope.
@@ -63,7 +63,7 @@ Aksi Admin:
 
 Detail sesi menampilkan delapan atribut absensi, materi pembelajaran, catatan/fokus, `submitted_at`, `reviewed_at`, catatan internal Admin, serta anomaly finding yang relevan.
 
-Data source: `lesson_sessions` + `tutor_assignments`, `tutors`, `users`, `students`, `subjects`, `anomaly_flags`.
+Data source: `lesson_sessions` + `tutors`, `users`, `students`, `subjects`, `anomaly_flags`.
 
 ### 2.3 Rekap
 
@@ -91,9 +91,8 @@ Konten:
 - tabel per tutor: jumlah sesi approved, dasar tarif, subtotal;
 - daftar sesi pending/revisi/ditolak yang belum masuk nominal;
 - detail sesi sumber kalkulasi;
-- badge/peringatan **Tarif Demo** saat nominal masih simulasi.
 
-**Aturan development:** gunakan dummy rate **Rp50.000 per sesi** untuk assignment demo. Nilai harus berasal dari `tutor_rates`/seed konfigurasi, bukan angka yang tersebar atau hard-coded di kalkulator. Nominal dari tarif demo ditandai badge kecil "Tarif demo" (D-20). Hanya sesi `approved` yang masuk estimasi. Jangan tampilkan status sudah dibayar karena payment tracking tidak termasuk MVP.
+**Aturan honor (D-24):** satu tarif tunggal per sesi dari konfigurasi `HONOR_RATE_PER_SESSION` (default Rp50.000), dikunci ke sesi saat disetujui — bukan angka yang tersebar atau hard-coded di kalkulator. Hanya sesi `approved` yang masuk estimasi. Jangan tampilkan status sudah dibayar karena payment tracking tidak termasuk MVP.
 
 ### 2.5 Master Data
 
@@ -101,14 +100,12 @@ Master Data adalah data referensi, bukan daftar transaksi absensi. Submenu:
 
 | Submenu | Isi | Data source / tindakan |
 |---|---|---|
-| Tutor | Profil, username, kontak opsional, status operasional, akses login | `users`, `tutors`; buat/edit/nonaktifkan profil atau akses login secara terpisah |
+| Tutor | Profil, username, kontak opsional, status operasional, akses login | `users`, `tutors`; buat/edit/nonaktifkan profil atau akses login secara terpisah. Password acak dibuat sistem dan ditampilkan sekali saat dibuat; tombol **Reset password** untuk tutor yang lupa |
 | Siswa | Nama, kelas, asal sekolah, status aktif | `students`; buat/edit/nonaktifkan |
 | Orang Tua/Wali | Profil wali, relasi anak, dan aksi generate/rotasi ID Akses Orang Tua | `users`, `parent_students`; hubungkan orang tua dengan siswa. Kode akses acak ditampilkan sekali saat dibuat/dirotasi, disimpan sebagai digest; jangan tampilkan ulang digest/kode lama |
 | Mata Pelajaran | Daftar mata pelajaran | `subjects`; tambah/edit/nonaktifkan |
-| Penugasan Tutor | Tutor + siswa + mapel + tanggal berlaku | `tutor_assignments`; menentukan opsi pada Form Tutor |
-| Tarif Honor | Tarif per sesi dan masa berlaku | `tutor_rates`; dibutuhkan untuk kalkulasi demo Rp50.000/sesi (ditandai "Tarif demo"); tarif resmi belum diketahui |
 
-Gunakan soft deactivation untuk record yang sudah direferensikan sesi. Jangan hard-delete tutor/siswa atau menulis ulang histori. Untuk Tutor, bedakan status operasional (`tutors.is_active`, menentukan kelayakan penugasan/submit baru) dengan akses login (`users.is_active`, menentukan apakah akun boleh login). Perubahan status pada UI harus menyatakan efeknya dengan jelas. Jika `student_links` parent diubah, tampilkan konfirmasi bahwa akses progres anak yang dilepas akan langsung dicabut.
+Gunakan soft deactivation untuk record yang sudah direferensikan sesi. Jangan hard-delete tutor/siswa atau menulis ulang histori. Untuk Tutor, bedakan status operasional (`tutors.is_active`, menentukan kelayakan submit sesi baru) dengan akses login (`users.is_active`, menentukan apakah akun boleh login). Perubahan status pada UI harus menyatakan efeknya dengan jelas. Jika `student_links` parent diubah, tampilkan konfirmasi bahwa akses progres anak yang dilepas akan langsung dicabut.
 
 ## 3. Dashboard Tutor
 
@@ -126,9 +123,9 @@ Menampilkan nama lengkap, username, dan kontak dari akun login secara read-only,
 
 Field:
 - Nama tutor: otomatis dari akun login, tidak bisa diubah.
-- Nama murid: pilihan assignment aktif milik tutor.
+- Nama murid: dipilih Tutor sendiri dari murid aktif (kotak pencarian).
 - Kelas dan asal sekolah: auto-fill dari Master Data siswa.
-- Mata pelajaran: dari assignment yang dipilih.
+- Mata pelajaran: dipilih Tutor sendiri dari mata pelajaran aktif.
 - Tanggal les: tanggal sesi berlangsung.
 - Durasi les: integer menit dengan label unit jelas.
 - Materi pembelajaran: working default wajib untuk data awal Progress Anak; requiredness belum dikonfirmasi owner (O-09).
@@ -145,7 +142,7 @@ Hanya menampilkan sesi milik tutor yang login. Kolom ringkas: tanggal les, siswa
 
 ### 3.4 Honor Saya
 
-Tampilkan estimasi honor per bulan dan rincian per tanggal/sesi: tanggal les, siswa/mapel, durasi, tarif demo atau tarif aktif, nilai sesi, dan status review. Hanya sesi approved dihitung. Tampilkan label jelas jika memakai rate dummy Rp50.000 per sesi. Jangan menampilkan “sudah dibayar” tanpa fitur pembayaran aktual.
+Tampilkan estimasi honor per bulan dan rincian per tanggal/sesi: tanggal les, siswa/mapel, durasi, tarif per sesi, nilai sesi, dan status review. Hanya sesi approved dihitung. Jangan menampilkan “sudah dibayar” tanpa fitur pembayaran aktual.
 
 ## 4. Dashboard Orang Tua/Wali
 
@@ -167,11 +164,11 @@ Hanya sesi `approved` dan field yang layak dipublikasikan yang ditampilkan. Jang
 | Layar | Tabel utama | Filter keamanan/periode |
 |---|---|---|
 | Admin → Data Absensi | `lesson_sessions` + tabel master + `anomaly_flags` | Admin; `lesson_date`, status, pencarian |
-| Tutor → Riwayat | `lesson_sessions` + relasi master | Tutor dari sesi server; hanya assignment milik tutor |
-| Tutor → Honor Saya | `lesson_sessions` + `tutor_rates` | Tutor login; sesi approved saja untuk nominal |
+| Tutor → Riwayat | `lesson_sessions` + relasi master | Tutor dari sesi server; hanya sesi milik tutor |
+| Tutor → Honor Saya | `lesson_sessions` (snapshot tarif) | Tutor login; sesi approved saja untuk nominal |
 | Orang Tua → Progress Anak | `lesson_sessions` + `parent_students` + relasi master | Parent-child link; sesi approved |
 | Admin → Rekap | `lesson_sessions` + relasi master | Admin; periode `YYYY-MM` |
-| Admin → Honor Tutor | `lesson_sessions` + `tutor_rates` | Admin; periode `YYYY-MM`, status approved |
+| Admin → Honor Tutor | `lesson_sessions` (snapshot tarif) | Admin; periode `YYYY-MM`, status approved |
 | Admin → Master Data | tabel master dan akun | Admin only |
 | Admin → Ekspor Sheets | sesi terpilih oleh kebijakan ekspor (semua status review) + `sheet_export_runs` | Admin; periode `YYYY-MM` |
 

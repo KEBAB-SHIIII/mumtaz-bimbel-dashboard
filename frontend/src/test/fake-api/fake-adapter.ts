@@ -1,6 +1,6 @@
 import { AxiosError, AxiosHeaders, type AxiosAdapter, type AxiosResponse } from 'axios';
-import { CSRF_HEADER, apiClient } from '../../lib/api-client';
-import { createDemoBackend, type DemoBackend } from './demo-backend';
+import { CSRF_HEADER } from '../../lib/api-client';
+import { createFakeBackend, type FakeBackend } from './fake-backend';
 
 function parseBody(data: unknown): Record<string, unknown> {
   if (typeof data === 'string' && data.length > 0) {
@@ -15,7 +15,7 @@ function parseBody(data: unknown): Record<string, unknown> {
 }
 
 /** Axios adapter yang menjawab request dari fake backend in-memory (data sintetis). */
-export function createDemoAdapter(backend: DemoBackend = createDemoBackend(), { latencyMs = 0 } = {}): AxiosAdapter {
+export function createFakeAdapter(backend: FakeBackend = createFakeBackend(), { latencyMs = 0 } = {}): AxiosAdapter {
   return async (config) => {
     if (latencyMs > 0) await new Promise((resolve) => setTimeout(resolve, latencyMs));
     const url = new URL(config.url ?? '/', 'http://demo.local');
@@ -36,7 +36,7 @@ export function createDemoAdapter(backend: DemoBackend = createDemoBackend(), { 
       data: result.data,
       status: result.status,
       statusText: String(result.status),
-      headers: { 'x-demo-mode': 'true' },
+      headers: {},
       config,
     };
     if (result.status >= 400) {
@@ -44,9 +44,4 @@ export function createDemoAdapter(backend: DemoBackend = createDemoBackend(), { 
     }
     return response;
   };
-}
-
-/** Mode demo: semua request `apiClient` dilayani fake backend. */
-export function installDemoAdapter(): void {
-  apiClient.defaults.adapter = createDemoAdapter(createDemoBackend(), { latencyMs: 150 });
 }

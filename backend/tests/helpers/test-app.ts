@@ -3,7 +3,8 @@ import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
 import { createApp } from '../../src/app.js';
 import { createSessionStore } from '../../src/config/session.js';
 import type { DatabaseHandle } from '../../src/db/client.js';
-import { seedSyntheticData } from '../../src/db/seed.js';
+import { seedSyntheticData } from './seed.js';
+import type { GoogleSheetsExporter } from '../../src/integrations/google-sheets/types.js';
 import type { AnomalyQueue } from '../../src/services/anomaly/anomaly-worker.js';
 import { createLogger } from '../../src/lib/logger.js';
 import { makeTestEnv, testEnvSource } from '../test-env.js';
@@ -28,10 +29,14 @@ export async function createTestApp(
     now?: () => Date;
     /** Factory antrean anomali (mis. worker dengan fake detector) yang memakai DB test. */
     anomalyQueue?: (database: DatabaseHandle) => AnomalyQueue;
+    /** Exporter Google Sheets (mis. `FakeGoogleSheetsExporter`); default: belum dikonfigurasi. */
+    sheetsExporter?: GoogleSheetsExporter;
+    /** Pakai database yang sudah ada (mis. dua app dengan konfigurasi berbeda); tidak di-seed & tidak ditutup. */
+    database?: DatabaseHandle;
   } = {},
 ): Promise<TestApp> {
-  const database = await createTestDatabase();
-  if (options.seed ?? true) {
+  const database = options.database ?? (await createTestDatabase());
+  if (!options.database && (options.seed ?? true)) {
     await seedSyntheticData(database.db, {
       adminPassword: TEST_ONLY_CREDENTIALS.adminPassword,
       tutorPassword: TEST_ONLY_CREDENTIALS.tutorPassword,
@@ -47,8 +52,9 @@ export async function createTestApp(
     logger: createLogger({ silent: true }),
     now: options.now ?? (() => FIXED_NOW),
     ...(options.anomalyQueue ? { anomalyQueue: options.anomalyQueue(database) } : {}),
+    ...(options.sheetsExporter ? { sheetsExporter: options.sheetsExporter } : {}),
   });
-  return { app, database, close: () => database.close() };
+  return { app, database, close: () => (options.database ? Promise.resolve() : database.close()) };
 }
 
 /**

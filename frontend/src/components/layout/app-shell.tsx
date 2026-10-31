@@ -1,10 +1,9 @@
 import { Dialog, DialogPanel } from '@headlessui/react';
-import { FlaskConical, LogOut, Menu, X } from 'lucide-react';
+import { LogOut, Menu, X } from 'lucide-react';
 import { Suspense, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import type { Role } from '@mumtaz/contracts';
-import { ROLE_LABEL, useCurrentUser, useLogoutMutation } from '../../features/auth/session';
-import { isDemoMode } from '../../lib/api-mode';
+import { ROLE_LABEL, useLogoutMutation, useSession } from '../../features/auth/session';
 import { cn } from '../../lib/cn';
 import { Button } from '../ui/button';
 import { LoadingState } from '../ui/feedback';
@@ -38,36 +37,27 @@ function Brand() {
   return <p className="px-6 py-5 text-sm font-semibold tracking-wide text-text uppercase">Mumtaz Bimbel</p>;
 }
 
-export function DemoModeBanner() {
-  if (!isDemoMode()) return null;
-  return (
-    <div role="status" className="flex items-center justify-center gap-2 bg-info px-4 py-1.5 text-xs font-medium text-white">
-      <FlaskConical aria-hidden className="size-3.5" />
-      Mode Demo — data sintetis dari fake API adapter, bukan data Neon.
-    </div>
-  );
-}
-
 /** Shell aplikasi per role: sidebar (drawer di mobile), topbar identitas + logout. */
 export function AppShell() {
-  const user = useCurrentUser();
+  const user = useSession().data;
   const logout = useLogoutMutation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
-    logout.mutate(undefined, {
-      onSettled: () => navigate(user.role === 'parent' ? '/login/orang-tua' : '/login', { replace: true }),
-    });
+    const loginPath = user?.role === 'parent' ? '/login/orang-tua' : '/login';
+    logout.mutate(undefined, { onSettled: () => navigate(loginPath, { replace: true }) });
   };
 
+  // Sesi baru saja berakhir (logout/401): route guard sedang mengarahkan ke login, jangan render shell.
+  if (!user) return null;
+
   return (
-    <div className="min-h-dvh bg-background">
+    <div className="flex min-h-dvh flex-col bg-background">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2">
         Lewati ke konten
       </a>
-      <DemoModeBanner />
-      <div className="flex">
+      <div className="flex flex-1">
         <aside className="hidden w-60 shrink-0 border-r border-border bg-surface lg:block">
           <div className="sticky top-0">
             <Brand />

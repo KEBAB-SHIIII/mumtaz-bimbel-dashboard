@@ -9,16 +9,16 @@ import {
   paginatedSchema,
   parentProgressResponseSchema,
   submitAttendanceResponseSchema,
-  tutorAssignmentOptionSchema,
+  attendanceOptionsSchema,
   tutorSessionSchema,
 } from '@mumtaz/contracts';
 import {
-  ASSIGNMENT_IDS,
   EXPECTED_SESSION_IDS_BY_PERIOD,
   FINDING_IDS,
   PARENT_FORBIDDEN_FIELDS,
   SESSION_IDS,
   STUDENT_IDS,
+  SUBJECT_IDS,
   domainInvalidSubmitCases,
   validSubmitRequest,
 } from '@mumtaz/contracts/fixtures';
@@ -40,16 +40,55 @@ const sessionCount = async () => (await t.database.db.select({ n: count() }).fro
 const uuid = (n: number) => `00000000-0000-4000-9000-${String(n).padStart(12, '0')}`;
 
 describe('POST /tutor/attendance', () => {
-  it('opsi assignment hanya milik tutor login (aktif), dengan auto-fill kelas/sekolah', async () => {
-    const res = await tutorA.get('/tutor/me/assignments').expect(200);
-    const items = tutorAssignmentOptionSchema.array().parse(res.body.items);
-    expect(items.map((item) => item.assignment_id).sort()).toEqual(
-      [ASSIGNMENT_IDS.tutorAMurid1Matematika, ASSIGNMENT_IDS.tutorAMurid2BahasaInggris].sort(),
-    );
-    expect(items.find((i) => i.assignment_id === ASSIGNMENT_IDS.tutorAMurid1Matematika)?.student).toMatchObject({
+  it('opsi Form Absensi = semua murid & mapel aktif (tanpa penugasan), dengan auto-fill kelas/sekolah', async () => {
+    const options = attendanceOptionsSchema.parse((await tutorA.get('/tutor/attendance-options').expect(200)).body);
+    expect(options.students).toHaveLength(12);
+    expect(options.subjects.map((subject) => subject.name)).toEqual(['Bahasa Indonesia', 'Bahasa Inggris', 'IPA', 'Matematika']);
+    expect(options.students.find((student) => student.id === STUDENT_IDS.murid1)).toMatchObject({
+      full_name: 'Aisyah',
       grade: '3 SD',
       school_name: 'SD Harapan Bangsa',
     });
+    // Tutor lain melihat daftar yang sama; bukan Tutor → 403.
+    expect(attendanceOptionsSchema.parse((await tutorB.get('/tutor/attendance-options').expect(200)).body)).toEqual(options);
+    expect((await admin.get('/tutor/attendance-options')).status).toBe(403);
+  });
+
+  it('murid & mapel nonaktif hilang dari opsi dan ditolak saat submit (422 per field)', async () => {
+    await admin.patch(`/admin/students/${STUDENT_IDS.murid3}`, { is_active: false }).expect(200);
+    await admin.patch(`/admin/subjects/${SUBJECT_IDS.bahasaIndonesia}`, { is_active: false }).expect(200);
+    try {
+      const options = attendanceOptionsSchema.parse((await tutorA.get('/tutor/attendance-options').expect(200)).body);
+      expect(options.students.map((student) => student.id)).not.toContain(STUDENT_IDS.murid3);
+      expect(options.subjects.map((subject) => subject.id)).not.toContain(SUBJECT_IDS.bahasaIndonesia);
+
+      const res = await tutorA.post('/tutor/attendance', {
+        ...validSubmitRequest,
+        client_submission_id: uuid(210),
+        student_id: STUDENT_IDS.murid3,
+        subject_id: SUBJECT_IDS.bahasaIndonesia,
+      });
+      expect(res.status).toBe(422);
+      expect(res.body.error.details).toEqual(
+        expect.arrayContaining([expect.objectContaining({ field: 'student_id' }), expect.objectContaining({ field: 'subject_id' })]),
+      );
+    } finally {
+      await admin.patch(`/admin/students/${STUDENT_IDS.murid3}`, { is_active: true }).expect(200);
+      await admin.patch(`/admin/subjects/${SUBJECT_IDS.bahasaIndonesia}`, { is_active: true }).expect(200);
+    }
+  });
+
+  it('tutor mana pun boleh memilih murid & mapel aktif mana pun (tidak ada penugasan)', async () => {
+    const res = await tutorB.post('/tutor/attendance', {
+      ...validSubmitRequest,
+      client_submission_id: uuid(211),
+      student_id: STUDENT_IDS.murid1,
+      subject_id: SUBJECT_IDS.bahasaIndonesia,
+      lesson_date: '2026-08-12',
+    });
+    expect(res.status).toBe(201);
+    const [row] = await t.database.db.select().from(lessonSessions).where(eq(lessonSessions.id, res.body.session.id));
+    expect(row).toMatchObject({ tutor_id: '00000000-0000-4000-8002-000000000002', student_id: STUDENT_IDS.murid1 });
   });
 
   it('submit valid → 201 pending + anomaly pending, tersimpan di DB', async () => {
@@ -64,7 +103,8 @@ describe('POST /tutor/attendance', () => {
 
     const [row] = await t.database.db.select().from(lessonSessions).where(eq(lessonSessions.id, session.id));
     expect(row).toMatchObject({
-      assignment_id: validSubmitRequest.assignment_id,
+      student_id: validSubmitRequest.student_id,
+      subject_id: validSubmitRequest.subject_id,
       lesson_date: '2026-10-20',
       duration_minutes: 90,
       status: 'pending',
@@ -89,7 +129,7 @@ describe('POST /tutor/attendance', () => {
   it('tutor lain memakai key yang sama → 409 (tidak membocorkan sesi tutor lain)', async () => {
     const res = await tutorB.post('/tutor/attendance', {
       ...validSubmitRequest,
-      assignment_id: ASSIGNMENT_IDS.tutorBMurid3Ipa,
+      student_id: STUDENT_IDS.murid3,
     });
     expect(res.status).toBe(409);
   });
@@ -180,13 +220,12 @@ describe('Admin: Data Absensi & keputusan review', () => {
     expect(detail.last_review.admin_note).toMatch(/Durasi tidak sesuai/);
   });
 
-  it('approve sesi pending → snapshot tarif demo dari tutor_rates', async () => {
+  it('approve sesi pending → snapshot tarif tunggal dari konfigurasi', async () => {
     const res = await admin.patch(`/admin/attendance/${SESSION_IDS.s02}/decision`, { decision: 'approved' });
     expect(res.status).toBe(200);
     expect(adminAttendanceDetailSchema.parse(res.body).status).toBe('approved');
 
     const [row] = await t.database.db.select().from(lessonSessions).where(eq(lessonSessions.id, SESSION_IDS.s02));
-    expect(row).toMatchObject({ rate_type_snapshot: 'per_session', rate_is_demo_snapshot: true });
     expect(Number(row?.rate_amount_snapshot)).toBe(50000);
     expect(row?.reviewed_at?.toISOString()).toBe('2026-11-15T03:00:00.000Z');
   });
@@ -218,7 +257,8 @@ describe('Admin: Data Absensi & keputusan review', () => {
 
 describe('revisi oleh Tutor', () => {
   const revision = {
-    assignment_id: ASSIGNMENT_IDS.tutorAMurid2BahasaInggris,
+    student_id: STUDENT_IDS.murid2,
+    subject_id: SUBJECT_IDS.bahasaInggris,
     lesson_date: '2026-10-11',
     duration_minutes: 60,
     learning_material: 'Numbers 1–100 (koreksi tanggal)',
@@ -260,7 +300,7 @@ describe('revisi oleh Tutor', () => {
   });
 
   it('sesi approved tidak bisa direvisi → 409', async () => {
-    const res = await tutorA.patch(`/tutor/me/attendance/${SESSION_IDS.s01}`, { ...revision, assignment_id: ASSIGNMENT_IDS.tutorAMurid1Matematika });
+    const res = await tutorA.patch(`/tutor/me/attendance/${SESSION_IDS.s01}`, { ...revision, student_id: STUDENT_IDS.murid1, subject_id: SUBJECT_IDS.matematika });
     expect(res.status).toBe(409);
   });
 
@@ -269,12 +309,14 @@ describe('revisi oleh Tutor', () => {
     expect(res.status).toBe(404);
   });
 
-  it('revisi ke assignment milik tutor lain → 422', async () => {
-    const res = await tutorB.patch(`/tutor/me/attendance/${SESSION_IDS.s03}`, {
-      ...revision,
-      assignment_id: ASSIGNMENT_IDS.tutorAMurid2BahasaInggris,
-    });
-    expect(res.status).toBe(422);
+  it('revisi ke murid nonaktif → 422', async () => {
+    await admin.patch(`/admin/students/${STUDENT_IDS.murid2}`, { is_active: false }).expect(200);
+    try {
+      const res = await tutorB.patch(`/tutor/me/attendance/${SESSION_IDS.s03}`, { ...revision, student_id: STUDENT_IDS.murid2 });
+      expect(res.status).toBe(422);
+    } finally {
+      await admin.patch(`/admin/students/${STUDENT_IDS.murid2}`, { is_active: true }).expect(200);
+    }
   });
 });
 

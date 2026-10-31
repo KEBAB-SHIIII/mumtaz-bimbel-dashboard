@@ -34,9 +34,12 @@ Membangun aplikasi full-stack TypeScript berbasis role (Admin, Tutor, Orang Tua)
    - AI **TIDAK PERNAH** mengambil keputusan otomatis untuk menyetujui/menolak sesi atau mengubah hitungan honor. Admin yang memegang keputusan akhir.
    - Kegagalan AI/screening tidak boleh membatalkan penyimpanan sesi absensi.
    - Unit tests offline WAJIB menggunakan deterministic fake detector, bukan fake live.
-7. **Honor Simulasi Demo**:
-   - Default tarif demo Rp50.000 per sesi (`is_demo_assumption=true`).
-   - Nominal dari tarif demo ditandai badge kecil **"Tarif demo"** di samping nominal pada halaman Honor (Admin `Honor Tutor`, Tutor `Honor Saya`). Label panjang "Simulasi — bukan tarif resmi UMKM" tidak dipakai lagi karena membingungkan (keputusan owner, `docs/17` D-20).
+7. **Honor**:
+   - Satu tarif tunggal per sesi dari konfigurasi `HONOR_RATE_PER_SESSION` (default Rp50.000), sama untuk semua tutor dan dikunci ke `lesson_sessions.rate_amount_snapshot` saat sesi disetujui (keputusan owner D-22/D-24; tarif resmi UMKM O-01 terbuka).
+   - Tidak ada penugasan tutor maupun tabel tarif: Tutor memilih murid dan mata pelajaran sendiri saat absen. Tidak ada badge/label "Tarif demo".
+8. **Satu Mode: Production** (keputusan owner D-23):
+   - Aplikasi selalu berjalan dengan `NODE_ENV=production`, satu file env `backend/.env`, satu database Neon (branch production), Gemini, dan spreadsheet yang sama — termasuk saat development.
+   - Tidak ada mode demo/dev, seed sintetis, atau reset data. Jangan menghapus/TRUNCATE data atau menulis data sintetis ke Neon tanpa persetujuan eksplisit owner. Test otomatis memakai PGlite + fixture, bukan Neon.
 
 ---
 

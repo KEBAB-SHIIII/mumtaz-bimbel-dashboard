@@ -1,5 +1,7 @@
 # Phase 04 — Frontend Role Shell and Fake API Adapter
 
+> **Catatan D-24 (30 Okt 2026):** penugasan tutor dan tarif per penugasan sudah dihapus. Istilah *assignment/penugasan/tarif demo* di dokumen fase ini bersifat historis; Tutor kini memilih murid dan mapel sendiri dan honor memakai satu tarif tunggal dari konfigurasi. Lihat `docs/17` D-24.
+
 ## Tujuan
 
 Bangun shell navigasi role Admin, Tutor dan Orang Tua serta halaman dasar dengan fake API adapter yang mengikuti `04-API-CONTRACT.md`. Phase bisa berjalan paralel dengan backend setelah Phase 02 selesai.

@@ -2,47 +2,52 @@
 
 Blueprint capstone Asah untuk membantu Bimbel Mumtaz Sampit memindahkan pencatatan sesi les tutor ke aplikasi, melakukan review absensi, membuat rekap bulanan, menghitung estimasi honor, dan menampilkan riwayat pembelajaran anak.
 
-> **Status:** Phase 01–07 selesai: fondasi monorepo, shared contracts + fixture, backend core (database, auth, role guard, master data, absensi, rekap, honor), frontend shell tiga role, modul anomali (rule engine + Gemini + review Admin), alur submission–review end-to-end termasuk revisi oleh Tutor, serta rekap & estimasi honor yang dapat ditelusuri ke sesi. Ekspor Google Sheets (Phase 08) belum dibangun. Data dan akun contoh sintetis. Tarif Rp50.000 per sesi adalah nilai demo, bukan tarif resmi UMKM (ditandai badge "Tarif demo" di halaman Honor).
+> **Status:** Phase 01–09 selesai (QA: `docs/20-QA-REPORT.md`): fondasi monorepo, shared contracts, backend (database, auth, role guard, master data, absensi, rekap, honor), dashboard tiga role, modul anomali (rule engine + Gemini + review Admin), alur submission–review termasuk revisi oleh Tutor, rekap & estimasi honor yang dapat ditelusuri ke sesi, serta ekspor absensi bulanan ke Google Sheets atas tindakan Admin. Honor memakai satu tarif tunggal Rp50.000 per sesi dari konfigurasi; Tutor memilih murid & mapel sendiri (tanpa penugasan) dan password tutor dibuat sistem + reset oleh Admin (D-24).
 
-## Menjalankan secara lokal
+## Satu mode: production
+
+Aplikasi **selalu berjalan dalam mode production** — saat ngoding maupun saat dipakai. Hanya ada **satu file env (`backend/.env`)**, satu database Neon, satu Gemini key, dan satu spreadsheet. Tidak ada mode dev/demo, seed sintetis, atau reset data: setiap perubahan langsung mengenai data asli, jadi uji coba dilakukan dengan hati-hati (test otomatis memakai database in-process, bukan Neon).
 
 Prasyarat: Node.js 22+ (lihat `.nvmrc`) dan npm.
 
 ```bash
-npm install                          # satu lockfile root untuk semua workspace
-cp backend/.env.example backend/.env # isi nilai lokal; jangan commit
-cp frontend/.env.example frontend/.env
-npm run dev                          # backend :3001 + frontend :5173
+npm install
+cp backend/.env.example backend/.env   # sekali; isi nilai asli, jangan commit
+npm run prod                            # build lalu jalankan: http://localhost:3001
+npm run dev                             # saat ngoding: hot reload di http://localhost:5173 (backend :3001, env sama)
 ```
 
 | Script (root) | Fungsi |
 |---|---|
-| `npm run dev` | Menjalankan backend (`tsx watch`) dan frontend (Vite) bersamaan |
-| `npm run build` | Build berurutan: `packages/contracts` → `backend` → `frontend` |
-| `npm run typecheck` | `tsc --noEmit` strict di semua workspace |
-| `npm run lint` | ESLint flat config root (termasuk larangan `fetch`, `localStorage`, dan UI kit terlarang di frontend) |
-| `npm test` | Vitest semua workspace; offline, tanpa credential live |
-
-### Database (Neon development)
-
-```bash
-npm run db:migrate -w backend          # terapkan migration di backend/drizzle (pakai DATABASE_MIGRATION_URL)
-npm run db:bootstrap-admin -w backend  # buat Admin dari BOOTSTRAP_ADMIN_* (idempoten, tidak menimpa password)
-npm run db:seed -w backend             # seed SINTETIS (ditolak di production; idempoten, tidak menghapus data)
-npm run db:reset-dev -w backend -- --yes  # RESET TOTAL DB dev lalu seed ulang (hanya branch development)
-```
+| `npm run prod` | `build` lalu `start` — aplikasi persis seperti production di `http://localhost:3001` |
+| `npm run dev` | Backend (`tsx watch`) + Vite (:5173, mem-proxy `/api` ke :3001) dengan env yang sama |
+| `npm run build` / `npm start` | Build berurutan `contracts → backend → frontend` / jalankan build backend (menyajikan UI dari `FRONTEND_DIST_DIR`) |
+| `npm run typecheck` / `npm run lint` / `npm test` | Pemeriksaan strict, ESLint (larangan `fetch`, `localStorage`, UI kit terlarang), Vitest offline |
 
 | Script backend | Fungsi |
 |---|---|
-| `db:generate` | Generate migration dari `src/db/schema.ts` (review SQL sebelum commit) |
-| `db:check` | Validasi konsistensi file migration |
-| `db:migrate` | Terapkan migration; **jangan** ke DB UMKM tanpa izin owner |
-| `db:bootstrap-admin` / `db:seed` | Akun Admin awal / master data + dataset dev sintetis (~150 sesi Sep–Okt 2026) |
-| `db:reset-dev -- --yes` | Hapus semua data (schema tetap) lalu seed ulang dalam satu transaksi; ditolak di production |
+| `db:generate` / `db:check` | Generate migration dari `src/db/schema.ts` (review SQL sebelum commit) / validasi file migration |
+| `db:migrate` (atau `start:migrate` dari build) | Terapkan migration ke Neon (koneksi direct `DATABASE_MIGRATION_URL`) |
+| `db:bootstrap-admin` (atau `start:bootstrap-admin`) | Buat Admin dari `BOOTSTRAP_ADMIN_*` bila belum ada (idempoten, tidak menimpa password) |
 
-Akun demo setelah seed (nama fiktif): Admin `BOOTSTRAP_ADMIN_USERNAME`; Tutor `farhan`, `noreen`, `fazrin`, `rama`, `giyas`, `nasywa` dengan password `SEED_TUTOR_PASSWORD`; Orang Tua (mis. Sari, wali Aisyah) dengan ID akses fixture `MUMTAZ-DEMO-PARENT-ACCESS-ONLY`, Budi `MUMTAZ-DEMO-PARENT-B-ACCESS-ONLY`, wali lain `MUMTAZ-DEMO-PARENT-03` s.d. `-08` (test/dev saja; kode produksi dibuat acak 128-bit oleh Admin).
+Akun: Admin `admin` (password dari `BOOTSTRAP_ADMIN_PASSWORD`); Tutor login dengan username masing-masing; password tutor dibuat acak oleh sistem saat Admin menambah tutor (tampil sekali; tombol Reset password di Master Data → Tutor); ID Akses Orang Tua dibuat acak oleh Admin (Master Data → Orang Tua → rotasi kode). Kode hasil rotasi massal 30 Okt 2026 ada di `backend/secrets/parent-access-codes.txt` (tidak di-commit) — bagikan pribadi lalu hapus file itu.
 
-Dataset dev (`buildDevDataset` di `@mumtaz/contracts/fixtures`) sengaja memuat duplikat, duplikat lintas tutor, dan durasi > 180 menit; semua sesi masuk dengan status analisis `pending` sehingga worker menganalisisnya lewat Gemini saat backend start.
+Backend menolak start bila konfigurasi tidak aman: origin publik bukan HTTPS (localhost boleh HTTP), `DATABASE_URL` tanpa TLS, secret < 32 karakter/placeholder, password Admin < 12 karakter, atau `SEED_TUTOR_PASSWORD` diset. Cookie `Secure` otomatis aktif bila origin HTTPS. **Jangan mengganti `PARENT_ACCESS_CODE_PEPPER`** setelah dipakai: semua ID Akses Orang Tua menjadi tidak valid.
+
+## Deploy ke server (opsional)
+
+`Dockerfile` membungkus API + UI menjadi satu container yang memakai **`backend/.env` yang sama**; di server cukup ubah `FRONTEND_ORIGIN=https://domain-anda` dan `TRUST_PROXY=1`.
+
+```bash
+docker build -t mumtaz-bimbel .
+docker run --rm --env-file backend/.env mumtaz-bimbel node dist/scripts/migrate.js   # sebelum setiap rilis
+docker run -d --env-file backend/.env -p 3001:3001 \
+  -v "$PWD/backend/secrets:/app/backend/secrets:ro" mumtaz-bimbel                    # key service account di-mount, tidak masuk image
+```
+
+- Probe: liveness `GET /api/v1/health`, readiness `GET /api/v1/health/ready` (query DB, 503 bila tidak siap). `SIGTERM` → shutdown bertahap.
+- Cache: `assets/*` ber-hash `immutable` 1 tahun; `index.html` `no-cache`. Header keamanan Helmet (CSP `self`, HSTS, nosniff, frame-ancestors).
+- Jalankan **satu instance** — worker anomali berjalan in-process (lock ekspor sudah berbasis PostgreSQL). Lihat docs/03 sebelum scale-out.
 
 ### Keamanan backend
 
@@ -57,12 +62,16 @@ Dataset dev (`buildDevDataset` di `@mumtaz/contracts/fixtures`) sengaja memuat d
 - Route per role: `/admin` (Dashboard, Data Absensi, Rekap, Honor Tutor, Master Data), `/tutor` (Dashboard, Form Absensi, Riwayat Mengajar, Honor Saya, Profil), `/orang-tua-murid` (Progress Anak, Riwayat Pembelajaran); login di `/login` dan `/login/orang-tua`. Guard route hanya untuk UI — backend tetap otoritas izin.
 - Data: feature API functions → satu Axios client (`src/lib/api-client.ts`) → TanStack Query. Setiap respons divalidasi dengan schema `@mumtaz/contracts`. Periode dan filter disimpan di URL (`?period=YYYY-MM`) sehingga menjadi bagian query key.
 - CSRF token di memory; `403 CSRF_INVALID` → token diambil ulang lalu request diulang sekali; `401` → cache dibersihkan dan kembali ke login. Cache dibersihkan total saat login/logout.
-- **Mode demo** (`npm run dev:demo -w frontend`): fake API adapter in-memory berbasis fixture sintetis, dengan banner "Mode Demo". Build live tidak memuat chunk/fixture demo sama sekali.
+- Test UI memakai fake API in-memory (`frontend/src/test/fake-api/`, data sintetis) — hanya untuk test, tidak ikut build aplikasi.
 - Code splitting per halaman + chunk vendor terpisah (cache jangka panjang).
 
 ### Modul anomali
 
 Setelah submit/revisi, worker in-process menyaring kandidat duplikasi/durasi tidak wajar secara deterministik lalu (bila `GEMINI_API_KEY` + `GEMINI_MODEL` diisi) meminta Gemini mengklasifikasikannya dengan data **pseudonymous**. Temuan masuk `anomaly_flags` untuk direview Admin; status sesi dan honor tidak pernah diubah otomatis. Tanpa provider → `not_evaluated`; provider gagal/timeout → `failed`. Test offline memakai fake detector berlabel; UI menandai sumber hasil (AI live vs fake).
+
+### Ekspor Google Sheets
+
+Admin → Rekap → **Ekspor Absensi Bulanan ke Google Sheets**. Konfigurasi backend: `GOOGLE_SHEETS_EXPORT_ENABLED=true`, `GOOGLE_SHEETS_SPREADSHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_KEY_FILE` (service account diberi akses Editor ke spreadsheet), opsional `GOOGLE_SHEETS_TIMEOUT_MS`. Tanpa konfigurasi, endpoint mengembalikan 503 dan UI menampilkan pesannya. Ekspor mengganti isi tab `Absensi YYYY-MM` secara atomik dan tercatat di riwayat ekspor. Test memakai fake exporter in-memory, tanpa credential.
 
 ### Testing backend
 
@@ -72,7 +81,7 @@ API/integration test memakai **PGlite** (PostgreSQL in-process) dengan migration
 
 ```text
 packages/contracts/  # shared Zod schema + types (@mumtaz/contracts)
-backend/             # Express 5 API: src/{app,server}.ts, auth/, config/, db/ (schema, seed), routes/, services/, middleware/, lib/, scripts/; drizzle/ (migration)
+backend/             # Express 5 API: src/{app,server}.ts, auth/, config/, db/ (schema, client, bootstrap admin), http/ (SPA statis), routes/, services/, middleware/, lib/, scripts/; drizzle/ (migration)
 frontend/            # Vite + React 19 + Tailwind v4: src/{app,features,lib,styles,components/ui}
 ```
 
@@ -81,12 +90,12 @@ frontend/            # Vite + React 19 + Tailwind v4: src/{app,features,lib,styl
 - Frontend memakai satu Axios client (`frontend/src/lib/api-client.ts`, `withCredentials: true`) dengan CSRF token di memory yang dikirim sebagai `X-CSRF-Token` pada request mutasi.
 - Design tokens semantik netral ada di `frontend/src/styles/tokens.css` (placeholder; palet/font final menunggu keputusan tim).
 - TypeScript dipatok `~6.0` karena `typescript-eslint` belum mendukung TypeScript 7.
-- Endpoint yang tersedia: health, auth (CSRF, login, parent-access, logout, me), `/admin/*` (dashboard, absensi + keputusan, rekap, payroll, master data), `/tutor/*` (dashboard, assignment, submit/riwayat/revisi absensi, honor, ganti password), `/parent/*` (anak terhubung, dashboard, progress). Kontrak: `docs/04-API-CONTRACT.md`.
+- Endpoint yang tersedia: health, auth (CSRF, login, parent-access, logout, me), `/admin/*` (dashboard, absensi + keputusan, rekap, payroll, ekspor Sheets, master data tutor/siswa/wali/mapel + reset password tutor), `/tutor/*` (dashboard, opsi murid & mapel, submit/riwayat/revisi absensi, honor, ganti password), `/parent/*` (anak terhubung, dashboard, progress). Kontrak: `docs/04-API-CONTRACT.md`.
 
 ## Alur utama (target produk)
 
 1. Tutor login menggunakan username + password lalu mengisi Form Absensi pada Dashboard Tutor.
-2. Backend Express memvalidasi role, assignment, tanggal, durasi, dan field wajib. Sesi disimpan ke Neon PostgreSQL dengan status awal `pending`.
+2. Backend Express memvalidasi role, murid/mapel aktif, tanggal, durasi, dan field wajib. Sesi disimpan ke Neon PostgreSQL dengan status awal `pending`.
 3. Anomaly module mengklasifikasikan indikasi seperti dugaan duplikasi/pola tidak wajar. Temuan ditampilkan pada Admin untuk review dan tidak otomatis menolak sesi/mengubah honor.
 4. Admin meninjau sesi dan menyetujui, meminta revisi, atau menolak. Hanya sesi `approved` yang masuk estimasi honor dan Progress Anak.
 5. Tutor melihat riwayat dan estimasi honor miliknya; orang tua melihat catatan belajar anak yang terhubung ke akun mereka.
@@ -124,9 +133,9 @@ Semua source aplikasi ditulis dalam TypeScript:
 
 Jangan pasang shadcn/ui tanpa persetujuan owner. Palet warna, typography, logo, dan referensi visual final belum diputuskan tim; gunakan semantic design tokens yang mudah diganti.
 
-## Tarif demo
+## Tarif honor
 
-Development menggunakan tarif **Rp50.000 per sesi** dalam `tutor_rates`, ditandai `is_demo_assumption=true`. Semua UI yang menunjukkan nilai demo wajib menampilkan keterangan bahwa nominal simulasi, bukan tarif resmi UMKM. Hanya sesi approved dihitung.
+Satu tarif **Rp50.000 per sesi** dari konfigurasi `HONOR_RATE_PER_SESSION` berlaku untuk semua tutor (keputusan owner D-24), dikunci ke sesi saat disetujui sehingga bulan lalu tidak berubah bila tarif diganti. Tidak ada penugasan tutor maupun master data tarif: Tutor memilih murid dan mata pelajaran sendiri saat absen. Tarif resmi UMKM masih O-01. Hanya sesi approved dihitung.
 
 ## Mulai dari dokumentasi
 
@@ -134,7 +143,7 @@ Development menggunakan tarif **Rp50.000 per sesi** dalam `tutor_rates`, ditanda
 2. Baca [`docs/01-PRD.md`](./docs/01-PRD.md), [`docs/02-AGENT-CONTEXT.md`](./docs/02-AGENT-CONTEXT.md), dan [`docs/03-TECHNICAL-ARCHITECTURE.md`](./docs/03-TECHNICAL-ARCHITECTURE.md).
 3. Sinkronkan API/data contracts dengan ERD dan breakdown tabs: `docs/04-API-CONTRACT.md`, `docs/05-DATA-CONTRACT.md`, `docs/14-ERD-AND-DATA-DICTIONARY.md`, `docs/15-DASHBOARD-TABS.md`.
 4. Ikuti user flow, spesifikasi ekspor Sheets, testing, dan phase docs.
-5. Baca `docs/18-AUDIT-REPORT.md` untuk temuan audit dokumentasi v3, perbaikan yang sudah diterapkan pada paket ini, dan keputusan provisional yang masih perlu owner konfirmasi.
+5. Baca `docs/17-DECISIONS-AND-OPEN-QUESTIONS.md` untuk keputusan owner dan hal yang masih terbuka, serta `docs/20-QA-REPORT.md` untuk hasil QA.
 
 ## Keamanan dan integrasi
 

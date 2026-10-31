@@ -47,7 +47,7 @@ export async function createStudent(ctx: ServiceContext, input: CreateStudentReq
   return toStudent(row);
 }
 
-/** Menonaktifkan siswa mencegah assignment/sesi baru; histori tidak dihapus. */
+/** Menonaktifkan siswa mencegah sesi baru; histori tidak dihapus. */
 export async function updateStudent(ctx: ServiceContext, id: string, input: UpdateStudentRequest): Promise<Student> {
   const [row] = await ctx.db
     .update(students)

@@ -30,13 +30,13 @@ Menyediakan aksi Admin untuk mengekspor report sesi dari Neon langsung ke Google
 
 ## Acceptance criteria
 
-- [ ] Submit tutor tidak memanggil Google Sheets.
-- [ ] Semua status review diekspor tanpa filter status; output tetap delapan kolom mentah.
-- [ ] Header tepat delapan kolom mentah dan urutannya benar.
-- [ ] Filter periode berbasis `lesson_date`.
-- [ ] Export pertama membuat tab bulan yang benar.
-- [ ] Re-export memperbarui tab yang sama tanpa duplikasi.
-- [ ] Export kosong mengembalikan `409 EMPTY_EXPORT_CONFIRMATION_REQUIRED` bila tab target berisi data; overwrite hanya setelah konfirmasi eksplisit.
-- [ ] Permission/API failure tercatat gagal, credential tidak bocor, dan Neon tetap utuh.
-- [ ] Non-Admin ditolak.
-- [ ] Live smoke test hanya diklaim sukses bila credential valid digunakan.
+- [x] Submit tutor tidak memanggil Google Sheets.
+- [x] Semua status review diekspor tanpa filter status; output tetap delapan kolom mentah.
+- [x] Header tepat delapan kolom mentah dan urutannya benar.
+- [x] Filter periode berbasis `lesson_date`.
+- [x] Export pertama membuat tab bulan yang benar.
+- [x] Re-export memperbarui tab yang sama tanpa duplikasi.
+- [x] Export kosong mengembalikan `409 EMPTY_EXPORT_CONFIRMATION_REQUIRED` bila tab target berisi data; overwrite hanya setelah konfirmasi eksplisit.
+- [x] Permission/API failure tercatat gagal, credential tidak bocor, dan Neon tetap utuh.
+- [x] Non-Admin ditolak.
+- [x] Live smoke test hanya diklaim sukses bila credential valid digunakan.

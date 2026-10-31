@@ -3,6 +3,15 @@ import { EnvValidationError, integrationStatus, parseEnv } from '../src/config/e
 import { buildSessionConfig } from '../src/config/session.js';
 import { makeTestEnv, testEnvSource } from './test-env.js';
 
+/** Konfigurasi production minimal yang valid (nilai sintetis). */
+const PRODUCTION_OK = {
+  NODE_ENV: 'production',
+  FRONTEND_ORIGIN: 'https://bimbel.example',
+  DATABASE_URL: 'postgresql://u:p@db.example/neondb?sslmode=verify-full',
+  SESSION_SECRET: 'a'.repeat(40),
+  PARENT_ACCESS_CODE_PEPPER: 'b'.repeat(40),
+};
+
 describe('parseEnv', () => {
   it('menerapkan default teknis dari .env.example', () => {
     const env = makeTestEnv();
@@ -56,6 +65,18 @@ describe('parseEnv', () => {
     ).toThrow(/SESSION_SECRET/);
   });
 
+  it('production menolak origin HTTP, DB tanpa TLS, dan password Admin lemah; konfigurasi benar diterima', () => {
+    expect(() => makeTestEnv({ ...PRODUCTION_OK, FRONTEND_ORIGIN: 'http://bimbel.example' })).toThrow(/FRONTEND_ORIGIN/);
+    // Satu mode production: laptop owner memakai http://localhost.
+    expect(makeTestEnv({ ...PRODUCTION_OK, FRONTEND_ORIGIN: 'http://localhost:3001' }).NODE_ENV).toBe('production');
+    expect(makeTestEnv({ ...PRODUCTION_OK, FRONTEND_ORIGIN: 'http://127.0.0.1:3001' }).NODE_ENV).toBe('production');
+    expect(() => makeTestEnv({ ...PRODUCTION_OK, DATABASE_URL: 'postgresql://u:p@db.example/neondb' })).toThrow(/DATABASE_URL/);
+    expect(() => makeTestEnv({ ...PRODUCTION_OK, BOOTSTRAP_ADMIN_PASSWORD: 'pendek' })).toThrow(/BOOTSTRAP_ADMIN_PASSWORD/);
+    expect(() => makeTestEnv({ ...PRODUCTION_OK, SEED_TUTOR_PASSWORD: 'x'.repeat(20) })).toThrow(/SEED_TUTOR_PASSWORD/);
+    const env = makeTestEnv({ ...PRODUCTION_OK, BOOTSTRAP_ADMIN_PASSWORD: 'p'.repeat(16) });
+    expect(env.NODE_ENV).toBe('production');
+  });
+
   it('TRUST_PROXY default 0 (X-Forwarded-For tidak dipercaya) dan FRONTEND_ORIGIN dinormalisasi', () => {
     const env = makeTestEnv({ FRONTEND_ORIGIN: 'http://localhost:5173/' });
     expect(env.TRUST_PROXY).toBe(0);
@@ -81,7 +102,7 @@ describe('integrationStatus', () => {
 });
 
 describe('buildSessionConfig', () => {
-  it('memakai cookie HttpOnly + SameSite=Lax, Secure hanya di production', () => {
+  it('memakai cookie HttpOnly + SameSite=Lax, Secure mengikuti protokol origin (bukan NODE_ENV)', () => {
     const dev = buildSessionConfig(makeTestEnv());
     expect(dev.cookie).toMatchObject({ httpOnly: true, sameSite: 'lax', secure: false });
     expect(dev.cookie.maxAge).toBe(480 * 60 * 1000);
@@ -89,12 +110,10 @@ describe('buildSessionConfig', () => {
     expect(dev.saveUninitialized).toBe(false);
 
     const prod = buildSessionConfig(
-      makeTestEnv({
-        NODE_ENV: 'production',
-        SESSION_SECRET: 'a'.repeat(40),
-        PARENT_ACCESS_CODE_PEPPER: 'b'.repeat(40),
-      }),
+      makeTestEnv({ ...PRODUCTION_OK }),
     );
     expect(prod.cookie.secure).toBe(true);
+    const localProd = buildSessionConfig(makeTestEnv({ ...PRODUCTION_OK, FRONTEND_ORIGIN: 'http://localhost:3001' }));
+    expect(localProd.cookie.secure).toBe(false);
   });
 });

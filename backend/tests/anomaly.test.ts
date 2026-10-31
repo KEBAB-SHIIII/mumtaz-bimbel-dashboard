@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ASSIGNMENT_IDS, FAKE_DETECTOR_PROVIDER, SESSION_IDS } from '@mumtaz/contracts/fixtures';
+import { FAKE_DETECTOR_PROVIDER, SESSION_IDS, STUDENT_IDS, SUBJECT_IDS } from '@mumtaz/contracts/fixtures';
 import { anomalyFlags, lessonSessions } from '../src/db/schema.js';
 import { createLogger } from '../src/lib/logger.js';
 import type { AnomalyDetectionInput, AnomalyDetector } from '../src/integrations/anomaly/types.js';
@@ -34,7 +34,7 @@ async function submit(overrides: Record<string, unknown> = {}): Promise<string> 
   const res = await tutorA
     .post('/tutor/attendance', {
       client_submission_id: `00000000-0000-4000-9000-${String(700 + counter).padStart(12, '0')}`,
-      assignment_id: ASSIGNMENT_IDS.tutorAMurid2BahasaInggris,
+      student_id: STUDENT_IDS.murid2, subject_id: SUBJECT_IDS.bahasaInggris,
       lesson_date: '2026-11-03',
       duration_minutes: 45,
       learning_material: 'Sesi uji anomali',
@@ -44,7 +44,7 @@ async function submit(overrides: Record<string, unknown> = {}): Promise<string> 
   return res.body.session.id as string;
 }
 
-/** Duplikat persis dari s08 (assignment A2, 10 Okt, 60 menit). */
+/** Duplikat persis dari s08 (tutor Farhan, Bima, Bahasa Inggris, 10 Okt, 60 menit). */
 const duplicateOfS08 = { lesson_date: '2026-10-10', duration_minutes: 60 };
 
 const sessionRow = async (id: string) => (await t.database.db.select().from(lessonSessions).where(eq(lessonSessions.id, id)))[0];
@@ -157,7 +157,7 @@ describe('AnomalyWorker', () => {
       const res = await tutor
         .post('/tutor/attendance', {
           client_submission_id: '00000000-0000-4000-9000-000000000800',
-          assignment_id: ASSIGNMENT_IDS.tutorAMurid2BahasaInggris,
+          student_id: STUDENT_IDS.murid2, subject_id: SUBJECT_IDS.bahasaInggris,
           ...duplicateOfS08,
           learning_material: 'Duplikat untuk worker',
         })

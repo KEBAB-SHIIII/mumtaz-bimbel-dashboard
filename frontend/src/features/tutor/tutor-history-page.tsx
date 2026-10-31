@@ -14,7 +14,7 @@ import { formatDuration, formatLessonDate, formatPeriod } from '../../lib/format
 import { usePeriodParam } from '../../lib/period';
 import { queryKeys } from '../../lib/query-keys';
 import { useSearchState } from '../../lib/use-search-state';
-import { fetchTutorAssignments, fetchTutorAttendance } from './api';
+import { fetchAttendanceOptions, fetchTutorAttendance } from './api';
 import { TutorSessionDialog } from './tutor-session-dialog';
 
 const PAGE_SIZE = 20;
@@ -32,8 +32,8 @@ export function TutorHistoryPage() {
     queryFn: () => fetchTutorAttendance(filters),
     placeholderData: keepPreviousData,
   });
-  const assignments = useQuery({ queryKey: queryKeys.tutor.assignments, queryFn: fetchTutorAssignments });
-  const studentOptions = [...new Map((assignments.data ?? []).map((a) => [a.student.id, a.student.full_name])).entries()];
+  const options = useQuery({ queryKey: queryKeys.tutor.attendanceOptions, queryFn: fetchAttendanceOptions });
+  const studentOptions = (options.data?.students ?? []).map((student) => [student.id, student.full_name] as const);
 
   const columns: ColumnDef<TutorSession, unknown>[] = [
     { id: 'date', header: 'Tanggal les', cell: ({ row }) => <span className="whitespace-nowrap">{formatLessonDate(row.original.lesson_date)}</span> },
@@ -45,6 +45,7 @@ export function TutorHistoryPage() {
     { id: 'material', header: 'Materi', cell: ({ row }) => <p className="line-clamp-2 max-w-xs">{row.original.learning_material}</p> },
     {
       id: 'actions',
+      meta: { stickyRight: true },
       header: () => <span className="sr-only">Aksi</span>,
       cell: ({ row }) => {
         const needsRevision = row.original.status === 'revision_requested';

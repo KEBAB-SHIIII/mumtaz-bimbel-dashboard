@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
-import { choosePeriod, loginStaff, renderApp, useDemoBackend } from '../test/render';
+import { choosePeriod, loginStaff, renderApp, useFakeBackend } from '../test/render';
 
 const navLinks = async () =>
   within(await screen.findByRole('navigation', { name: 'Navigasi utama' }))
@@ -11,20 +11,20 @@ const navLinks = async () =>
 
 describe('autentikasi & navigasi per role', () => {
   it('route terproteksi tanpa sesi → halaman login', async () => {
-    useDemoBackend();
+    useFakeBackend();
     renderApp('/admin');
     expect(await screen.findByRole('heading', { name: 'Masuk Admin / Tutor' })).toBeInTheDocument();
   });
 
   it('kredensial salah → pesan generik dari server', async () => {
-    useDemoBackend();
+    useFakeBackend();
     renderApp('/login');
     await loginStaff('admin.demo', 'salah');
     expect(await screen.findByText('Kredensial tidak valid')).toBeInTheDocument();
   });
 
   it('Admin: menu Admin saja, tanpa menu Tutor/Orang Tua', async () => {
-    useDemoBackend();
+    useFakeBackend();
     renderApp('/login');
     await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
@@ -32,7 +32,7 @@ describe('autentikasi & navigasi per role', () => {
   });
 
   it('Tutor: menu Tutor saja; membuka /admin dialihkan ke /tutor', async () => {
-    useDemoBackend();
+    useFakeBackend();
     renderApp('/login');
     await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
     expect(await screen.findByRole('heading', { name: 'Halo, Farhan' })).toBeInTheDocument();
@@ -40,7 +40,7 @@ describe('autentikasi & navigasi per role', () => {
   });
 
   it('Orang Tua: login satu field ID Akses, tanpa username/password', async () => {
-    useDemoBackend();
+    useFakeBackend();
     renderApp('/login/orang-tua');
     const user = userEvent.setup();
     expect(screen.queryByLabelText(/^Username/)).not.toBeInTheDocument();
@@ -52,7 +52,7 @@ describe('autentikasi & navigasi per role', () => {
   });
 
   it('logout membersihkan sesi dan kembali ke login', async () => {
-    useDemoBackend();
+    useFakeBackend();
     renderApp('/login');
     const user = await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
     await user.click(await screen.findByRole('button', { name: 'Keluar' }));
@@ -62,7 +62,7 @@ describe('autentikasi & navigasi per role', () => {
 
 describe('halaman berbasis periode', () => {
   it('mengganti bulan mengubah query (Okt 9 sesi → Nov 1 sesi)', async () => {
-    useDemoBackend();
+    useFakeBackend();
     renderApp('/login');
     const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
     await user.click(await screen.findByRole('link', { name: 'Data Absensi' }));
@@ -77,28 +77,30 @@ describe('halaman berbasis periode', () => {
     expect(screen.getByText('1–1 dari 1')).toBeInTheDocument();
   });
 
-  it('Honor Tutor menandai tarif demo dengan badge kecil (tanpa label simulasi panjang)', async () => {
-    useDemoBackend();
+  it('Honor Tutor menampilkan tarif tunggal tanpa badge demo atau label simulasi', async () => {
+    useFakeBackend();
     renderApp('/login');
     const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
     await user.click(await screen.findByRole('link', { name: 'Honor Tutor' }));
+    await screen.findByRole('heading', { name: 'Honor Tutor', level: 1 });
     await choosePeriod('2026-10');
-    expect((await screen.findAllByText('Tarif demo')).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/Simulasi/)).not.toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Farhan' })).toBeInTheDocument();
+    expect(screen.queryByText('Tarif demo')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Simulasi/)).not.toBeInTheDocument();
   });
 });
 
 describe('Admin: keputusan review', () => {
   it('tolak wajib alasan; setelah dikonfirmasi status berubah', async () => {
-    useDemoBackend();
+    useFakeBackend();
     renderApp('/login');
     const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
     await user.click(await screen.findByRole('link', { name: 'Data Absensi' }));
+    await screen.findByRole('heading', { name: 'Data Absensi', level: 1 });
     await choosePeriod('2026-10');
     await user.selectOptions(screen.getByLabelText('Status'), 'pending');
 
-    const detailButtons = await screen.findAllByRole('button', { name: /Lihat detail sesi/ });
+    const detailButtons = await screen.findAllByRole('button', { name: /Tinjau sesi/ });
     const first = detailButtons[0];
     if (!first) throw new Error('tidak ada sesi pending');
     await user.click(first);
@@ -118,14 +120,15 @@ describe('Admin: keputusan review', () => {
 
 describe('Admin: review temuan anomali', () => {
   it('review mencatat hasil tanpa mengubah status sesi; label sumber analisis jelas', async () => {
-    useDemoBackend();
+    useFakeBackend();
     renderApp('/login');
     const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
     await user.click(await screen.findByRole('link', { name: 'Data Absensi' }));
+    await screen.findByRole('heading', { name: 'Data Absensi', level: 1 });
     await choosePeriod('2026-10');
 
     // s10: durasi 240 menit dengan temuan duration_outlier.
-    await user.click(await screen.findByRole('button', { name: /Lihat detail sesi Citra 12 Okt 2026/ }));
+    await user.click(await screen.findByRole('button', { name: /Tinjau sesi Citra 12 Okt 2026/ }));
     const dialog = await screen.findByRole('dialog', { name: 'Detail sesi' });
     expect(within(dialog).getByText('Durasi tidak wajar')).toBeInTheDocument();
     expect(within(dialog).getByText('Hasil uji (fake detector), bukan AI live')).toBeInTheDocument();
@@ -146,7 +149,7 @@ describe('Admin: review temuan anomali', () => {
 
 describe('Tutor: Form Absensi', () => {
   it('auto-fill kelas/sekolah, validasi di dekat field, sukses setelah server menyimpan', async () => {
-    useDemoBackend();
+    useFakeBackend();
     renderApp('/login');
     const user = await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
     await user.click(await screen.findByRole('link', { name: 'Form Absensi' }));
@@ -155,7 +158,11 @@ describe('Tutor: Form Absensi', () => {
     await user.click(screen.getByRole('button', { name: 'Kirim absensi' }));
     expect(await screen.findByText('Wajib diisi')).toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText(/^Nama murid/), screen.getByRole('option', { name: /Aisyah/ }));
+    // Tutor memilih murid (kotak pencarian) dan mata pelajaran sendiri; tidak ada penugasan.
+    await user.type(screen.getByLabelText(/^Nama murid/), 'Ais');
+    await user.click(await screen.findByRole('option', { name: /Aisyah/ }));
+    expect(screen.getByLabelText(/^Nama murid/)).toHaveValue('Aisyah');
+    await user.selectOptions(screen.getByLabelText(/^Mata pelajaran/), 'Matematika');
     expect(screen.getByLabelText(/^Kelas/)).toHaveValue('3 SD');
     expect(screen.getByLabelText(/^Asal sekolah/)).toHaveValue('SD Harapan Bangsa');
 
@@ -169,7 +176,7 @@ describe('Tutor: Form Absensi', () => {
   });
 
   it('durasi bukan bilangan bulat ditolak sebelum dikirim', async () => {
-    useDemoBackend();
+    useFakeBackend();
     renderApp('/login');
     const user = await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
     await user.click(await screen.findByRole('link', { name: 'Form Absensi' }));
@@ -181,12 +188,13 @@ describe('Tutor: Form Absensi', () => {
 
 describe('Orang Tua: Progress Anak', () => {
   it('hanya sesi disetujui, tanpa catatan internal Admin', async () => {
-    useDemoBackend();
+    useFakeBackend();
     renderApp('/login/orang-tua');
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText(/ID Akses Orang Tua/), 'MUMTAZ-DEMO-PARENT-ACCESS-ONLY');
     await user.click(screen.getByRole('button', { name: 'Masuk' }));
     await user.click(await screen.findByRole('link', { name: 'Riwayat Pembelajaran' }));
+    await screen.findByRole('heading', { name: 'Riwayat Pembelajaran', level: 1 });
     await choosePeriod('2026-10');
 
     expect(await screen.findByText(/Penjumlahan dan pengurangan/)).toBeInTheDocument();

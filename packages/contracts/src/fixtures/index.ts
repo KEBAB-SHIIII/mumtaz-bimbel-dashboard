@@ -6,4 +6,3 @@ export * from './sessions.js';
 export * from './submissions.js';
 export * from './expectations.js';
 export * from './lookup.js';
-export * from './dev-dataset.js';

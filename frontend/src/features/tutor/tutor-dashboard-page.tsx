@@ -1,19 +1,22 @@
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, NotebookPen } from 'lucide-react';
 import { Link } from 'react-router';
-import { ErrorState, InlineAlert, LoadingState } from '../../components/ui/feedback';
-import { PageHeader, StatCard } from '../../components/ui/layout-primitives';
+import { StatusBadge } from '../../components/ui/badge';
+import { EmptyState, ErrorState, InlineAlert, LoadingState } from '../../components/ui/feedback';
+import { Card, PageHeader, StatCard } from '../../components/ui/layout-primitives';
 import { PeriodSelector } from '../../components/ui/period-selector';
 import { useCurrentUser } from '../auth/session';
-import { formatPeriod, formatRupiah } from '../../lib/format';
+import { formatDuration, formatLessonDate, formatPeriod, formatRupiah } from '../../lib/format';
 import { usePeriodParam } from '../../lib/period';
 import { queryKeys } from '../../lib/query-keys';
-import { fetchTutorDashboard } from './api';
+import { fetchTutorAttendance, fetchTutorDashboard } from './api';
 
 export function TutorDashboardPage() {
   const user = useCurrentUser();
   const [period, setPeriod] = usePeriodParam();
   const summary = useQuery({ queryKey: queryKeys.tutor.dashboard(period), queryFn: () => fetchTutorDashboard(period) });
+  const recentFilters = { period, page: 1, page_size: 5 };
+  const recent = useQuery({ queryKey: queryKeys.tutor.attendance(recentFilters), queryFn: () => fetchTutorAttendance(recentFilters) });
 
   return (
     <>
@@ -46,17 +49,54 @@ export function TutorDashboardPage() {
             </InlineAlert>
           )}
           <dl className="grid grid-cols-2 gap-3 md:grid-cols-5">
-            <StatCard label="Total sesi" value={Object.values(summary.data.status_counts).reduce((a, b) => a + b, 0)} />
-            <StatCard label="Menunggu verifikasi" value={summary.data.status_counts.pending} />
-            <StatCard label="Disetujui" value={summary.data.status_counts.approved} />
-            <StatCard label="Perlu revisi" value={summary.data.status_counts.revision_requested} />
+            <StatCard label="Total sesi" value={Object.values(summary.data.status_counts).reduce((a, b) => a + b, 0)} to={`/tutor/riwayat?period=${period}`} />
+            <StatCard label="Menunggu verifikasi" value={summary.data.status_counts.pending} to={`/tutor/riwayat?period=${period}&status=pending`} />
+            <StatCard label="Disetujui" value={summary.data.status_counts.approved} to={`/tutor/riwayat?period=${period}&status=approved`} />
+            <StatCard label="Perlu revisi" value={summary.data.status_counts.revision_requested} to={`/tutor/riwayat?period=${period}&status=revision_requested`} />
             <StatCard
               label="Estimasi honor"
               value={formatRupiah(summary.data.honor.estimated_amount)}
+              to={`/tutor/honor?period=${period}`}
             />
           </dl>
         </>
       )}
+
+      <Card
+        title="Sesi terbaru"
+        actions={
+          <Link to={`/tutor/riwayat?period=${period}`} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+            Lihat riwayat <ArrowRight aria-hidden className="size-4" />
+          </Link>
+        }
+      >
+        {recent.isPending ? (
+          <LoadingState />
+        ) : recent.isError ? (
+          <ErrorState error={recent.error} onRetry={() => void recent.refetch()} />
+        ) : recent.data.items.length === 0 ? (
+          <EmptyState
+            title="Belum ada sesi bulan ini"
+            description="Catat sesi les yang sudah berlangsung lewat Form Absensi; Admin akan memverifikasinya."
+          />
+        ) : (
+          <ul className="divide-y divide-border">
+            {recent.data.items.map((item) => (
+              <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                <div>
+                  <p className="font-medium text-text">
+                    {item.student_name} · {item.subject_name}
+                  </p>
+                  <p className="text-muted">
+                    {formatLessonDate(item.lesson_date)} · {formatDuration(item.duration_minutes)}
+                  </p>
+                </div>
+                <StatusBadge status={item.status} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
     </>
   );
 }

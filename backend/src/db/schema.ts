@@ -121,10 +121,11 @@ export const subjects = pgTable(
   (t) => [uniqueIndex('subjects_name_key').on(sql`lower(${t.name})`)],
 );
 
-export const tutorAssignments = pgTable(
-  'tutor_assignments',
+export const lessonSessions = pgTable(
+  'lesson_sessions',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    client_submission_id: uuid('client_submission_id').notNull(),
     tutor_id: uuid('tutor_id')
       .notNull()
       .references(() => tutors.id, { onDelete: 'restrict' }),
@@ -134,48 +135,6 @@ export const tutorAssignments = pgTable(
     subject_id: uuid('subject_id')
       .notNull()
       .references(() => subjects.id, { onDelete: 'restrict' }),
-    start_date: date('start_date', { mode: 'string' }).notNull(),
-    end_date: date('end_date', { mode: 'string' }),
-    is_active: boolean('is_active').notNull().default(true),
-    ...timestamps,
-  },
-  (t) => [
-    index('tutor_assignments_tutor_id_idx').on(t.tutor_id),
-    index('tutor_assignments_student_id_idx').on(t.student_id),
-    check('tutor_assignments_dates_check', sql`${t.end_date} IS NULL OR ${t.end_date} >= ${t.start_date}`),
-  ],
-);
-
-export const tutorRates = pgTable(
-  'tutor_rates',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    assignment_id: uuid('assignment_id')
-      .notNull()
-      .references(() => tutorAssignments.id, { onDelete: 'restrict' }),
-    rate_type: varchar('rate_type', { length: 20 }).notNull(),
-    rate_amount: money('rate_amount').notNull(),
-    is_demo_assumption: boolean('is_demo_assumption').notNull().default(false),
-    effective_from: date('effective_from', { mode: 'string' }).notNull(),
-    effective_to: date('effective_to', { mode: 'string' }),
-    ...timestamps,
-  },
-  (t) => [
-    index('tutor_rates_assignment_id_idx').on(t.assignment_id),
-    check('tutor_rates_rate_type_check', sql`${t.rate_type} IN ('per_session')`),
-    check('tutor_rates_amount_check', sql`${t.rate_amount} > 0`),
-    check('tutor_rates_dates_check', sql`${t.effective_to} IS NULL OR ${t.effective_to} >= ${t.effective_from}`),
-  ],
-);
-
-export const lessonSessions = pgTable(
-  'lesson_sessions',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    client_submission_id: uuid('client_submission_id').notNull(),
-    assignment_id: uuid('assignment_id')
-      .notNull()
-      .references(() => tutorAssignments.id, { onDelete: 'restrict' }),
     lesson_date: date('lesson_date', { mode: 'string' }).notNull(),
     duration_minutes: integer('duration_minutes').notNull(),
     learning_material: varchar('learning_material', { length: 255 }).notNull(),
@@ -183,9 +142,7 @@ export const lessonSessions = pgTable(
     next_focus: text('next_focus'),
     status: varchar('status', { length: 24 }).notNull().default('pending'),
     anomaly_analysis_status: varchar('anomaly_analysis_status', { length: 16 }).notNull().default('pending'),
-    rate_type_snapshot: varchar('rate_type_snapshot', { length: 20 }),
     rate_amount_snapshot: money('rate_amount_snapshot'),
-    rate_is_demo_snapshot: boolean('rate_is_demo_snapshot'),
     reviewed_by_user_id: uuid('reviewed_by_user_id').references(() => users.id, { onDelete: 'restrict' }),
     submitted_at: timestamp('submitted_at', { withTimezone: true }).notNull().defaultNow(),
     reviewed_at: timestamp('reviewed_at', { withTimezone: true }),
@@ -196,7 +153,8 @@ export const lessonSessions = pgTable(
     uniqueIndex('lesson_sessions_client_submission_id_key').on(t.client_submission_id),
     index('lesson_sessions_lesson_date_idx').on(t.lesson_date),
     index('lesson_sessions_status_idx').on(t.status),
-    index('lesson_sessions_assignment_date_idx').on(t.assignment_id, t.lesson_date),
+    index('lesson_sessions_tutor_date_idx').on(t.tutor_id, t.lesson_date),
+    index('lesson_sessions_student_date_idx').on(t.student_id, t.lesson_date),
     index('lesson_sessions_anomaly_pending_idx')
       .on(t.anomaly_analysis_status)
       .where(sql`${t.anomaly_analysis_status} = 'pending'`),
@@ -209,11 +167,7 @@ export const lessonSessions = pgTable(
       sql`${t.anomaly_analysis_status} IN ('pending', 'completed', 'failed', 'not_evaluated')`,
     ),
     check('lesson_sessions_duration_check', sql`${t.duration_minutes} > 0`),
-    check(
-      'lesson_sessions_rate_snapshot_check',
-      sql`(${t.rate_type_snapshot} IS NULL AND ${t.rate_amount_snapshot} IS NULL AND ${t.rate_is_demo_snapshot} IS NULL)
-        OR (${t.rate_type_snapshot} IN ('per_session') AND ${t.rate_amount_snapshot} > 0 AND ${t.rate_is_demo_snapshot} IS NOT NULL)`,
-    ),
+    check('lesson_sessions_rate_snapshot_check', sql`${t.rate_amount_snapshot} IS NULL OR ${t.rate_amount_snapshot} > 0`),
     // Snapshot tarif hanya untuk sesi approved (honor approved-only).
     check(
       'lesson_sessions_snapshot_approved_check',
@@ -291,6 +245,10 @@ export const sheetExportRuns = pgTable(
   },
   (t) => [
     index('sheet_export_runs_period_idx').on(t.period),
+    // Satu ekspor berjalan per periode & jenis laporan (aman lintas instance API).
+    uniqueIndex('sheet_export_runs_one_running_per_period')
+      .on(t.report_type, t.period)
+      .where(sql`${t.status} = 'running'`),
     index('sheet_export_runs_started_at_idx').on(t.started_at),
     check('sheet_export_runs_report_type_check', sql`${t.report_type} IN ('attendance')`),
     check('sheet_export_runs_status_check', sql`${t.status} IN ('running', 'succeeded', 'failed')`),

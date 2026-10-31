@@ -20,7 +20,7 @@ Aplikasi memiliki tiga role:
 
 Tujuan MVP adalah mengurangi input berulang, membuat rekap bulanan lebih mudah, memberikan alur review manual yang jelas, serta menyediakan dasar data untuk riwayat pembelajaran anak.
 
-Sistem harus mengurangi pekerjaan manual/repetitif: isi form sesingkat mungkin, auto-fill data tutor/penugasan, validasi dan normalisasi otomatis, filter bulanan yang jelas, review anomali terpusat, dan ekspor bulanan satu tindakan dengan konfirmasi yang mudah dipahami.
+Sistem harus mengurangi pekerjaan manual/repetitif: isi form sesingkat mungkin, auto-fill data tutor dan kelas/sekolah murid, validasi dan normalisasi otomatis, filter bulanan yang jelas, review anomali terpusat, dan ekspor bulanan satu tindakan dengan konfirmasi yang mudah dipahami.
 
 ## Tiga route utama dashboard (frontend)
 
@@ -91,10 +91,10 @@ Semua integrasi eksternal harus dipisahkan dari aturan bisnis melalui service/ad
 1. Tutor login dengan username dan password.
 2. Tutor membuka **Form Absensi / Pertemuan Les**.
 3. Nama tutor berasal dari akun login dan tidak dapat dipilih manual.
-4. Tutor memilih siswa dari daftar penugasan yang aktif. Backend harus tetap memvalidasi bahwa siswa/mata pelajaran memang berada dalam penugasan tutor tersebut.
+4. Tutor memilih sendiri murid (dari Master Data Siswa, aktif) dan mata pelajaran (dari Master Data Mata Pelajaran, aktif); tidak ada penugasan (D-24). Backend tetap memvalidasi bahwa murid/mapel ada dan aktif.
 5. Kelas dan asal sekolah diambil dari master data siswa; jangan meminta tutor mengetik ulang jika data sudah tersedia.
 6. Tutor memilih mata pelajaran yang diizinkan, mengisi tanggal les, durasi dalam menit, dan materi pembelajaran.
-7. Frontend mengirim ke backend. Backend memvalidasi identity, assignment, tanggal, durasi, dan field wajib.
+7. Frontend mengirim ke backend. Backend memvalidasi identity, murid/mapel aktif, tanggal, durasi, dan field wajib.
 8. Backend menyimpan satu row `lesson_sessions` ke Neon dengan status `pending` dan UUID internal.
 9. Sistem menjalankan atau menjadwalkan screening anomali secara terpisah. Jika AI/provider gagal, penyimpanan sesi tidak dibatalkan.
 10. Tutor mendapat konfirmasi bahwa data tersimpan dan statusnya menunggu review.
@@ -137,7 +137,7 @@ Navigasi utama:
 - **Data Absensi:** daftar semua sesi, filter bulanan, detail, review, revisi/penolakan, status, serta temuan anomali.
 - **Rekap:** jumlah sesi dan total durasi per bulan, tutor, siswa, atau mata pelajaran.
 - **Honor Tutor:** estimasi honor per tutor dan rincian sesi `approved`; memakai tarif demo Rp50.000/sesi. Pembayaran aktual belum masuk scope baseline.
-- **Master Data:** submenu Tutor, Siswa, Orang Tua/Wali, Mata Pelajaran, Penugasan Tutor-Siswa-Mapel, dan Tarif Honor. Tarif Honor dibutuhkan untuk konfigurasi/demo Rp50.000 per sesi; tarif resmi UMKM tetap belum diketahui.
+- **Master Data:** submenu Tutor (password acak + Reset password), Siswa, Orang Tua/Wali, dan Mata Pelajaran. Tidak ada Penugasan maupun Tarif Honor (D-24); honor memakai satu tarif tunggal dari konfigurasi (Rp50.000/sesi), tarif resmi UMKM tetap belum diketahui.
 
 Submenu Master Data:
 
@@ -145,7 +145,7 @@ Submenu Master Data:
 - **Siswa:** nama, kelas, asal sekolah, status aktif.
 - **Orang Tua/Wali:** akun/ID akses dan relasi anak.
 - **Mata Pelajaran:** daftar mapel yang digunakan.
-- **Penugasan:** tutor yang mengajar siswa tertentu untuk mata pelajaran tertentu, termasuk masa berlaku/status.
+- **Penugasan (dihapus, D-24):** dulu mengikat tutor-murid-mapel; kini Tutor memilih murid dan mapel sendiri saat absen.
 - **Tarif Honor:** konfigurasi rate per sesi untuk data demo; tarif resmi menunggu konfirmasi UMKM.
 
 Data yang sudah direferensikan sebaiknya dinonaktifkan (soft deactivate), bukan dihapus permanen hingga merusak histori.
@@ -155,17 +155,17 @@ Data yang sudah direferensikan sebaiknya dinonaktifkan (soft deactivate), bukan 
 Navigasi utama:
 
 - **Dashboard:** ringkasan sesi bulanan, status review, estimasi honor.
-- **Form Absensi:** siswa dan mapel dari assignment, tanggal, durasi, materi.
+- **Form Absensi:** murid dan mapel dipilih Tutor, tanggal, durasi, materi.
 - **Riwayat Mengajar:** sesi tutor sendiri; filter bulan dan status; detail catatan.
 - **Honor Saya:** sesi approved yang dihitung, tarif demo yang jelas diberi label, dan total estimasi per bulan.
 
 Field form baseline:
 
 - Nama tutor: otomatis dari akun login.
-- Nama siswa: pilihan dari penugasan yang aktif.
+- Nama siswa: dipilih Tutor dari murid aktif (kotak pencarian).
 - Kelas: otomatis dari Master Data siswa.
 - Asal sekolah: otomatis dari Master Data siswa.
-- Mata pelajaran: pilih dari penugasan.
+- Mata pelajaran: dipilih Tutor dari mata pelajaran aktif.
 - Tanggal les: input tanggal.
 - Durasi les: input/pilihan durasi, disimpan konsisten sebagai integer `duration_minutes`.
 - Materi pembelajaran: `learning_material`.
@@ -189,9 +189,8 @@ Rujuk ERD penuh di `docs/14-ERD-AND-DATA-DICTIONARY.md`. Gambaran tabel yang dip
 - `students`: profil siswa; kelas dan asal sekolah sebagai atribut master untuk MVP.
 - `parent_students`: relasi akun orang tua dan siswa.
 - `subjects`: referensi mata pelajaran.
-- `tutor_assignments`: relasi tutor, siswa, mapel dan status/masa berlaku penugasan.
 - `tutor_rates`: tarif per sesi dan penanda demo; tarif resmi masih belum diketahui.
-- `lesson_sessions`: record sesi, assignment, tanggal, durasi menit, materi, status, informasi submit/review terakhir, catatan admin, snapshot rate setelah sesi disetujui.
+- `lesson_sessions`: record sesi (tutor, murid, mapel), tanggal, durasi menit, materi, status, informasi submit/review terakhir, catatan admin, snapshot rate setelah sesi disetujui.
 - `anomaly_flags`: klasifikasi, alasan, tingkat/keyakinan bila tersedia, status review admin, dan referensi sesi yang terkait.
 - `sheet_export_runs`: log ekspor bulanan ke Google Sheets.
 
@@ -224,7 +223,7 @@ Jangan membuat tabel riwayat terpisah hanya untuk setiap dashboard. Semua tampil
 ## 8. Deteksi anomali
 
 - Baseline: klasifikasi dugaan duplikasi dan pola tidak biasa pada data sesi.
-- Validasi deterministik (field wajib, durasi/tanggal valid, assignment sah) tetap dijalankan terlepas dari AI.
+- Validasi deterministik (field wajib, durasi/tanggal valid, murid/mapel aktif) tetap dijalankan terlepas dari AI.
 - AI anomaly service boleh membantu memprioritaskan kandidat dan memberi alasan yang dapat ditinjau; jangan dianggap bukti kesalahan/kecurangan.
 - Simpan finding di `anomaly_flags`, terpisah dari status sesi.
 - Temuan duplikat tidak boleh otomatis menghapus record, menolak sesi, atau mengubah honor.

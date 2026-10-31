@@ -4,14 +4,14 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { AppRoutes } from '../app/app-routes';
 import { AppProviders } from '../app/providers';
-import { createDemoAdapter } from '../features/demo/demo-adapter';
-import { createDemoBackend, type DemoBackend } from '../features/demo/demo-backend';
+import { createFakeAdapter } from './fake-api/fake-adapter';
+import { createFakeBackend, type FakeBackend } from './fake-api/fake-backend';
 import { apiClient, setCsrfToken } from '../lib/api-client';
 
 /** Pasang fake API adapter (data sintetis) pada client Axios bersama. */
-export function useDemoBackend(backend: DemoBackend = createDemoBackend({ now: () => new Date('2026-11-15T03:00:00Z') })) {
+export function useFakeBackend(backend: FakeBackend = createFakeBackend({ now: () => new Date('2026-11-15T03:00:00Z') })) {
   setCsrfToken(null);
-  apiClient.defaults.adapter = createDemoAdapter(backend);
+  apiClient.defaults.adapter = createFakeAdapter(backend);
   return backend;
 }
 
@@ -38,10 +38,7 @@ export async function loginStaff(username: string, password: string) {
   return user;
 }
 
-/**
- * Pilih periode (`YYYY-MM`) seperti memilih dari month picker browser. Input bulan
- * adalah controlled input, sehingga mengetik karakter per karakter tidak realistis.
- */
+/** Pilih periode (`YYYY-MM`) dari dropdown Periode, seperti pengguna memilih bulan. */
 export async function choosePeriod(period: string) {
   fireEvent.change(await screen.findByLabelText('Periode'), { target: { value: period } });
 }

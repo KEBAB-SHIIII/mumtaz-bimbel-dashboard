@@ -1,7 +1,5 @@
-import type { RateType, Role } from '../enums.js';
+import type { Role } from '../enums.js';
 import {
-  ASSIGNMENT_IDS,
-  fixtureId,
   STUDENT_IDS,
   SUBJECT_IDS,
   TUTOR_IDS,
@@ -45,26 +43,6 @@ export interface FixtureSubject {
   id: string;
   name: string;
   is_active: boolean;
-}
-
-export interface FixtureAssignment {
-  id: string;
-  tutor_id: string;
-  student_id: string;
-  subject_id: string;
-  start_date: string;
-  end_date: string | null;
-  is_active: boolean;
-}
-
-export interface FixtureRate {
-  id: string;
-  assignment_id: string;
-  rate_type: RateType;
-  rate_amount: string;
-  is_demo_assumption: boolean;
-  effective_from: string;
-  effective_to: string | null;
 }
 
 /**
@@ -169,53 +147,6 @@ export const fixtureSubjects: FixtureSubject[] = [
   { id: SUBJECT_IDS.ipa, name: 'IPA', is_active: true },
   { id: SUBJECT_IDS.bahasaIndonesia, name: 'Bahasa Indonesia', is_active: true },
 ];
-
-const assignment = (id: string, tutor_id: string, student_id: string, subject_id: string): FixtureAssignment => ({
-  id,
-  tutor_id,
-  student_id,
-  subject_id,
-  start_date: '2026-09-01',
-  end_date: null,
-  is_active: true,
-});
-
-const A = ASSIGNMENT_IDS;
-const T = TUTOR_IDS;
-const S = STUDENT_IDS;
-const M = SUBJECT_IDS;
-
-export const fixtureAssignments: FixtureAssignment[] = [
-  assignment(A.tutorAMurid1Matematika, T.tutorA, S.murid1, M.matematika),
-  assignment(A.tutorAMurid2BahasaInggris, T.tutorA, S.murid2, M.bahasaInggris),
-  assignment(A.tutorBMurid3Ipa, T.tutorB, S.murid3, M.ipa),
-  { ...assignment(A.tutorBMurid2MatematikaInactive, T.tutorB, S.murid2, M.matematika), end_date: '2026-09-30', is_active: false },
-  assignment(A.fazrinDimasMatematika, T.fazrin, S.dimas, M.matematika),
-  assignment(A.fazrinEkaBahasaIndonesia, T.fazrin, S.eka, M.bahasaIndonesia),
-  assignment(A.ramaFikriIpa, T.rama, S.fikri, M.ipa),
-  assignment(A.ramaAisyahMatematika, T.rama, S.murid1, M.matematika),
-  assignment(A.giyasGitaBahasaInggris, T.giyas, S.gita, M.bahasaInggris),
-  assignment(A.giyasHanaMatematika, T.giyas, S.hana, M.matematika),
-  assignment(A.nasywaIntanBahasaIndonesia, T.nasywa, S.intan, M.bahasaIndonesia),
-  assignment(A.nasywaJokoIpa, T.nasywa, S.joko, M.ipa),
-  assignment(A.fazrinKiranaBahasaInggris, T.fazrin, S.kirana, M.bahasaInggris),
-  assignment(A.ramaLutfiMatematika, T.rama, S.lutfi, M.matematika),
-  assignment(A.giyasCitraIpa, T.giyas, S.murid3, M.ipa),
-  assignment(A.nasywaBimaBahasaInggris, T.nasywa, S.murid2, M.bahasaInggris),
-];
-
-/** Tarif demo Rp50.000/sesi untuk setiap assignment aktif — simulasi, bukan tarif resmi UMKM. */
-export const fixtureRates: FixtureRate[] = fixtureAssignments
-  .filter((a) => a.is_active)
-  .map((a, index) => ({
-    id: fixtureId('8006', index + 1),
-    assignment_id: a.id,
-    rate_type: 'per_session',
-    rate_amount: '50000',
-    is_demo_assumption: true,
-    effective_from: '2026-09-01',
-    effective_to: null,
-  }));
 
 /**
  * Credential KHUSUS TEST lokal/terisolasi. Tidak memenuhi format kode produksi

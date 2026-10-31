@@ -28,7 +28,7 @@ Browser menggunakan session cookie `HttpOnly`, `SameSite=Lax`, `Secure` di produ
 
 ```mermaid
 flowchart TD
-  T[Tutor submit form] --> V[Backend validasi role, assignment, tanggal, durasi]
+  T[Tutor submit form] --> V[Backend validasi role, murid/mapel aktif, tanggal, durasi]
   V -->|valid| DB[(Neon: lesson_sessions status pending)]
   V -->|invalid| ERR[Pesan validasi di Dashboard Tutor]
   DB --> AN[Anomaly module: kandidat duplicate/pola]
@@ -50,10 +50,10 @@ Tidak ada panah Tutor → Google Sheets pada saat submit. AI/anomaly provider ti
 
 1. Tutor login dengan username + password.
 2. Buka `Form Absensi`.
-3. Frontend meminta assignment aktif milik tutor dari API.
-4. Nama tutor, kelas, dan sekolah ditentukan/diisi dari data master; murid dan mapel dipilih lewat assignment.
+3. Frontend meminta pilihan murid dan mata pelajaran aktif dari API (`GET /tutor/attendance-options`).
+4. Nama tutor, kelas, dan sekolah ditentukan/diisi dari data master; Tutor memilih sendiri murid (kotak pencarian) dan mapel; kelas & sekolah terisi otomatis dari murid.
 5. Tutor mengisi tanggal sesi, durasi dalam menit, materi pembelajaran, catatan opsional, dan fokus berikutnya opsional.
-6. Frontend memvalidasi untuk UX; backend memvalidasi secara otoritatif (session, ownership, assignment, tanggal, durasi, field wajib).
+6. Frontend memvalidasi untuk UX; backend memvalidasi secara otoritatif (session, murid/mapel aktif, tanggal, durasi, field wajib).
 7. Backend menyimpan satu record `lesson_sessions` berstatus `pending`, `submitted_at`, dan `anomaly_analysis_status='pending'`.
 8. Setelah commit DB, anomaly module menjalankan screening. Proses ini tidak boleh mengganti status sesi/menolak sesi. Bila AI error, catat `failed` atau `not_evaluated`; submit tetap berhasil.
 9. UI mengonfirmasi “Absensi tersimpan dan menunggu verifikasi” setelah DB berhasil. Jika analisis belum selesai, tampilkan status analisis secara terpisah.
@@ -63,7 +63,7 @@ Gunakan perlindungan double-submit/idempotency bila request diulang. Jangan memb
 
 ## 4. Flow Anomaly — dugaan duplikasi dan pola tidak wajar
 
-1. Setelah sesi masuk Neon, backend menjalankan validasi deterministik terhadap field/assignment serta membangun kandidat yang relevan.
+1. Setelah sesi masuk Neon, backend menjalankan validasi deterministik terhadap field murid/mapel serta membangun kandidat yang relevan.
 2. Anomaly service mengklasifikasikan kemungkinan `suspected_duplicate`, `duration_outlier`, atau `unusual_pattern`. AI boleh membandingkan fitur/session ID pseudonymous, bukan nama/PII.
 3. Finding disimpan di `anomaly_flags`, termasuk sesi pembanding jika ada, alasan/evidence ringkas, provider/model, dan status review manusia. Status proses agregat (`pending/completed/failed/not_evaluated`) hanya disimpan di `lesson_sessions.anomaly_analysis_status`, bukan pada setiap finding.
 4. Admin melihat indikator pada Data Absensi dan memeriksa data asli.
@@ -97,7 +97,7 @@ Jika model belum dikonfigurasi, gunakan fake detector hanya pada development/tes
 1. Admin memilih periode `YYYY-MM` di `Rekap` atau `Honor Tutor`.
 2. Backend memfilter sesi memakai `lesson_date`, bukan `submitted_at`/`reviewed_at`.
 3. Rekap menampilkan jumlah sesi per status, serta durasi approved; drill-down mengarah ke sesi sumber.
-4. Honor menggunakan hanya sesi approved dan tarif yang sesuai. Pada development, seed rate Rp50.000 per sesi dipakai untuk semua assignment demo dan nominalnya ditandai badge "Tarif demo" di halaman Honor (D-20).
+4. Honor menggunakan hanya sesi approved × tarif tunggal per sesi dari konfigurasi (default Rp50.000, dikunci saat approve; D-24).
 5. Tutor melihat hasil yang sama dari endpoint terpisah dengan scope dirinya sendiri.
 6. Status pembayaran aktual bukan scope MVP.
 
@@ -123,12 +123,11 @@ Jika model belum dikonfigurasi, gunakan fake detector hanya pada development/tes
 
 ## 10. Flow Master Data
 
-1. Admin mengelola Tutor, Siswa, Orang Tua/Wali/ID Akses, Mata Pelajaran, Penugasan, dan Tarif Honor.
-2. Penugasan menghubungkan tutor + siswa + mapel dengan masa berlaku.
-3. Tutor hanya menerima assignment yang valid miliknya pada form.
-4. Untuk parent, Admin menghubungkan satu/multi siswa dan membuat/merotasi ID akses; kode mentah hanya terlihat sekali dan disampaikan secara privat.
-5. Tarif seed development: Rp50.000/sesi, `is_demo_assumption=true`. Admin dapat melihat/mengubah konfigurasi data demo, tetapi UI harus tetap memisahkan nilai demo dari tarif resmi yang belum diketahui.
-6. Master data yang sudah dipakai dalam sesi dinonaktifkan/diarsipkan, bukan dihapus keras.
+1. Admin mengelola Tutor, Siswa, Orang Tua/Wali/ID Akses, dan Mata Pelajaran. Tidak ada penugasan tutor atau tarif per penugasan: Tutor memilih murid dan mapel sendiri saat absen (D-24).
+2. Tutor baru: Admin mengisi nama + username; sistem membuat password acak yang tampil sekali untuk disampaikan privat. Tutor menggantinya di Profil; lupa password → Admin menekan Reset password.
+3. Untuk parent, Admin menghubungkan satu/multi siswa dan membuat/merotasi ID akses; kode mentah hanya terlihat sekali dan disampaikan secara privat.
+4. Tarif honor tunggal per sesi dikelola lewat konfigurasi server (`HONOR_RATE_PER_SESSION`), bukan Master Data.
+5. Master data yang sudah dipakai dalam sesi dinonaktifkan/diarsipkan, bukan dihapus keras.
 
 ## 11. State dan feedback
 
@@ -143,7 +142,7 @@ Jika model belum dikonfigurasi, gunakan fake detector hanya pada development/tes
 
 - [ ] Admin/Tutor login username-password, Parent login access code saja.
 - [ ] Parent code acak, digest-only, rate-limited dan hanya membuka relasi anak yang benar.
-- [ ] Tutor tidak dapat membuat sesi untuk assignment tutor lain.
+- [ ] Tutor tidak dapat melihat atau mengubah sesi milik tutor lain, dan tidak dapat memilih murid/mapel nonaktif.
 - [ ] Semua filter periode memakai `lesson_date`.
 - [ ] Admin dapat memverifikasi/meminta revisi/menolak dan mereview anomaly terpisah.
 - [ ] AI finding tidak otomatis mengubah status/honor.

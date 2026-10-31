@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import argon2 from 'argon2';
 
 /**
@@ -38,4 +39,19 @@ export async function verifyAgainstDummy(password: string): Promise<false> {
   dummyHash ??= hashPassword('dummy-password-for-timing-equalization');
   await verifyPassword(await dummyHash, password);
   return false;
+}
+
+/** Tanpa karakter ambigu (0/O, 1/l/I) agar mudah dibaca & diketik Tutor. */
+const TEMP_PASSWORD_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+const TEMP_PASSWORD_GROUPS = 3;
+const TEMP_PASSWORD_GROUP_SIZE = 4;
+
+/**
+ * Password sementara Tutor: 12 karakter acak (CSPRNG, ±69 bit) dalam 3 grup, mis. `Kx7m-Pq3R-wN9t`.
+ * Dikembalikan SEKALI ke Admin; hanya hash-nya yang disimpan. Tutor menggantinya di Profil.
+ */
+export function generateTemporaryPassword(): string {
+  const group = () =>
+    Array.from({ length: TEMP_PASSWORD_GROUP_SIZE }, () => TEMP_PASSWORD_ALPHABET[randomInt(TEMP_PASSWORD_ALPHABET.length)]).join('');
+  return Array.from({ length: TEMP_PASSWORD_GROUPS }, group).join('-');
 }

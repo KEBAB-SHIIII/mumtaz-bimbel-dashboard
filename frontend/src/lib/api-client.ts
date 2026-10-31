@@ -41,7 +41,8 @@ export function onUnauthenticated(listener: UnauthenticatedListener): () => void
 }
 
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3001/api/v1',
+  // Same-origin: UI disajikan backend yang sama (:3001), atau lewat proxy Vite saat hot reload.
+  baseURL: '/api/v1',
   withCredentials: true,
   timeout: 15_000,
   headers: { Accept: 'application/json' },

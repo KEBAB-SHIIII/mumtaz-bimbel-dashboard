@@ -13,7 +13,7 @@ import type { AuthRateLimiters } from '../auth/rate-limit.js';
 import { establishSession } from '../auth/session-helpers.js';
 import { parseInput } from '../lib/validation.js';
 import {
-  listTutorAssignmentOptions,
+  listAttendanceOptions,
   listTutorAttendance,
   reviseAttendance,
   submitAttendance,
@@ -37,8 +37,9 @@ export function tutorRouter(ctx: ServiceContext, limiters: AuthRateLimiters, ano
     res.json(await getTutorDashboardSummary(ctx, tutorIdOf(req), period));
   });
 
-  router.get('/tutor/me/assignments', async (req, res) => {
-    res.json({ items: await listTutorAssignmentOptions(ctx, tutorIdOf(req)) });
+  /** Murid & mata pelajaran aktif yang dapat dipilih Tutor di Form Absensi (tanpa penugasan, D-24). */
+  router.get('/tutor/attendance-options', async (_req, res) => {
+    res.json(await listAttendanceOptions(ctx));
   });
 
   /** Submit Form Absensi → Neon `pending`. Tidak ada panggilan Google Sheets. */

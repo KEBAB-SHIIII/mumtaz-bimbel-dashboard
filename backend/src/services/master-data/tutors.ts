@@ -4,9 +4,10 @@ import type {
   MasterDataListQuery,
   Paginated,
   Tutor,
+  TutorCredentialIssued,
   UpdateTutorRequest,
 } from '@mumtaz/contracts';
-import { hashPassword } from '../../auth/password.js';
+import { generateTemporaryPassword, hashPassword } from '../../auth/password.js';
 import { tutors, users } from '../../db/schema.js';
 import { iso } from '../../lib/format.js';
 import { notFound } from '../../lib/http-error.js';
@@ -80,9 +81,13 @@ export async function getTutor(ctx: ServiceContext, id: string): Promise<Tutor> 
   return toTutor(row);
 }
 
-/** Satu transaksi: `users` role tutor + `tutors`. Password hanya disimpan sebagai hash. */
-export async function createTutor(ctx: ServiceContext, input: CreateTutorRequest): Promise<Tutor> {
-  const passwordHash = await hashPassword(input.initial_password);
+/**
+ * Satu transaksi: `users` role tutor + `tutors`. Password sementara dibuat sistem (acak) dan
+ * dikembalikan SEKALI; hanya hash-nya yang disimpan.
+ */
+export async function createTutor(ctx: ServiceContext, input: CreateTutorRequest): Promise<TutorCredentialIssued> {
+  const temporaryPassword = generateTemporaryPassword();
+  const passwordHash = await hashPassword(temporaryPassword);
   const tutorId = await ctx.db.transaction(async (tx) => {
     const [user] = await tx
       .insert(users)
@@ -101,7 +106,23 @@ export async function createTutor(ctx: ServiceContext, input: CreateTutorRequest
     if (!tutor) throw new Error('Insert tutor gagal');
     return tutor.id;
   });
-  return getTutor(ctx, tutorId);
+  return { tutor: await getTutor(ctx, tutorId), temporary_password: temporaryPassword };
+}
+
+/** Reset password (mis. Tutor lupa): password lama tidak berlaku dan semua session Tutor dicabut. */
+export async function resetTutorPassword(ctx: ServiceContext, id: string): Promise<TutorCredentialIssued> {
+  const current = await getTutor(ctx, id);
+  const temporaryPassword = generateTemporaryPassword();
+  const passwordHash = await hashPassword(temporaryPassword);
+  await ctx.db
+    .update(users)
+    .set({
+      password_hash: passwordHash,
+      credential_version: sql`${users.credential_version} + 1`,
+      updated_at: ctx.now(),
+    })
+    .where(eq(users.id, current.user_id));
+  return { tutor: await getTutor(ctx, id), temporary_password: temporaryPassword };
 }
 
 export async function updateTutor(ctx: ServiceContext, id: string, input: UpdateTutorRequest): Promise<Tutor> {

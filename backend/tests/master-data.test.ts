@@ -5,11 +5,10 @@ import {
   paginatedSchema,
   studentSchema,
   subjectSchema,
-  tutorAssignmentSchema,
-  tutorRateSchema,
+  tutorCredentialIssuedSchema,
   tutorSchema,
 } from '@mumtaz/contracts';
-import { ASSIGNMENT_IDS, STUDENT_IDS, SUBJECT_IDS, TUTOR_IDS, USER_IDS } from '@mumtaz/contracts/fixtures';
+import { STUDENT_IDS, TUTOR_IDS, USER_IDS } from '@mumtaz/contracts/fixtures';
 import { TestClient, as, createTestApp, type TestApp } from './helpers/test-app.js';
 
 let t: TestApp;
@@ -29,26 +28,58 @@ describe('Master Data → Tutor', () => {
     expect(JSON.stringify(res.body)).not.toMatch(/password|hash/i);
   });
 
-  it('create: users+tutors satu transaksi, password tidak pernah dikembalikan, bisa login', async () => {
-    const res = await admin.post('/admin/tutors', {
-      full_name: 'Dewi',
-      username: 'dewi',
-      initial_password: 'password-awal-tutor-c',
-      phone: '080000000003',
-    });
+  it('create: password acak dibuat sistem, tampil sekali (no-store), tidak ada di GET, tutor bisa login', async () => {
+    const res = await admin.post('/admin/tutors', { full_name: 'Dewi', username: 'dewi', phone: '080000000003' });
     expect(res.status).toBe(201);
-    const tutor = tutorSchema.parse(res.body);
-    expect(tutor).toMatchObject({ full_name: 'Dewi', is_active: true, login_active: true });
-    expect(JSON.stringify(res.body)).not.toMatch(/password/i);
-    await new TestClient(t.app).login('dewi', 'password-awal-tutor-c');
+    expect(res.headers['cache-control']).toBe('no-store');
+    const issued = tutorCredentialIssuedSchema.parse(res.body);
+    expect(issued.tutor).toMatchObject({ full_name: 'Dewi', is_active: true, login_active: true });
+    expect(issued.temporary_password).toMatch(/^[A-Za-z2-9]{4}-[A-Za-z2-9]{4}-[A-Za-z2-9]{4}$/);
+
+    const detail = await admin.get(`/admin/tutors/${issued.tutor.id}`).expect(200);
+    expect(JSON.stringify(detail.body)).not.toContain(issued.temporary_password);
+    expect(JSON.stringify(detail.body)).not.toMatch(/password/i);
+    await new TestClient(t.app).login('dewi', issued.temporary_password);
+  });
+
+  it('password sementara berbeda untuk tiap tutor; initial_password dari Admin ditolak (422)', async () => {
+    const a = tutorCredentialIssuedSchema.parse((await admin.post('/admin/tutors', { full_name: 'Tutor Satu', username: 'tutor.satu' }).expect(201)).body);
+    const b = tutorCredentialIssuedSchema.parse((await admin.post('/admin/tutors', { full_name: 'Tutor Dua', username: 'tutor.dua' }).expect(201)).body);
+    expect(a.temporary_password).not.toBe(b.temporary_password);
+    const manual = await admin.post('/admin/tutors', { full_name: 'Manual', username: 'manual', initial_password: 'password-manual-123' });
+    expect(manual.status).toBe(422);
+  });
+
+  it('reset password: password lama & session aktif dicabut, password baru bisa login, tutor mengganti sendiri', async () => {
+    const created = tutorCredentialIssuedSchema.parse(
+      (await admin.post('/admin/tutors', { full_name: 'Lupa Password', username: 'lupa.password' }).expect(201)).body,
+    );
+    const session = await new TestClient(t.app).login('lupa.password', created.temporary_password);
+    await session.get('/auth/me').expect(200);
+
+    const res = await admin.post(`/admin/tutors/${created.tutor.id}/reset-password`);
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('no-store');
+    const reset = tutorCredentialIssuedSchema.parse(res.body);
+    expect(reset.temporary_password).not.toBe(created.temporary_password);
+
+    await session.get('/auth/me').expect(401);
+    const oldLogin = await (await new TestClient(t.app).init()).post('/auth/login', { username: 'lupa.password', password: created.temporary_password });
+    expect(oldLogin.status).toBe(401);
+
+    const fresh = await new TestClient(t.app).login('lupa.password', reset.temporary_password);
+    await fresh.patch('/tutor/me/password', { current_password: reset.temporary_password, new_password: 'password-baru-pilihan-tutor' }).expect(200);
+    await new TestClient(t.app).login('lupa.password', 'password-baru-pilihan-tutor');
+  });
+
+  it('reset password hanya untuk Admin; tutor tidak ada → 404', async () => {
+    const tutorA = await as.tutorA(t.app);
+    expect((await tutorA.post(`/admin/tutors/${TUTOR_IDS.tutorB}/reset-password`)).status).toBe(403);
+    expect((await admin.post('/admin/tutors/00000000-0000-4000-8fff-000000000001/reset-password')).status).toBe(404);
   });
 
   it('username duplikat → 409 CONFLICT dengan pesan aman', async () => {
-    const res = await admin.post('/admin/tutors', {
-      full_name: 'Duplikat',
-      username: 'farhan',
-      initial_password: 'password-panjang-123',
-    });
+    const res = await admin.post('/admin/tutors', { full_name: 'Duplikat', username: 'farhan' });
     expect(res.status).toBe(409);
     expect(res.body.error).toMatchObject({ code: 'CONFLICT', details: [{ field: 'username' }] });
     expect(JSON.stringify(res.body)).not.toMatch(/users_username_key|duplicate key/);
@@ -165,87 +196,5 @@ describe('Master Data → Orang Tua & ID Akses', () => {
     await admin
       .patch(`/admin/parents/${USER_IDS.parentA}`, { student_links: [{ student_id: STUDENT_IDS.murid1, relationship: 'ibu' }] })
       .expect(200);
-  });
-});
-
-describe('Master Data → Penugasan & Tarif', () => {
-  it('assignment aktif dengan tuple sama dan periode overlap → 409', async () => {
-    const res = await admin.post('/admin/tutor-assignments', {
-      tutor_id: TUTOR_IDS.tutorA,
-      student_id: STUDENT_IDS.murid1,
-      subject_id: SUBJECT_IDS.matematika,
-      start_date: '2026-10-01',
-    });
-    expect(res.status).toBe(409);
-    expect(res.body.error.details[0].field).toBe('start_date');
-  });
-
-  it('assignment baru valid; tuple immutable pada PATCH', async () => {
-    const created = tutorAssignmentSchema.parse(
-      (
-        await admin
-          .post('/admin/tutor-assignments', {
-            tutor_id: TUTOR_IDS.tutorA,
-            student_id: STUDENT_IDS.murid3,
-            subject_id: SUBJECT_IDS.matematika,
-            start_date: '2026-10-01',
-          })
-          .expect(201)
-      ).body,
-    );
-    expect(created).toMatchObject({ tutor_name: 'Farhan', student_name: 'Citra', subject_name: 'Matematika' });
-
-    const tuple = await admin.patch(`/admin/tutor-assignments/${created.id}`, { student_id: STUDENT_IDS.murid1 });
-    expect(tuple.status).toBe(422);
-    const endBefore = await admin.patch(`/admin/tutor-assignments/${created.id}`, { end_date: '2026-09-01' });
-    expect(endBefore.status).toBe(422);
-  });
-
-  it('assignment untuk siswa nonaktif → 422', async () => {
-    const student = studentSchema.parse(
-      (await admin.post('/admin/students', { full_name: 'Nonaktif', grade: '1 SD', school_name: 'S' }).expect(201)).body,
-    );
-    await admin.patch(`/admin/students/${student.id}`, { is_active: false }).expect(200);
-    const res = await admin.post('/admin/tutor-assignments', {
-      tutor_id: TUTOR_IDS.tutorA,
-      student_id: student.id,
-      subject_id: SUBJECT_IDS.ipa,
-      start_date: '2026-10-01',
-    });
-    expect(res.status).toBe(422);
-    expect(res.body.error.details[0].field).toBe('student_id');
-  });
-
-  it('tarif overlap → 409; tarif berurutan setelah ditutup → 201', async () => {
-    const overlap = await admin.post('/admin/tutor-rates', {
-      assignment_id: ASSIGNMENT_IDS.tutorAMurid1Matematika,
-      rate_type: 'per_session',
-      rate_amount: '60000',
-      is_demo_assumption: true,
-      effective_from: '2026-12-01',
-    });
-    expect(overlap.status).toBe(409);
-
-    const rates = await admin.get(`/admin/tutor-rates?assignment_id=${ASSIGNMENT_IDS.tutorAMurid1Matematika}`).expect(200);
-    const [current] = paginatedSchema(tutorRateSchema).parse(rates.body).items;
-    expect(current).toMatchObject({ rate_amount: '50000', is_demo_assumption: true });
-    if (!current) throw new Error('tarif fixture tidak ada');
-
-    await admin.patch(`/admin/tutor-rates/${current.id}`, { effective_to: '2026-11-30' }).expect(200);
-    const next = await admin.post('/admin/tutor-rates', {
-      assignment_id: ASSIGNMENT_IDS.tutorAMurid1Matematika,
-      rate_type: 'per_session',
-      rate_amount: '60000',
-      is_demo_assumption: true,
-      effective_from: '2026-12-01',
-    });
-    expect(next.status).toBe(201);
-    expect(tutorRateSchema.parse(next.body).rate_amount).toBe('60000');
-  });
-
-  it('nominal/jenis tarif tidak bisa diubah lewat PATCH', async () => {
-    const rates = await admin.get('/admin/tutor-rates').expect(200);
-    const id = (rates.body.items[0] as { id: string }).id;
-    expect((await admin.patch(`/admin/tutor-rates/${id}`, { rate_amount: '1' })).status).toBe(422);
   });
 });

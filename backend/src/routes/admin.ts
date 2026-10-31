@@ -2,24 +2,20 @@ import { Router } from 'express';
 import {
   adminAttendanceListQuerySchema,
   anomalyReviewRequestSchema,
-  assignmentListQuerySchema,
   createParentRequestSchema,
   createStudentRequestSchema,
   createSubjectRequestSchema,
-  createTutorAssignmentRequestSchema,
-  createTutorRateRequestSchema,
   createTutorRequestSchema,
   idParamSchema,
   masterDataListQuerySchema,
   periodQuerySchema,
-  rateListQuerySchema,
   recapQuerySchema,
   sessionDecisionRequestSchema,
+  sheetExportHistoryQuerySchema,
+  sheetExportRequestSchema,
   updateParentRequestSchema,
   updateStudentRequestSchema,
   updateSubjectRequestSchema,
-  updateTutorAssignmentRequestSchema,
-  updateTutorRateRequestSchema,
   updateTutorRequestSchema,
 } from '@mumtaz/contracts';
 import { authOf, requireRole } from '../auth/middleware.js';
@@ -32,19 +28,18 @@ import {
 import { reviewFinding } from '../services/anomaly/anomaly-review.js';
 import type { ServiceContext } from '../services/context.js';
 import { getAdminDashboardSummary } from '../services/dashboard-service.js';
-import * as assignments from '../services/master-data/assignments.js';
 import * as parents from '../services/master-data/parents.js';
-import * as rates from '../services/master-data/rates.js';
 import * as students from '../services/master-data/students.js';
 import * as subjects from '../services/master-data/subjects.js';
 import * as tutors from '../services/master-data/tutors.js';
 import { getPayrollPreview } from '../services/payroll-service.js';
 import { getRecap } from '../services/recap-service.js';
+import { exportAttendanceToSheets, listExportHistory, type ExportDeps } from '../services/exports/attendance-export-service.js';
 
 const idOf = (params: unknown) => parseInput(idParamSchema, params).id;
 
 /** Semua route `/admin/*` — role Admin saja (role guard di level router). */
-export function adminRouter(ctx: ServiceContext) {
+export function adminRouter(ctx: ServiceContext, exportDeps: ExportDeps) {
   const router = Router();
   router.use('/admin', requireRole('admin'));
 
@@ -61,6 +56,16 @@ export function adminRouter(ctx: ServiceContext) {
   router.get('/admin/payroll/preview', async (req, res) => {
     const { period } = parseInput(periodQuerySchema, req.query);
     res.json(await getPayrollPreview(ctx, period));
+  });
+
+  // --- Ekspor Google Sheets (on-demand Admin; tidak pernah dari submit Tutor) ---
+  router.post('/admin/reports/google-sheets/attendance', async (req, res) => {
+    const input = parseInput(sheetExportRequestSchema, req.body);
+    res.json(await exportAttendanceToSheets(ctx, exportDeps, authOf(req).userId, input));
+  });
+
+  router.get('/admin/reports/google-sheets/attendance/history', async (req, res) => {
+    res.json(await listExportHistory(ctx, parseInput(sheetExportHistoryQuerySchema, req.query)));
   });
 
   // --- Absensi -------------------------------------------------------------
@@ -88,10 +93,16 @@ export function adminRouter(ctx: ServiceContext) {
     res.json(await tutors.listTutors(ctx, parseInput(masterDataListQuerySchema, req.query)));
   });
   router.post('/admin/tutors', async (req, res) => {
-    res.status(201).json(await tutors.createTutor(ctx, parseInput(createTutorRequestSchema, req.body)));
+    const issued = await tutors.createTutor(ctx, parseInput(createTutorRequestSchema, req.body));
+    // Password sementara hanya ada di respons ini; jangan di-cache.
+    res.status(201).set('Cache-Control', 'no-store').json(issued);
   });
   router.get('/admin/tutors/:id', async (req, res) => {
     res.json(await tutors.getTutor(ctx, idOf(req.params)));
+  });
+  router.post('/admin/tutors/:id/reset-password', async (req, res) => {
+    const issued = await tutors.resetTutorPassword(ctx, idOf(req.params));
+    res.set('Cache-Control', 'no-store').json(issued);
   });
   router.patch('/admin/tutors/:id', async (req, res) => {
     res.json(await tutors.updateTutor(ctx, idOf(req.params), parseInput(updateTutorRequestSchema, req.body)));
@@ -140,34 +151,6 @@ export function adminRouter(ctx: ServiceContext) {
   });
   router.patch('/admin/subjects/:id', async (req, res) => {
     res.json(await subjects.updateSubject(ctx, idOf(req.params), parseInput(updateSubjectRequestSchema, req.body)));
-  });
-
-  router.get('/admin/tutor-assignments', async (req, res) => {
-    res.json(await assignments.listAssignments(ctx, parseInput(assignmentListQuerySchema, req.query)));
-  });
-  router.post('/admin/tutor-assignments', async (req, res) => {
-    const input = parseInput(createTutorAssignmentRequestSchema, req.body);
-    res.status(201).json(await assignments.createAssignment(ctx, input));
-  });
-  router.get('/admin/tutor-assignments/:id', async (req, res) => {
-    res.json(await assignments.getAssignment(ctx, idOf(req.params)));
-  });
-  router.patch('/admin/tutor-assignments/:id', async (req, res) => {
-    const input = parseInput(updateTutorAssignmentRequestSchema, req.body);
-    res.json(await assignments.updateAssignment(ctx, idOf(req.params), input));
-  });
-
-  router.get('/admin/tutor-rates', async (req, res) => {
-    res.json(await rates.listRates(ctx, parseInput(rateListQuerySchema, req.query)));
-  });
-  router.post('/admin/tutor-rates', async (req, res) => {
-    res.status(201).json(await rates.createRate(ctx, parseInput(createTutorRateRequestSchema, req.body)));
-  });
-  router.get('/admin/tutor-rates/:id', async (req, res) => {
-    res.json(await rates.getRate(ctx, idOf(req.params)));
-  });
-  router.patch('/admin/tutor-rates/:id', async (req, res) => {
-    res.json(await rates.updateRate(ctx, idOf(req.params), parseInput(updateTutorRateRequestSchema, req.body)));
   });
 
   return router;

@@ -64,7 +64,7 @@ flowchart TD
 │       │   ├── attendance/       # admin list/detail/review
 │       │   ├── tutor/             # form, riwayat, honor
 │       │   ├── parent/            # progress anak
-│       │   ├── master-data/       # tutor, siswa, parents, subjects, assignments, rates
+│       │   ├── master-data/       # tutor (password acak + reset), siswa, parents, subjects
 │       │   ├── recap/
 │       │   ├── payroll/
 │       │   └── exports/
@@ -90,9 +90,9 @@ Agent boleh merapikan struktur jika repository existing berbeda, tetapi pemisaha
 
 ## 5. Submit form — urutan server
 
-1. User Tutor yang terautentikasi mengirim `assignment_id`, `lesson_date`, `duration_minutes`, `learning_material`, `learning_notes`, dan `next_focus`.
+1. User Tutor yang terautentikasi mengirim `student_id`, `subject_id`, `lesson_date`, `duration_minutes`, `learning_material`, `learning_notes`, dan `next_focus`.
 2. Middleware memverifikasi role `tutor`; backend mengambil `tutor_id` dari session, bukan dari body.
-3. Backend memastikan assignment aktif dan milik tutor login, memvalidasi tanggal/durasi/data wajib, lalu menyimpan `lesson_sessions` dengan status `pending`, `anomaly_analysis_status=pending`, `submitted_at`, dan `updated_at`.
+3. Backend memastikan murid dan mata pelajaran yang dipilih ada dan aktif, memvalidasi tanggal/durasi/data wajib, lalu menyimpan `lesson_sessions` dengan status `pending`, `anomaly_analysis_status=pending`, `submitted_at`, dan `updated_at`.
 4. Setelah commit database, anomaly service mengklasifikasikan kandidat dugaan duplikasi/pola. Temuan ditulis ke `anomaly_flags`; analisis harus memiliki timeout/fallback dan tidak menggagalkan record yang sudah tersimpan.
 5. Endpoint mengembalikan `201` setelah sesi tersimpan di Neon dengan `anomaly_analysis_status=pending`; screening berjalan di proses backend terpisah dan memperbarui status/flags. Proses harus menangkap error dan, saat startup, melanjutkan sesi berstatus analisis pending agar restart tidak membuat status menggantung. Baseline mengasumsikan satu worker anomaly aktif; cegah pemrosesan sesi yang sama dua kali di dalam proses. Jika deployment memakai beberapa instance/worker, implementasikan claim/lock berbasis PostgreSQL atau durable job queue sebelum scale-out. Frontend mengonfirmasi “Absensi tersimpan dan menunggu verifikasi”; status analisis ditampilkan terpisah. Jangan mengembalikan status analisis yang tidak aktual.
 6. Tidak ada call Google Sheets pada alur submit.

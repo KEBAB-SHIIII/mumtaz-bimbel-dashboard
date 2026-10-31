@@ -57,9 +57,21 @@ export function useLogoutMutation() {
   return useMutation({ mutationFn: logout, onSettled: () => transition(null) });
 }
 
-/** Sesi kedaluwarsa/dicabut di tengah pemakaian (401) → kembali ke state anonim. */
+/**
+ * Sesi kedaluwarsa/dicabut di tengah pemakaian (401) → state anonim, lalu route guard mengarahkan
+ * ke halaman login. Urutannya penting: `me` diubah dulu agar halaman aktif ter-unmount; menjalankan
+ * `queryClient.clear()` saat observer masih aktif membuat halaman macet di "Memuat data…".
+ */
 export function SessionWatcher({ children }: { children: ReactNode }) {
-  const transition = useAuthTransition();
-  useEffect(() => onUnauthenticated(() => transition(null)), [transition]);
+  const queryClient = useQueryClient();
+  useEffect(
+    () =>
+      onUnauthenticated(() => {
+        queryClient.setQueryData(queryKeys.me, null);
+        // Buang data akun sebelumnya (kecuali sesi); query halaman yang sedang tampil ikut lepas saat unmount.
+        queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== queryKeys.me[0] });
+      }),
+    [queryClient],
+  );
   return <>{children}</>;
 }

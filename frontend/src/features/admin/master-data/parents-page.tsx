@@ -233,6 +233,7 @@ export function ParentsPage() {
     { id: 'is_active', header: 'Akses login', cell: ({ row }) => <ActiveBadge active={row.original.is_active} /> },
     {
       id: 'actions',
+      meta: { stickyRight: true },
       header: () => <span className="sr-only">Aksi</span>,
       cell: ({ row }) => (
         <div className="flex gap-2">

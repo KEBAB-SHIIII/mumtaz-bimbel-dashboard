@@ -8,7 +8,6 @@ import { AnomalyProviderError, type AnomalyDetectionInput } from '../src/integra
 
 const target = {
   id: '00000000-0000-4000-8000-000000000009',
-  assignment_id: '00000000-0000-4000-8005-000000000002',
   tutor_id: '00000000-0000-4000-8002-000000000001',
   student_id: '00000000-0000-4000-8003-000000000002',
   subject_id: '00000000-0000-4000-8004-000000000002',
@@ -22,7 +21,7 @@ const input: AnomalyDetectionInput = {
   target,
   comparisons: [related],
   candidates: [
-    { finding_type: 'suspected_duplicate', signal: 'same_assignment_date_duration', related_lesson_session_id: related.id, default_severity: 'medium' },
+    { finding_type: 'suspected_duplicate', signal: 'same_tutor_student_subject_date_duration', related_lesson_session_id: related.id, default_severity: 'medium' },
     { finding_type: 'duration_outlier', signal: 'duration_above_threshold', related_lesson_session_id: null, default_severity: 'low' },
   ],
   config: { durationOutlierMinutes: 180 },
@@ -42,7 +41,7 @@ function fakeClient(text: string | undefined | ((params: GenerateContentParamete
 
 const validOutput = {
   classifications: [
-    { candidate_ref: 'C1', is_anomaly: true, severity: 'medium', reason: 'S0 identik dengan S1 pada tanggal yang sama.', evidence_summary: 'Penugasan A1, durasi sama.' },
+    { candidate_ref: 'C1', is_anomaly: true, severity: 'medium', reason: 'S0 identik dengan S1 pada tanggal yang sama.', evidence_summary: 'Tutor T1, murid P1, durasi sama.' },
     { candidate_ref: 'C2', is_anomaly: false, severity: 'low', reason: 'Durasi panjang masih wajar untuk persiapan ujian.', evidence_summary: '' },
   ],
   additional_findings: [],
@@ -55,14 +54,14 @@ describe('pseudonymize', () => {
     const { payload, sessionIdOf } = pseudonymize(input);
     const raw = JSON.stringify(payload);
     expect(raw).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/);
-    expect(payload.target).toEqual({ ref: 'S0', assignment: 'A1', tutor: 'T1', student: 'P1', subject: 'M1', lesson_date: '2026-10-10', duration_minutes: 240 });
+    expect(payload.target).toEqual({ ref: 'S0', tutor: 'T1', student: 'P1', subject: 'M1', lesson_date: '2026-10-10', duration_minutes: 240 });
     expect(payload.candidates[0]).toMatchObject({ ref: 'C1', related: 'S1' });
     expect(sessionIdOf.get('S1')).toBe(related.id);
   });
 
   it('alias pada teks model diganti frasa netral', () => {
-    expect(humanizeAliases('S0 mirip S12 (tutor T1, siswa P3, mapel M2, penugasan A1, C1)')).toBe(
-      'sesi ini mirip sesi pembanding (tutor tutor, siswa siswa, mapel mata pelajaran, penugasan penugasan, kandidat)',
+    expect(humanizeAliases('S0 mirip S12 (tutor T1, siswa P3, mapel M2, C1)')).toBe(
+      'sesi ini mirip sesi pembanding (tutor tutor, siswa siswa, mapel mata pelajaran, kandidat)',
     );
   });
 });
@@ -87,7 +86,7 @@ describe('GeminiAnomalyDetector (klien di-mock, tanpa credential)', () => {
         finding_type: 'suspected_duplicate',
         severity: 'medium',
         reason: 'sesi ini identik dengan sesi pembanding pada tanggal yang sama.',
-        evidence_summary: 'Penugasan penugasan, durasi sama.',
+        evidence_summary: 'Tutor tutor, murid siswa, durasi sama.',
         suggested_action: 'review',
       },
       expect.objectContaining({ finding_type: 'duration_outlier', is_anomaly: false, evidence_summary: null }),

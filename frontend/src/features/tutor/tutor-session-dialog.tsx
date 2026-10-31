@@ -13,11 +13,12 @@ import { formatDuration, formatLessonDate, formatTimestamp } from '../../lib/for
 import { applyServerErrors, hasFieldErrors, validateWith } from '../../lib/form';
 import { queryKeys } from '../../lib/query-keys';
 import { useCurrentUser } from '../auth/session';
-import { fetchTutorAssignments, reviseAttendance } from './api';
+import { fetchAttendanceOptions, reviseAttendance } from './api';
 import { ATTENDANCE_SERVER_FIELDS, AttendanceFields, toEditablePayload, type AttendanceFormValues } from './attendance-fields';
 
 const valuesOf = (session: TutorSession): AttendanceFormValues => ({
-  assignment_id: session.assignment_id,
+  student_id: session.student_id,
+  subject_id: session.subject_id,
   lesson_date: session.lesson_date,
   duration_minutes: String(session.duration_minutes),
   learning_material: session.learning_material,
@@ -29,7 +30,7 @@ const valuesOf = (session: TutorSession): AttendanceFormValues => ({
 function RevisionForm({ session, onDone, onCancel }: { session: TutorSession; onDone: () => void; onCancel: () => void }) {
   const user = useCurrentUser();
   const queryClient = useQueryClient();
-  const assignments = useQuery({ queryKey: queryKeys.tutor.assignments, queryFn: fetchTutorAssignments });
+  const options = useQuery({ queryKey: queryKeys.tutor.attendanceOptions, queryFn: fetchAttendanceOptions });
   const form = useForm<AttendanceFormValues>({ defaultValues: valuesOf(session) });
 
   const mutation = useMutation({
@@ -47,8 +48,8 @@ function RevisionForm({ session, onDone, onCancel }: { session: TutorSession; on
     if (payload) mutation.mutate(payload);
   });
 
-  if (assignments.isPending) return <LoadingState label="Memuat penugasan…" />;
-  if (assignments.isError) return <ErrorState error={assignments.error} onRetry={() => void assignments.refetch()} />;
+  if (options.isPending) return <LoadingState label="Memuat pilihan murid…" />;
+  if (options.isError) return <ErrorState error={options.error} onRetry={() => void options.refetch()} />;
 
   return (
     <form id="revision-form" noValidate className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={(event) => void onSubmit(event)}>
@@ -57,7 +58,7 @@ function RevisionForm({ session, onDone, onCancel }: { session: TutorSession; on
           <InlineAlert tone="danger" title="Revisi belum terkirim">{toApiError(mutation.error).message}</InlineAlert>
         </div>
       )}
-      <AttendanceFields form={form} assignments={assignments.data} tutorName={user.full_name} idPrefix="revision" />
+      <AttendanceFields form={form} options={options.data} tutorName={user.full_name} idPrefix="revision" />
       <div className="flex justify-end gap-2 md:col-span-2">
         <Button variant="secondary" onClick={onCancel} disabled={mutation.isPending}>Batal</Button>
         <Button type="submit" loading={mutation.isPending} icon={<Send aria-hidden className="size-4" />}>Kirim revisi</Button>

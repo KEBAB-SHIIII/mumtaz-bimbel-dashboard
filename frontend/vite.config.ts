@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 import { defaultClientConditions } from 'vite';
 import { defineConfig } from 'vitest/config';
 
+/** Backend lokal; sama dengan `FRONTEND_ORIGIN` + `PORT` di backend/.env. */
+const API_ORIGIN = 'http://localhost:3001';
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -12,6 +15,9 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // Hot reload di :5173 memakai backend yang sama (:3001). Header Origin diganti menjadi origin
+    // backend (= FRONTEND_ORIGIN di backend/.env) agar cek CSRF/Origin lolos tanpa env kedua.
+    proxy: { '/api': { target: API_ORIGIN, headers: { origin: API_ORIGIN } } },
   },
   build: {
     rolldownOptions: {

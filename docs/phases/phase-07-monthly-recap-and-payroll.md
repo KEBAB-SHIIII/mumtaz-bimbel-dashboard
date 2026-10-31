@@ -1,5 +1,7 @@
 # Phase 07 — Rekap Bulanan dan Honor Tutor
 
+> **Catatan D-24 (30 Okt 2026):** penugasan tutor dan tarif per penugasan sudah dihapus. Istilah *assignment/penugasan/tarif demo* di dokumen fase ini bersifat historis; Tutor kini memilih murid dan mapel sendiri dan honor memakai satu tarif tunggal dari konfigurasi. Lihat `docs/17` D-24.
+
 ## Tujuan
 
 Menyediakan rekap bulanan dan estimasi honor yang transparan, dihitung di backend, dan dapat ditelusuri ke sesi yang telah disetujui Admin. Ekspor PDF bukan bagian dari baseline; tambahkan hanya setelah owner menyetujui scope tambahan.

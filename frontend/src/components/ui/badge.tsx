@@ -2,7 +2,6 @@ import {
   CircleCheck,
   CircleX,
   Clock,
-  FlaskConical,
   PencilLine,
   TriangleAlert,
   type LucideIcon,
@@ -56,14 +55,6 @@ export function FindingIndicator({ count }: { count: number }) {
   return (
     <Badge tone="warning" icon={TriangleAlert}>
       {count} temuan
-    </Badge>
-  );
-}
-
-export function DemoBadge() {
-  return (
-    <Badge tone="info" icon={FlaskConical}>
-      Tarif demo
     </Badge>
   );
 }

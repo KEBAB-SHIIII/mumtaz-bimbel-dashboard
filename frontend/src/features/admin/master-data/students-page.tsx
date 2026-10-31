@@ -108,6 +108,7 @@ export function StudentsPage() {
     { id: 'is_active', header: 'Status', cell: ({ row }) => <ActiveBadge active={row.original.is_active} /> },
     {
       id: 'actions',
+      meta: { stickyRight: true },
       header: () => <span className="sr-only">Aksi</span>,
       cell: ({ row }) => (
         <Button variant="secondary" size="sm" icon={<Pencil aria-hidden className="size-4" />} aria-label={`Ubah ${row.original.full_name}`} onClick={() => { setEditing(row.original); setFormOpen(true); }}>

@@ -1,7 +1,7 @@
 import type { AnomalyDetectionInput, AnomalySessionSnapshot } from './types.js';
 
 /**
- * Payload minimum untuk model: alias pengganti semua ID (S/A/T/P/M), tanggal,
+ * Payload minimum untuk model: alias pengganti semua ID (S/T/P/M), tanggal,
  * dan durasi. Tidak ada nama, kontak, materi/catatan, ataupun UUID internal.
  */
 export interface PseudonymousPayload {
@@ -13,7 +13,6 @@ export interface PseudonymousPayload {
 
 interface PseudonymousSession {
   ref: string;
-  assignment: string;
   tutor: string;
   student: string;
   subject: string;
@@ -42,7 +41,6 @@ function aliaser(prefix: string) {
 }
 
 export function pseudonymize(input: AnomalyDetectionInput): AliasMap {
-  const assignment = aliaser('A');
   const tutor = aliaser('T');
   const student = aliaser('P');
   const subject = aliaser('M');
@@ -54,7 +52,6 @@ export function pseudonymize(input: AnomalyDetectionInput): AliasMap {
     sessionAlias.set(snapshot.id, ref);
     return {
       ref,
-      assignment: assignment(snapshot.assignment_id),
       tutor: tutor(snapshot.tutor_id),
       student: student(snapshot.student_id),
       subject: subject(snapshot.subject_id),
@@ -92,7 +89,6 @@ export function humanizeAliases(text: string): string {
     .replace(/\bT\d+\b/g, 'tutor')
     .replace(/\bP\d+\b/g, 'siswa')
     .replace(/\bM\d+\b/g, 'mata pelajaran')
-    .replace(/\bA\d+\b/g, 'penugasan')
     .replace(/\bC\d+\b/g, 'kandidat')
     .trim();
 }

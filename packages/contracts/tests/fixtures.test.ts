@@ -23,9 +23,7 @@ import {
   EXPECTED_SESSION_IDS_BY_PERIOD,
   TEST_ONLY_CREDENTIALS,
   fixtureAnomalyFlags,
-  fixtureAssignments,
   fixtureParentStudents,
-  fixtureRates,
   fixtureSessions,
   fixtureStudents,
   fixtureSubjects,
@@ -53,8 +51,6 @@ describe('examples/seed-data.json selaras dengan fixtures', () => {
     expect(seed.students).toEqual(fixtureStudents);
     expect(seed.parent_students).toEqual(fixtureParentStudents);
     expect(seed.subjects).toEqual(fixtureSubjects);
-    expect(seed.tutor_assignments).toEqual(fixtureAssignments);
-    expect(seed.tutor_rates).toEqual(fixtureRates);
     expect(seed.development_auth_fixtures.parent_access_codes).toEqual(TEST_ONLY_CREDENTIALS.parentAccessCodes);
   });
 
@@ -66,7 +62,7 @@ describe('examples/seed-data.json selaras dengan fixtures', () => {
 describe('integritas fixtures', () => {
   const ids = [
     ...fixtureUsers, ...fixtureTutors, ...fixtureStudents, ...fixtureSubjects,
-    ...fixtureAssignments, ...fixtureRates, ...fixtureSessions, ...fixtureAnomalyFlags,
+    ...fixtureSessions, ...fixtureAnomalyFlags,
   ].map((row) => row.id);
 
   it('semua ID adalah UUID unik (no ekspor bukan primary key)', () => {
@@ -89,13 +85,6 @@ describe('integritas fixtures', () => {
     for (const link of fixtureParentStudents) {
       expect(fixtureUsers.find((u) => u.id === link.parent_user_id)?.role).toBe('parent');
       expect(fixtureStudents.some((s) => s.id === link.student_id)).toBe(true);
-    }
-  });
-
-  it('setiap assignment aktif punya tarif demo Rp50.000 berlabel simulasi', () => {
-    for (const assignment of fixtureAssignments.filter((a) => a.is_active)) {
-      const rate = fixtureRates.find((r) => r.assignment_id === assignment.id);
-      expect(rate).toMatchObject({ rate_type: 'per_session', rate_amount: '50000', is_demo_assumption: true });
     }
   });
 

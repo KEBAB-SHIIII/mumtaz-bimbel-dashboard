@@ -14,11 +14,11 @@ Dokumen kontrak bersama frontend, backend, database, modul anomali, dan integras
 
 | Label UI | Field API/database | Aturan |
 |---|---|---|
-| Nama tutor | Diturunkan dari sesi login → `assignment_id` | Tidak dikirim sebagai sumber identitas yang dipercaya dari browser. |
-| Nama murid | `assignment_id` → student | Tutor memilih hanya assignment valid miliknya. |
+| Nama tutor | Diturunkan dari sesi login → `lesson_sessions.tutor_id` | Tidak dikirim sebagai sumber identitas yang dipercaya dari browser. |
+| Nama murid | `student_id` → student | Tutor memilih sendiri dari murid aktif (Master Data Siswa). |
 | Kelas | `students.grade` | Auto-fill dari Master Data. |
 | Asal sekolah | `students.school_name` | Auto-fill dari Master Data. |
-| Mata pelajaran | `assignment_id` → subject | Hanya mapel dalam assignment yang dipilih. |
+| Mata pelajaran | `subject_id` → subject | Tutor memilih sendiri dari mata pelajaran aktif (Master Data Mata Pelajaran). |
 | Tanggal les | `lesson_date` | Format `YYYY-MM-DD`; tanggal sesi aktual dan dasar filter bulan. Working default (O-14): tolak tanggal masa depan menurut `Asia/Jakarta`, izinkan tanggal lampau untuk pelaporan terlambat. |
 | Durasi les | `duration_minutes` | Integer menit, bukan jam desimal. Rentang valid harus config yang jelas dan bisa diubah. |
 | Materi pembelajaran | `learning_material` | Working default required untuk Progress Anak; owner setuju field dicantumkan tetapi requiredness belum dikonfirmasi (O-09). |
@@ -42,7 +42,7 @@ no | nama tutor | nama murid | kelas | asal sekolah | mata pelajaran | tanggal l
 | `nama murid` | `students.full_name` | Nama siswa. |
 | `kelas` | `students.grade` | Nilai Master Data. |
 | `asal sekolah` | `students.school_name` | Nilai Master Data. |
-| `mata pelajaran` | `subjects.name` melalui assignment | Nama mapel. |
+| `mata pelajaran` | `subjects.name` melalui `subject_id` | Nama mapel. |
 | `tanggal les` | `lesson_sessions.lesson_date` | Format konsisten `DD/MM/YYYY`. |
 | `durasi les` | `lesson_sessions.duration_minutes` | Tampilan `N menit`, misalnya `90 menit`. |
 
@@ -69,17 +69,17 @@ Ekspor mencakup semua submission pada periode terpilih, termasuk `pending`, `app
 
 Transisi baseline: `pending → approved`, `pending → revision_requested`, atau `pending → rejected`; setelah Tutor memperbaiki sesi `revision_requested`, record yang sama kembali ke `pending` untuk direview ulang. `approved` dan `rejected` terminal adalah working default MVP (O-15, belum dikonfirmasi owner); belum ada endpoint reopen pada baseline. Hanya Admin dapat memutuskan status review. Tutor hanya boleh mengedit sesi miliknya yang berstatus `revision_requested`. Schema baseline hanya menyimpan metadata review untuk payload sesi yang saat ini tersimpan, bukan riwayat keputusan penuh. Saat Tutor mengirim revisi, perbarui `submitted_at` ke waktu submit payload terbaru, set status ke `pending`, kosongkan `reviewed_by_user_id`, `reviewed_at`, dan `admin_note` (alasan revisi telah ditampilkan kepada Tutor sebelum revisi dikirim), reset `anomaly_analysis_status` ke `pending`, dan tandai finding lama sebagai `superseded` dengan `review_note="superseded_by_revision"`. Jalankan analisis ulang berdasarkan payload terbaru. Riwayat keputusan/revisi penuh membutuhkan tabel audit terpisah dan berada di luar baseline.
 
-**Honor hanya menghitung sesi approved.** Nominal estimasi demo adalah Rp50.000 per sesi, menggunakan `tutor_rates` dengan `rate_type='per_session'` dan `is_demo_assumption=true`. UI wajib memberi label bahwa nominal itu dummy/simulasi, bukan tarif resmi UMKM. Jangan menyebut honor sudah dibayar karena belum ada payment tracking.
+**Honor hanya menghitung sesi approved.** Nominal estimasi memakai tarif tunggal per sesi dari konfigurasi `HONOR_RATE_PER_SESSION` (default Rp50.000; D-24; tarif resmi UMKM masih O-01), dikunci ke `rate_amount_snapshot` saat sesi disetujui. Jangan menyebut honor sudah dibayar karena belum ada payment tracking.
 
 ### 5.1 Revisi sesi — field yang dapat diubah
 
-Untuk sesi milik Tutor yang berstatus `revision_requested`, hanya field berikut yang boleh diperbarui: `assignment_id` (harus tetap assignment valid milik Tutor login untuk tanggal sesi), `lesson_date`, `duration_minutes`, `learning_material`, `learning_notes`, dan `next_focus`. Identitas Tutor, status sesi, tarif snapshot, metadata review, dan catatan Admin tidak dapat diubah melalui payload Tutor.
+Untuk sesi milik Tutor yang berstatus `revision_requested`, hanya field berikut yang boleh diperbarui: `student_id` dan `subject_id` (murid/mapel aktif), `lesson_date`, `duration_minutes`, `learning_material`, `learning_notes`, dan `next_focus`. Identitas Tutor, status sesi, tarif snapshot, metadata review, dan catatan Admin tidak dapat diubah melalui payload Tutor.
 
 ## 6. Kontrak anomali dan duplikasi
 
-- Validasi input, role, assignment, format tanggal, dan durasi dilakukan deterministik oleh backend sebelum/bersamaan dengan analisis.
+- Validasi input, role, murid/mapel aktif, format tanggal, dan durasi dilakukan deterministik oleh backend sebelum/bersamaan dengan analisis.
 - Anomaly module mengklasifikasikan dugaan duplikasi dan pola tidak wajar; exact-match/fingerprint boleh dipakai untuk menghasilkan kandidat pembanding secara efisien, lalu modul AI dapat mengklasifikasikan/menjelaskan kandidat tersebut.
-- Nilai `finding_type` baseline: `suspected_duplicate`, `duration_outlier`, `unusual_pattern`. `invalid_data` bukan finding model untuk submit baru karena field/assignment invalid harus ditolak oleh validasi deterministik sebelum sesi disimpan. Kategori untuk data historis invalid hanya boleh ditambahkan bila migrasi historis disetujui.
+- Nilai `finding_type` baseline: `suspected_duplicate`, `duration_outlier`, `unusual_pattern`. `invalid_data` bukan finding model untuk submit baru karena field murid/mapel invalid harus ditolak oleh validasi deterministik sebelum sesi disimpan. Kategori untuk data historis invalid hanya boleh ditambahkan bila migrasi historis disetujui.
 - Temuan disimpan pada `anomaly_flags`, ditampilkan di Data Absensi Admin untuk review. Temuan bukan bukti kecurangan dan tidak otomatis mengubah status sesi atau nominal honor.
 - Dua sesi dengan atribut sama bisa saja sama-sama valid. Jangan auto-delete atau auto-reject.
 - Kirim hanya data minimum/pseudonymous ke provider AI; jangan kirim nama lengkap, nomor telepon, email, ID akses orang tua, atau data sensitif.
@@ -89,14 +89,14 @@ Untuk sesi milik Tutor yang berstatus `revision_requested`, hanya field berikut 
 
 `examples/anomaly-response.json` adalah fixture DTO hasil normalisasi service, bukan raw JSON yang wajib dikeluarkan langsung oleh Gemini dan bukan row database. `analysis_status` ditentukan backend dan dipetakan ke `lesson_sessions.anomaly_analysis_status`. Setiap item `findings` boleh menyertakan `is_anomaly`, `finding_type`, `severity`, `reason`, `evidence_summary`, `related_lesson_session_id`, dan `suggested_action`. Service memvalidasi item dengan Zod; hanya item yang diklasifikasikan sebagai finding (`is_anomaly=true` dengan `finding_type` yang diizinkan) disimpan sebagai `anomaly_flags`. `suggested_action` bersifat rekomendasi UI, tidak otomatis mengeksekusi keputusan sesi. Metadata provider/model ditambahkan oleh adapter/backend, bukan dipercaya mentah dari model.
 
-## 7. Data honor demo
+## 7. Data honor
 
-- Gunakan `rate_type='per_session'`, `rate_amount=50000`, `is_demo_assumption=true` pada setiap assignment demo.
-- Nominal berasal dari tabel tarif/seed, tidak ditulis sebagai konstanta di tiap komponen atau service.
+- Satu tarif per sesi untuk semua tutor: `HONOR_RATE_PER_SESSION` (default 50000), dibaca dari konfigurasi dan dikunci ke sesi saat approve.
+- Nominal berasal dari konfigurasi/snapshot, tidak ditulis sebagai konstanta di tiap komponen atau service.
 - Hanya status approved yang masuk total honor.
 - Sesi pending/revision/rejected ditampilkan sebagai jumlah terpisah, tidak masuk nominal.
 - Kalkulasi uang menggunakan PostgreSQL `numeric` dan decimal-safe arithmetic.
-- Simpan snapshot tarif yang dipakai untuk histori. Jika assignment belum memiliki tarif valid, jangan tampilkan nominal seolah benar; tampilkan warning.
+- Simpan snapshot tarif yang dipakai untuk histori. Sesi approved tanpa snapshot tidak diberi nominal seolah benar; tampilkan warning.
 
 ## 8. Status ekspor
 

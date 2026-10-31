@@ -12,13 +12,14 @@ export const queryKeys = {
     attendanceDetail: (id: string) => ['admin', 'attendance', 'detail', id] as const,
     recap: (period: string, groupBy: string) => ['admin', 'recap', period, groupBy] as const,
     payroll: (period: string) => ['admin', 'payroll', period] as const,
+    exportHistory: ['admin', 'export-history'] as const,
     masterData: (entity: string, filters: object) => ['admin', 'master-data', entity, filters] as const,
     masterDataAll: (entity: string) => ['admin', 'master-data', entity] as const,
   },
 
   tutor: {
     dashboard: (period: string) => ['tutor', 'dashboard', period] as const,
-    assignments: ['tutor', 'assignments'] as const,
+    attendanceOptions: ['tutor', 'attendance-options'] as const,
     attendance: (filters: object) => ['tutor', 'attendance', filters] as const,
     payroll: (period: string) => ['tutor', 'payroll', period] as const,
   },

@@ -23,12 +23,10 @@ const adminPaths = [
   '/admin/students',
   '/admin/parents',
   '/admin/subjects',
-  '/admin/tutor-assignments',
-  '/admin/tutor-rates',
 ];
 const tutorPaths = [
   '/tutor/dashboard/summary?period=2026-10',
-  '/tutor/me/assignments',
+  '/tutor/attendance-options',
   '/tutor/me/attendance?period=2026-10',
   '/tutor/me/payroll?period=2026-10',
 ];

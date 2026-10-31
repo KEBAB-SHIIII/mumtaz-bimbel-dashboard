@@ -3,6 +3,13 @@ import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
 import { apiClient, setCsrfToken } from '../lib/api-client';
 
+// jsdom tidak menyediakan ResizeObserver (dipakai Headless UI & tabel); browser nyata punya.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
 const originalAdapter = apiClient.defaults.adapter;
 
 afterEach(() => {

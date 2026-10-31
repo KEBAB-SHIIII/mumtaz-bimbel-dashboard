@@ -7,7 +7,6 @@ import type { AnomalyFindingCandidate, FindingSeverity, FindingType } from '@mum
  */
 export interface AnomalySessionSnapshot {
   id: string;
-  assignment_id: string;
   tutor_id: string;
   student_id: string;
   subject_id: string;
@@ -18,7 +17,7 @@ export interface AnomalySessionSnapshot {
 
 /** Sinyal deterministik yang membuat sebuah kandidat diperiksa. */
 export type CandidateSignal =
-  | 'same_assignment_date_duration'
+  | 'same_tutor_student_subject_date_duration'
   | 'same_student_subject_date'
   | 'duration_above_threshold';
 

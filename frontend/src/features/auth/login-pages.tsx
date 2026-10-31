@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, KeyRound, LogIn } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { loginRequestSchema, parentAccessRequestSchema, type LoginRequest, type ParentAccessRequest, type Role } from '@mumtaz/contracts';
@@ -11,6 +11,9 @@ import { toApiError } from '../../lib/api-error';
 import { ROLE_HOME, useLoginMutation, useParentAccessMutation, useSession } from './session';
 
 function AuthLayout({ title, description, children, footer }: { title: string; description: string; children: ReactNode; footer: ReactNode }) {
+  useEffect(() => {
+    document.title = `${title} · Mumtaz Bimbel`;
+  }, [title]);
   return (
     <main className="flex min-h-dvh items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-sm">

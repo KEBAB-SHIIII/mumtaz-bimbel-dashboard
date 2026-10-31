@@ -1,12 +1,9 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import {
   TEST_ONLY_CREDENTIALS,
   USER_IDS,
-  buildDevDataset,
   fixtureAnomalyFlags,
-  fixtureAssignments,
   fixtureParentStudents,
-  fixtureRates,
   fixtureSessions,
   fixtureStudents,
   fixtureSubjects,
@@ -14,21 +11,19 @@ import {
   fixtureUsers,
   type FixtureLessonSession,
 } from '@mumtaz/contracts/fixtures';
-import { digestParentAccessCode } from '../auth/parent-access-code.js';
-import { hashPassword } from '../auth/password.js';
-import { ensureBootstrapAdmin } from './bootstrap-admin.js';
-import type { Database, Transaction } from './client.js';
+import { digestParentAccessCode } from '../../src/auth/parent-access-code.js';
+import { hashPassword } from '../../src/auth/password.js';
+import { ensureBootstrapAdmin } from '../../src/db/bootstrap-admin.js';
+import type { Database, Transaction } from '../../src/db/client.js';
 import {
   anomalyFlags,
   lessonSessions,
   parentStudents,
   students,
   subjects,
-  tutorAssignments,
-  tutorRates,
   tutors,
   users,
-} from './schema.js';
+} from '../../src/db/schema.js';
 
 export interface SeedOptions {
   adminPassword: string;
@@ -40,8 +35,10 @@ export interface SeedOptions {
 type ReviewerMap = (id: string | null) => string | null;
 
 /**
+ * KHUSUS TEST (PGlite). Aplikasi production tidak memuat data sintetis.
+ *
  * Master data sintetis (= `examples/seed-data.json`): akun, tutor, siswa, wali,
- * mapel, penugasan, tarif demo. Idempoten (`ON CONFLICT DO NOTHING`).
+ * mapel, penugasan, tarif dari konfigurasi. Idempoten (`ON CONFLICT DO NOTHING`).
  */
 async function seedMasterData(tx: Transaction, options: SeedOptions): Promise<ReviewerMap> {
   const admin = fixtureUsers.find((user) => user.id === USER_IDS.admin);
@@ -77,8 +74,6 @@ async function seedMasterData(tx: Transaction, options: SeedOptions): Promise<Re
   await tx.insert(students).values(fixtureStudents).onConflictDoNothing();
   await tx.insert(subjects).values(fixtureSubjects).onConflictDoNothing();
   await tx.insert(parentStudents).values(fixtureParentStudents).onConflictDoNothing();
-  await tx.insert(tutorAssignments).values(fixtureAssignments).onConflictDoNothing();
-  await tx.insert(tutorRates).values(fixtureRates).onConflictDoNothing();
 
   return (id) => (id === USER_IDS.admin ? actualAdmin.id : id);
 }
@@ -119,36 +114,4 @@ export async function seedSyntheticData(db: Database, options: SeedOptions): Pro
       )
       .onConflictDoNothing();
   });
-}
-
-/**
- * Seed DEV (Neon development): master data + dataset generator (~150 sesi Sep–Okt 2026).
- * Semua sesi `anomaly_analysis_status='pending'` tanpa temuan → dianalisis worker
- * (Gemini) saat backend start. Idempoten.
- */
-export async function seedDevDataset(
-  db: Database,
-  options: SeedOptions & { reset?: boolean },
-): Promise<{ sessions: number }> {
-  const { sessions } = buildDevDataset();
-  // Reset + seed dalam SATU transaksi: bila seed gagal, data lama tidak hilang.
-  await db.transaction(async (tx) => {
-    if (options.reset) await truncateAllData(tx);
-    const reviewer = await seedMasterData(tx, options);
-    await insertSessions(tx, sessions, reviewer);
-  });
-  return { sessions: sessions.length };
-}
-
-/**
- * Kosongkan SEMUA data (domain + session) tanpa menyentuh schema/migration.
- * Destruktif — hanya lewat `seedDevDataset({ reset: true })` dari skrip `db:reset-dev`.
- */
-async function truncateAllData(db: Transaction): Promise<void> {
-  await db.execute(sql`
-    TRUNCATE TABLE
-      anomaly_flags, sheet_export_runs, lesson_sessions, tutor_rates, tutor_assignments,
-      parent_students, tutors, students, subjects, users, app_sessions
-    RESTART IDENTITY
-  `);
 }

@@ -5,14 +5,7 @@ import { AppRoutes } from './app/app-routes';
 import { AppProviders } from './app/providers';
 import './styles/index.css';
 
-async function bootstrap() {
-  // Dibandingkan langsung dengan konstanta build-time agar bundler membuang cabang
-  // ini (beserta chunk fixture sintetis) sepenuhnya dari build mode live.
-  if (import.meta.env.VITE_API_MODE === 'demo') {
-    const { installDemoAdapter } = await import('./features/demo/demo-adapter');
-    installDemoAdapter();
-  }
-
+function bootstrap() {
   const root = document.getElementById('root');
   if (!root) throw new Error('Elemen #root tidak ditemukan');
 
@@ -27,4 +20,4 @@ async function bootstrap() {
   );
 }
 
-void bootstrap();
+bootstrap();

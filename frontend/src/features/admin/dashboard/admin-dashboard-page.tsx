@@ -33,16 +33,17 @@ export function AdminDashboardPage() {
         <ErrorState error={summary.error} onRetry={() => void summary.refetch()} />
       ) : (
         <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <StatCard label="Tutor aktif" value={summary.data.active_tutors} />
-          <StatCard label="Siswa aktif" value={summary.data.active_students} />
-          <StatCard label="Sesi bulan ini" value={summary.data.total_sessions} />
-          <StatCard label="Menunggu verifikasi" value={summary.data.status_counts.pending} />
-          <StatCard label="Disetujui" value={summary.data.status_counts.approved} />
-          <StatCard label="Perlu revisi" value={summary.data.status_counts.revision_requested} />
+          <StatCard label="Tutor aktif" value={summary.data.active_tutors} to="/admin/master-data/tutor" />
+          <StatCard label="Siswa aktif" value={summary.data.active_students} to="/admin/master-data/siswa" />
+          <StatCard label="Sesi bulan ini" value={summary.data.total_sessions} to={`/admin/absensi?period=${period}`} />
+          <StatCard label="Menunggu verifikasi" value={summary.data.status_counts.pending} to={`/admin/absensi?period=${period}&status=pending`} />
+          <StatCard label="Disetujui" value={summary.data.status_counts.approved} to={`/admin/absensi?period=${period}&status=approved`} />
+          <StatCard label="Perlu revisi" value={summary.data.status_counts.revision_requested} to={`/admin/absensi?period=${period}&status=revision_requested`} />
           <StatCard label="Temuan anomali belum direview" value={summary.data.anomaly_findings_pending_review} />
           <StatCard
             label="Estimasi honor (sesi disetujui)"
             value={formatRupiah(summary.data.honor.estimated_amount)}
+            to={`/admin/honor?period=${period}`}
           />
         </dl>
       )}

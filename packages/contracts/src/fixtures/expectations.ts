@@ -41,10 +41,9 @@ export const EXPECTED_EXPORT_SESSION_ORDER_2026_10 = [
   SESSION_IDS.s08, SESSION_IDS.s09, SESSION_IDS.s11, SESSION_IDS.s10, SESSION_IDS.s05,
 ];
 
-/** Payroll Oktober 2026: hanya `approved` × tarif snapshot demo Rp50.000. */
+/** Payroll Oktober 2026: hanya `approved` × tarif snapshot Rp50.000 (tarif tunggal, D-24). */
 export const EXPECTED_PAYROLL_2026_10 = {
   period: '2026-10',
-  is_demo_assumption: true,
   total_estimated_amount: '200000',
   tutors: [
     {
@@ -99,8 +98,6 @@ export const PARENT_FORBIDDEN_FIELDS = [
   'anomaly_analysis_status',
   'findings',
   'rate_amount_snapshot',
-  'rate_type_snapshot',
-  'rate_is_demo_snapshot',
   'estimated_amount',
   'access_code',
   'parent_access_code_hash',

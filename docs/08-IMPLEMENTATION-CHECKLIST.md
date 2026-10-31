@@ -12,14 +12,14 @@
 - [ ] Admin/Tutor login username-password; Orang Tua login hanya dengan ID Akses Orang Tua rahasia.
 - [ ] Password Admin/Tutor di-hash; ID akses Parent disimpan sebagai digest berkunci, bukan plaintext.
 - [ ] Rate limit autentikasi, respons gagal generik, expiry/logout, PostgreSQL-backed session store, `GET /auth/csrf`, cookie aman, Origin/CSRF defense, dan role/scope checks diterapkan server-side.
-- [ ] CRUD/deactivation tutor, siswa, parent links/access ID, mata pelajaran, assignment, dan tarif.
+- [ ] CRUD/deactivation tutor, siswa, parent links/access ID, mata pelajaran (tanpa assignment/tarif per penugasan, D-24).
 - [ ] Admin dapat membuat/merotasi ID akses orang tua; kode mentah ditampilkan sekali dan tidak masuk log.
-- [ ] Tutor-siswa-mapel divalidasi dari assignment aktif.
+- [ ] Murid dan mapel pilihan Tutor divalidasi aktif.
 - [ ] Data master yang direferensikan sesi tidak dihapus permanen dengan hard delete.
 
 ## C. Form Tutor dan catatan sesi
 
-- [ ] Form berisi assignment/siswa, tanggal les, durasi menit, `learning_material`, catatan pembelajaran dan fokus opsional.
+- [ ] Form berisi murid, mata pelajaran, tanggal les, durasi menit, `learning_material`, catatan pembelajaran dan fokus opsional.
 - [ ] Nama tutor diturunkan dari session; kelas/sekolah dari Master Data.
 - [ ] POST form membuat satu `lesson_sessions` berstatus awal `pending` di Neon; retry dengan `client_submission_id` yang sama tidak membuat sesi kedua.
 - [ ] Anomaly screening dijalankan melalui service terpisah setelah penyimpanan; tidak ada call Sheets pada submit.
@@ -61,7 +61,7 @@
 ## G. UX, tests, dan dokumentasi
 
 - [ ] Seluruh halaman memiliki loading, empty, error, success, disabled/loading states.
-- [ ] Form menghindari input berulang melalui auto-fill dan pilihan assignment yang valid.
+- [ ] Form menghindari input berulang melalui auto-fill dan pilihan murid/mapel aktif.
 - [ ] Parent login adalah satu field; helper text menjelaskan ID akses bersifat privat.
 - [ ] Design memakai semantic tokens; palet/typography/logo final menunggu referensi tim.
 - [ ] Test mencakup auth/access scope, submit/review, anomali/duplikasi, period filter, payroll demo dan ekspor.

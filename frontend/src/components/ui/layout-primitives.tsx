@@ -1,7 +1,13 @@
-import type { ReactNode } from 'react';
+import { ChevronRight } from 'lucide-react';
+import { useEffect, type ReactNode } from 'react';
+import { Link } from 'react-router';
 import { cn } from '../../lib/cn';
 
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
+  // Judul tab browser mengikuti halaman aktif (riwayat & banyak tab mudah dibedakan).
+  useEffect(() => {
+    document.title = `${title} · Mumtaz Bimbel`;
+  }, [title]);
   return (
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
@@ -27,12 +33,30 @@ export function Card({ title, actions, children, className }: { title?: string; 
   );
 }
 
-export function StatCard({ label, value, hint }: { label: string; value: ReactNode; hint?: ReactNode }) {
+/**
+ * Kartu angka ringkasan. Dengan `to`, seluruh kartu menjadi tautan ke data di balik angka itu
+ * (stretched link: markup `<dl>` tetap valid dan nama tautan = label kartu).
+ */
+export function StatCard({ label, value, hint, to }: { label: string; value: ReactNode; hint?: ReactNode; to?: string }) {
   return (
-    <div className="rounded-lg border border-border bg-surface p-4 shadow-sm">
-      <dt className="text-xs font-medium text-muted">{label}</dt>
+    <div
+      className={cn(
+        'relative rounded-lg border border-border bg-surface p-4 shadow-sm',
+        to && 'transition-colors focus-within:ring-2 focus-within:ring-focus-ring hover:border-text/30 hover:bg-surface-muted',
+      )}
+    >
+      <dt className="flex items-center justify-between gap-2 text-xs font-medium text-muted">
+        {to ? (
+          <Link to={to} className="outline-none after:absolute after:inset-0 after:rounded-lg">
+            {label}
+          </Link>
+        ) : (
+          label
+        )}
+        {to && <ChevronRight aria-hidden className="size-4 shrink-0" />}
+      </dt>
       <dd className="mt-1 text-2xl font-semibold tabular-nums text-text">{value}</dd>
-      {hint && <dd className="mt-1">{hint}</dd>}
+      {hint && <dd className="relative mt-1">{hint}</dd>}
     </div>
   );
 }

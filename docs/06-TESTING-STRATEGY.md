@@ -6,7 +6,7 @@ Tes membuktikan aturan akses, validasi data, periode, verifikasi manual, klasifi
 
 ## Unit tests backend
 
-- Validator submit form: field wajib, durasi bukan integer/tidak positif, tanggal tidak valid, assignment nonaktif, dan tutor tidak sesuai assignment.
+- Validator submit form: field wajib, durasi bukan integer/tidak positif, tanggal tidak valid, murid/mapel nonaktif atau tidak ada.
 - Mapping sesi → row ekspor delapan kolom; `no` berurutan, tanggal/durasi konsisten, tanpa field tambahan.
 - Period filter `YYYY-MM` memakai `lesson_date`, termasuk sesi yang baru disubmit pada bulan berikutnya.
 - Payroll: hanya sesi approved; tarif dummy Rp50.000 per sesi dibaca dari `tutor_rates`; hasil decimal-safe dengan flag `is_demo_assumption` (UI: badge "Tarif demo").
@@ -38,7 +38,7 @@ Tes membuktikan aturan akses, validasi data, periode, verifikasi manual, klasifi
 ## Frontend tests (Vitest + React Testing Library)
 
 - Loading, error, empty dan success states di setiap tab.
-- Form auto-fills tutor identity, grade/school, dan assignment; menyimpan pending dan memberi konfirmasi setelah DB commit.
+- Form auto-fills tutor identity, grade/school dari murid yang dipilih sendiri; menyimpan pending dan memberi konfirmasi setelah DB commit.
 - Temuan anomaly ditampilkan sebagai indikator yang perlu direview, bukan status sesi atau tuduhan otomatis.
 - Monthly selector mengubah query key/list sesuai periode.
 - Admin status badges, keputusan verifikasi dan workflow revisi.
@@ -49,7 +49,7 @@ Tes membuktikan aturan akses, validasi data, periode, verifikasi manual, klasifi
 
 ## Integration/smoke tests (credential live bila tersedia)
 
-1. Buat tutor, siswa, assignment dan tarif demo Rp50.000/sesi pada database development.
+1. Buat tutor (password acak sekali tampil), siswa, dan mapel; tarif tunggal Rp50.000/sesi dari konfigurasi.
 2. Login Tutor, submit sesi, pastikan status pending, tersimpan di Neon, dan tidak ada call Sheets saat submit.
 3. Pastikan anomaly detector dipanggil melalui adapter. Dalam test offline gunakan fake detector yang diberi label; jika menguji Gemini live, gunakan credential valid dan data sintetis/pseudonymous.
 4. Login Admin, review temuan anomali secara terpisah, lalu approve sesi. Pastikan honor/progress hanya memasukkan sesi setelah approved.

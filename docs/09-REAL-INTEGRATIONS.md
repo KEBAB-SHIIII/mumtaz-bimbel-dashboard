@@ -33,7 +33,7 @@ Referensi: https://developers.google.com/workspace/sheets/api/guides/values, htt
 Modul anomaly adalah bagian dari baseline development. Gemini adalah provider yang direncanakan; adapter dibuat agar unit test tidak memerlukan credential live dan provider dapat diganti tanpa mengubah business service.
 
 - Gunakan SDK resmi `@google/genai` di backend. Saat live integration disiapkan, baca `GEMINI_API_KEY` dan `GEMINI_MODEL` dari environment.
-- Validasi field, assignment, tanggal dan durasi dilakukan secara deterministik oleh backend.
+- Validasi field, murid/mapel aktif, tanggal dan durasi dilakukan secara deterministik oleh backend.
 - Kandidat duplikasi dibuat dari kombinasi data yang relevan, misalnya tutor, siswa, mapel, tanggal dan durasi. Modul AI mengklasifikasikan/menjelaskan kandidat; jangan mengirim nama lengkap atau PII yang tidak diperlukan.
 - Jenis finding baseline: `suspected_duplicate`, `duration_outlier`, `unusual_pattern`. Input invalid ditangani validasi deterministik dan tidak menjadi finding model pada submit baru.
 - Finding masuk `anomaly_flags` dan harus ditinjau Admin. Finding tidak otomatis mengubah `lesson_sessions.status`, tidak menghapus data, dan tidak menentukan honor.

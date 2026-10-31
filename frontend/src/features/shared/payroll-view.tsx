@@ -1,7 +1,7 @@
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
 import { ChevronDown } from 'lucide-react';
 import type { PayrollPreviewResponse, PayrollSessionLine, PayrollTutorSummary } from '@mumtaz/contracts';
-import { DemoBadge, StatusBadge } from '../../components/ui/badge';
+import { StatusBadge } from '../../components/ui/badge';
 import { EmptyState, InlineAlert } from '../../components/ui/feedback';
 import { Card, StatCard } from '../../components/ui/layout-primitives';
 import { cn } from '../../lib/cn';
@@ -24,10 +24,10 @@ function RateLines({ tutor }: { tutor: PayrollTutorSummary }) {
         </thead>
         <tbody>
           {tutor.rate_lines.map((line) => (
-            <tr key={`${line.rate_amount}-${String(line.is_demo_assumption)}`} className="border-b border-border last:border-0">
+            <tr key={line.rate_amount} className="border-b border-border last:border-0">
               <td className="px-4 py-2">
                 <span className="inline-flex items-center gap-2">
-                  {formatRupiah(line.rate_amount)} {line.is_demo_assumption && <DemoBadge />}
+                  {formatRupiah(line.rate_amount)}
                 </span>
               </td>
               <td className="px-4 py-2 tabular-nums">{line.sessions}</td>
@@ -42,7 +42,7 @@ function RateLines({ tutor }: { tutor: PayrollTutorSummary }) {
 
 /** Alasan sesi tidak masuk nominal — selalu eksplisit, tidak ada angka palsu. */
 function notCountedReason(line: PayrollSessionLine): string {
-  return line.status === 'approved' ? 'Tarif belum ada' : 'Tidak dihitung';
+  return line.status === 'approved' ? 'Tarif belum terkunci' : 'Tidak dihitung';
 }
 
 /** Rincian sesi sumber kalkulasi: total tutor = Σ kolom "Nilai" pada baris yang dihitung. */
@@ -73,7 +73,7 @@ function SessionLines({ tutor }: { tutor: PayrollTutorSummary }) {
               <td className="px-4 py-2 whitespace-nowrap">
                 {line.rate_amount ? (
                   <span className="inline-flex items-center gap-2">
-                    {formatRupiah(line.rate_amount)} {line.is_demo_assumption && <DemoBadge />}
+                    {formatRupiah(line.rate_amount)}
                   </span>
                 ) : (
                   '—'
@@ -117,8 +117,8 @@ function TutorPayrollCard({ tutor, showTutorName, defaultOpen }: { tutor: Payrol
 
 /**
  * Estimasi honor (Admin `Honor Tutor` & Tutor `Honor Saya`) dari service backend yang sama.
- * Semua nominal dari backend; frontend tidak menghitung ulang. Tarif demo ditandai badge
- * kecil "Tarif demo" (keputusan owner). Tidak ada status "sudah dibayar".
+ * Semua nominal dari backend; frontend tidak menghitung ulang (tarif tunggal per sesi, D-24).
+ * Tidak ada status "sudah dibayar".
  */
 export function PayrollView({ payroll, showTutorName }: { payroll: PayrollPreviewResponse; showTutorName: boolean }) {
   const approved = payroll.tutors.reduce((sum, tutor) => sum + tutor.approved_sessions, 0);
@@ -139,7 +139,6 @@ export function PayrollView({ payroll, showTutorName }: { payroll: PayrollPrevie
         <StatCard
           label="Total estimasi honor"
           value={formatRupiah(payroll.total_estimated_amount)}
-          hint={payroll.is_demo_assumption ? <DemoBadge /> : undefined}
         />
         <StatCard label="Sesi disetujui" value={approved} />
         <StatCard label="Sesi belum disetujui (tidak dihitung)" value={notCounted} />

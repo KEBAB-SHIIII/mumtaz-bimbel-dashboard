@@ -37,7 +37,7 @@ Bagian ini mendeskripsikan arti fixture CSV untuk pengujian mapping/normalisasi 
 
 ## Expected payroll
 
-- Tarif development adalah **Rp50.000 per sesi**, melalui `tutor_rates` dengan `rate_type=per_session`, `rate_amount=50000`, dan `is_demo_assumption=true`.
+- Honor memakai **tarif tunggal Rp50.000 per sesi** dari konfigurasi (`HONOR_RATE_PER_SESSION`, D-24); nilainya dikunci ke `lesson_sessions.rate_amount_snapshot` saat sesi disetujui.
 - Nominal ini dummy, bukan tarif resmi UMKM. UI honor menampilkan label simulasi.
 - Hanya sesi `approved` yang dihitung; pending/revisi/ditolak tidak masuk nominal.
 - Honor adalah estimasi, bukan bukti pembayaran aktual.

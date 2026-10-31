@@ -13,12 +13,11 @@ import { FakeAnomalyDetector } from './fakes/fake-anomaly-detector.js';
 const october: AnomalySessionSnapshot[] = fixtureSessions
   .filter((s) => isDateInPeriod(s.lesson_date, '2026-10'))
   .map(resolveFixtureSession)
-  .map(({ session, assignment }) => ({
+  .map(({ session }) => ({
     id: session.id,
-    assignment_id: session.assignment_id,
-    tutor_id: assignment.tutor_id,
-    student_id: assignment.student_id,
-    subject_id: assignment.subject_id,
+    tutor_id: session.tutor_id,
+    student_id: session.student_id,
+    subject_id: session.subject_id,
     lesson_date: session.lesson_date,
     duration_minutes: session.duration_minutes,
     submitted_at: session.submitted_at,
@@ -53,13 +52,13 @@ describe('candidate generator (rule engine deterministik)', () => {
     const [first, second] = [sessionAt(0), { ...sessionAt(0), id: '00000000-0000-4000-8000-0000000000aa', submitted_at: '2026-12-01T00:00:00Z' }];
     expect(generateCandidates(first, [first, second], config)).toEqual([]);
     expect(generateCandidates(second, [first, second], config)).toEqual([
-      { finding_type: 'suspected_duplicate', signal: 'same_assignment_date_duration', related_lesson_session_id: first.id, default_severity: 'medium' },
+      { finding_type: 'suspected_duplicate', signal: 'same_tutor_student_subject_date_duration', related_lesson_session_id: first.id, default_severity: 'medium' },
     ]);
   });
 
-  it('siswa+mapel+tanggal sama lewat penugasan lain → kandidat duplikasi severity rendah', () => {
+  it('murid+mapel+tanggal sama dicatat tutor lain → kandidat duplikasi severity rendah', () => {
     const base = sessionAt(0);
-    const other = { ...base, id: '00000000-0000-4000-8000-0000000000ab', assignment_id: '00000000-0000-4000-8005-0000000000ff', tutor_id: 'tutor-lain', submitted_at: '2026-12-01T00:00:00Z' };
+    const other = { ...base, id: '00000000-0000-4000-8000-0000000000ab', tutor_id: 'tutor-lain', submitted_at: '2026-12-01T00:00:00Z' };
     expect(generateCandidates(other, [base, other], config)).toEqual([
       { finding_type: 'suspected_duplicate', signal: 'same_student_subject_date', related_lesson_session_id: base.id, default_severity: 'low' },
     ]);
@@ -73,7 +72,7 @@ describe('candidate generator (rule engine deterministik)', () => {
 
   it('pembanding: kandidat terkait diprioritaskan dan jumlahnya dibatasi', () => {
     const target = sessionAt(-1);
-    const candidates = [{ finding_type: 'suspected_duplicate' as const, signal: 'same_assignment_date_duration' as const, related_lesson_session_id: sessionAt(1).id, default_severity: 'medium' as const }];
+    const candidates = [{ finding_type: 'suspected_duplicate' as const, signal: 'same_tutor_student_subject_date_duration' as const, related_lesson_session_id: sessionAt(1).id, default_severity: 'medium' as const }];
     const comparisons = selectComparisons(target, october, candidates);
     expect(comparisons[0]?.id).toBe(sessionAt(1).id);
     expect(comparisons.map((c) => c.id)).not.toContain(target.id);

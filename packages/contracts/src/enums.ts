@@ -38,10 +38,6 @@ export type AnomalyReviewDecision = z.infer<typeof anomalyReviewDecisionSchema>;
 
 export const SUPERSEDED_BY_REVISION_NOTE = 'superseded_by_revision';
 
-/** MVP hanya `per_session` (docs/14 §3.7). */
-export const rateTypeSchema = z.enum(['per_session']);
-export type RateType = z.infer<typeof rateTypeSchema>;
-
 export const exportRunStatusSchema = z.enum(['running', 'succeeded', 'failed']);
 export type ExportRunStatus = z.infer<typeof exportRunStatusSchema>;
 

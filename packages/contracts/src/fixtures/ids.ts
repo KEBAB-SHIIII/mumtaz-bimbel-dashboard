@@ -69,29 +69,6 @@ export const SUBJECT_IDS = {
   bahasaIndonesia: id('8004', 4),
 } as const;
 
-export const ASSIGNMENT_IDS = {
-  tutorAMurid1Matematika: id('8005', 1),
-  tutorAMurid2BahasaInggris: id('8005', 2),
-  tutorBMurid3Ipa: id('8005', 3),
-  /** Nonaktif sejak 2026-09-30 — fixture "invalid assignment". */
-  tutorBMurid2MatematikaInactive: id('8005', 4),
-  fazrinDimasMatematika: id('8005', 5),
-  fazrinEkaBahasaIndonesia: id('8005', 6),
-  ramaFikriIpa: id('8005', 7),
-  /** Aisyah–Matematika juga diajar Farhan → pasangan lintas tutor. */
-  ramaAisyahMatematika: id('8005', 8),
-  giyasGitaBahasaInggris: id('8005', 9),
-  giyasHanaMatematika: id('8005', 10),
-  nasywaIntanBahasaIndonesia: id('8005', 11),
-  nasywaJokoIpa: id('8005', 12),
-  fazrinKiranaBahasaInggris: id('8005', 13),
-  ramaLutfiMatematika: id('8005', 14),
-  /** Citra–IPA juga diajar Noreen → pasangan lintas tutor. */
-  giyasCitraIpa: id('8005', 15),
-  /** Bima–Bahasa Inggris juga diajar Farhan → pasangan lintas tutor. */
-  nasywaBimaBahasaInggris: id('8005', 16),
-} as const;
-
 export const SESSION_IDS = {
   s01: id('8000', 1),
   s02: id('8000', 2),

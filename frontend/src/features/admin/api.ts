@@ -9,17 +9,18 @@ import {
   parentSchema,
   payrollPreviewResponseSchema,
   recapResponseSchema,
+  sheetExportResponseSchema,
+  sheetExportRunSchema,
   studentSchema,
   subjectSchema,
-  tutorAssignmentSchema,
-  tutorRateCreatedSchema,
-  tutorRateSchema,
+  tutorCredentialIssuedSchema,
   tutorSchema,
   type AdminAttendanceListQuery,
   type AnomalyReviewRequest,
   type Paginated,
   type RecapGroupBy,
   type SessionDecisionRequest,
+  type SheetExportRequest,
 } from '@mumtaz/contracts';
 import { apiClient } from '../../lib/api-client';
 
@@ -68,8 +69,6 @@ export const MASTER_DATA_SCHEMAS = {
   students: studentSchema,
   parents: parentSchema,
   subjects: subjectSchema,
-  'tutor-assignments': tutorAssignmentSchema,
-  'tutor-rates': tutorRateSchema,
 } as const;
 
 export type MasterDataEntity = keyof typeof MASTER_DATA_SCHEMAS;
@@ -87,6 +86,17 @@ export async function createMasterData<E extends MasterDataEntity>(entity: E, bo
 export async function updateMasterData<E extends MasterDataEntity>(entity: E, id: string, body: object): Promise<MasterDataRow<E>> {
   const { data } = await apiClient.patch<unknown>(`/admin/${entity}/${encodeURIComponent(id)}`, body);
   return MASTER_DATA_SCHEMAS[entity].parse(data) as MasterDataRow<E>;
+}
+
+/** Respons create/reset tutor memuat password sementara SEKALI (tidak disimpan di cache). */
+export async function createTutor(body: object) {
+  const { data } = await apiClient.post<unknown>('/admin/tutors', body);
+  return tutorCredentialIssuedSchema.parse(data);
+}
+
+export async function resetTutorPassword(id: string) {
+  const { data } = await apiClient.post<unknown>(`/admin/tutors/${encodeURIComponent(id)}/reset-password`);
+  return tutorCredentialIssuedSchema.parse(data);
 }
 
 /** Respons create parent memuat kode akses mentah SEKALI (tidak disimpan di cache). */
@@ -108,8 +118,13 @@ export async function reviewAnomalyFinding(id: string, input: AnomalyReviewReque
   return anomalyFindingSchema.parse(data);
 }
 
-/** Membuat tarif; respons menyebut berapa sesi approved tanpa tarif yang kini memakai tarif ini. */
-export async function createTutorRate(body: object) {
-  const { data } = await apiClient.post<unknown>('/admin/tutor-rates', body);
-  return tutorRateCreatedSchema.parse(data);
+// --- Ekspor Google Sheets (on-demand Admin) ------------------------------------------
+
+/** Ekspor delapan kolom absensi periode ke tab `Absensi YYYY-MM` (replace isi tab). */
+export async function exportAttendanceToSheets(input: SheetExportRequest) {
+  const { data } = await apiClient.post<unknown>('/admin/reports/google-sheets/attendance', input);
+  return sheetExportResponseSchema.parse(data).export;
 }
+
+export const fetchExportHistory = (params: { page?: number; page_size?: number; period?: string }) =>
+  get(paginatedSchema(sheetExportRunSchema), '/admin/reports/google-sheets/attendance/history', params);

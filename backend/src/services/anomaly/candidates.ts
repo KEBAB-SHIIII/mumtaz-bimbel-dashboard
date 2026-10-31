@@ -29,22 +29,24 @@ export function generateCandidates(
 
   const exact = earlier.find(
     (other) =>
-      other.assignment_id === target.assignment_id &&
+      other.tutor_id === target.tutor_id &&
+      other.student_id === target.student_id &&
+      other.subject_id === target.subject_id &&
       other.lesson_date === target.lesson_date &&
       other.duration_minutes === target.duration_minutes,
   );
   if (exact) {
     candidates.push({
       finding_type: 'suspected_duplicate',
-      signal: 'same_assignment_date_duration',
+      signal: 'same_tutor_student_subject_date_duration',
       related_lesson_session_id: exact.id,
       default_severity: 'medium',
     });
   } else {
-    // Siswa & mapel sama pada tanggal sama lewat penugasan lain (mis. tutor berbeda).
+    // Murid & mapel sama pada tanggal sama yang dicatat tutor lain.
     const sameStudent = earlier.find(
       (other) =>
-        other.assignment_id !== target.assignment_id &&
+        other.tutor_id !== target.tutor_id &&
         other.student_id === target.student_id &&
         other.subject_id === target.subject_id &&
         other.lesson_date === target.lesson_date,

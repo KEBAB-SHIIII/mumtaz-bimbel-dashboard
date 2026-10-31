@@ -136,7 +136,7 @@ Jangan mengikuti tutorial Tailwind v3 lama secara tidak sadar: v4 menggunakan pl
 - Button, Input, Label, Card, Badge, StatusBadge.
 - PageHeader, Breadcrumb, Sidebar, Topbar.
 - DataTable styling, KPI summary, filter bar, EmptyState, LoadingState, ErrorState.
-- Banner mode Demo, panel ringkasan, review status dan inline alert.
+- Panel ringkasan, review status dan inline alert.
 
 Gunakan native HTML semantics untuk link, form field, checkbox, table, dan button kecuali ada kebutuhan interaksi khusus. Semua custom component harus punya props sederhana, focus-visible state, disabled/loading state bila relevan, dan aksesibilitas yang memadai.
 

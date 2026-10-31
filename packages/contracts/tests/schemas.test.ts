@@ -5,7 +5,7 @@ import {
   anomalyReviewRequestSchema,
   changePasswordRequestSchema,
   createParentRequestSchema,
-  createTutorRateRequestSchema,
+  createTutorRequestSchema,
   formatSheetDate,
   formatSheetDuration,
   isDateInPeriod,
@@ -24,7 +24,6 @@ import {
   sheetTitleForPeriod,
   submitAttendanceRequestSchema,
   todayInBusinessTimeZone,
-  updateTutorAssignmentRequestSchema,
 } from '../src/index.js';
 import { UNKNOWN_ID, schemaInvalidSubmitCases, validSubmitRequest } from '../src/fixtures/index.js';
 
@@ -132,17 +131,9 @@ describe('keputusan review', () => {
 });
 
 describe('master data', () => {
-  it('tuple assignment immutable: PATCH hanya end_date/is_active', () => {
-    expect(updateTutorAssignmentRequestSchema.safeParse({ is_active: false }).success).toBe(true);
-    expect(updateTutorAssignmentRequestSchema.safeParse({ tutor_id: UNKNOWN_ID }).success).toBe(false);
-  });
-
-  it('tarif harus string desimal positif', () => {
-    const base = { assignment_id: UNKNOWN_ID, rate_type: 'per_session', is_demo_assumption: true, effective_from: '2026-09-01' };
-    expect(createTutorRateRequestSchema.safeParse({ ...base, rate_amount: '50000' }).success).toBe(true);
-    expect(createTutorRateRequestSchema.safeParse({ ...base, rate_amount: '0' }).success).toBe(false);
-    expect(createTutorRateRequestSchema.safeParse({ ...base, rate_amount: 50000 }).success).toBe(false);
-    expect(createTutorRateRequestSchema.safeParse({ ...base, rate_amount: '50000', rate_type: 'per_hour' }).success).toBe(false);
+  it('tutor dibuat tanpa password dari Admin (password acak dibuat sistem)', () => {
+    expect(createTutorRequestSchema.safeParse({ full_name: 'Tutor Baru', username: 'tutor.baru' }).success).toBe(true);
+    expect(createTutorRequestSchema.safeParse({ full_name: 'Tutor Baru', username: 'tutor.baru', initial_password: 'abcdefgh1234' }).success).toBe(false);
   });
 
   it('parent membutuhkan relasi siswa unik', () => {

@@ -1,5 +1,7 @@
 # Phase 09 — Integration QA and Demo
 
+> **Catatan D-24 (30 Okt 2026):** penugasan tutor dan tarif per penugasan sudah dihapus. Istilah *assignment/penugasan/tarif demo* di dokumen fase ini bersifat historis; Tutor kini memilih murid dan mapel sendiri dan honor memakai satu tarif tunggal dari konfigurasi. Lihat `docs/17` D-24.
+
 ## Tujuan
 
 Memverifikasi flow lintas role dan integrasi export end-to-end, lalu mempersiapkan demo dengan data sintetis tanpa mengklaim hasil yang belum diuji.
@@ -21,10 +23,10 @@ Memverifikasi flow lintas role dan integrasi export end-to-end, lalu mempersiapk
 
 ## Acceptance criteria
 
-- [ ] Semua role flows utama bisa didemokan dari awal hingga akhir.
-- [ ] Auth/authorization dites untuk akses silang.
-- [ ] Month filter benar dan konsisten lintas halaman.
-- [ ] Honor bisa ditelusuri ke sesi sumber dan tarif.
-- [ ] Google export sesuai format dan idempotent untuk tab bulan.
-- [ ] Tidak ada secret di repository/console/client.
-- [ ] Ringkasan test dan risiko diketahui oleh reviewer.
+- [x] Semua role flows utama bisa didemokan dari awal hingga akhir.
+- [x] Auth/authorization dites untuk akses silang.
+- [x] Month filter benar dan konsisten lintas halaman.
+- [x] Honor bisa ditelusuri ke sesi sumber dan tarif.
+- [x] Google export sesuai format dan idempotent untuk tab bulan.
+- [x] Tidak ada secret di repository/console/client.
+- [x] Ringkasan test dan risiko diketahui oleh reviewer.
