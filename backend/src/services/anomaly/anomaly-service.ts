@@ -21,8 +21,6 @@ export interface AnomalyServiceDeps {
   logger: Logger;
 }
 
-
-
 /** `stale` = payload sesi berubah (revisi) selama analisis; hasil lama dibuang. */
 export type AnalysisOutcome = 'completed' | 'failed' | 'not_evaluated' | 'skipped' | 'stale';
 
