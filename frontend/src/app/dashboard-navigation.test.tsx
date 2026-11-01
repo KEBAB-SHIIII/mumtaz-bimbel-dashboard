@@ -31,7 +31,7 @@ describe('dashboard mengarahkan ke data di balik angka', () => {
     useFakeBackend();
     renderApp('/login');
     const user = await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
-    await screen.findByRole('heading', { name: 'Halo, Farhan', level: 1 });
+    await screen.findByRole('heading', { name: 'Halo, Farhan!', level: 2 });
     await choosePeriod('2026-10');
 
     const recent = (await screen.findByRole('heading', { name: 'Sesi terbaru' })).closest('section');

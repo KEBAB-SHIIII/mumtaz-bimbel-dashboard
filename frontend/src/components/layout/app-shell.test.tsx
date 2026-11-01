@@ -128,7 +128,7 @@ describe('AppShell: header', () => {
   it('menu akun Tutor berisi Profil dan Keluar', async () => {
     renderApp('/login');
     const user = await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
-    await screen.findByRole('heading', { name: 'Halo, Farhan' });
+    await screen.findByRole('heading', { name: 'Halo, Farhan!' });
     await user.click(screen.getByRole('button', { name: /^Menu akun/ }));
     const menu = await screen.findByRole('menu');
     expect(within(menu).getByRole('menuitem', { name: 'Profil' })).toBeInTheDocument();

@@ -59,7 +59,7 @@ describe('Sesi dicabut di tengah pemakaian', () => {
     const backend = useFakeBackend();
     renderApp('/login');
     const user = await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
-    await screen.findByRole('heading', { name: 'Halo, Farhan', level: 1 });
+    await screen.findByRole('heading', { name: 'Halo, Farhan!', level: 2 });
 
     backend.revokeSession();
     await user.click(screen.getByRole('link', { name: 'Riwayat Mengajar' }));

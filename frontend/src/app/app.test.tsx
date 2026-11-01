@@ -35,7 +35,7 @@ describe('autentikasi & navigasi per role', () => {
     useFakeBackend();
     renderApp('/login');
     await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
-    expect(await screen.findByRole('heading', { name: 'Halo, Farhan' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Halo, Farhan!' })).toBeInTheDocument();
     expect(await navLinks()).toEqual(['Dashboard', 'Form Absensi', 'Riwayat Mengajar', 'Honor Saya', 'Profil']);
   });
 
