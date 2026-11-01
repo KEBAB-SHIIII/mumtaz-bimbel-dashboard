@@ -6,7 +6,7 @@ import { Avatar } from '../../../components/ui/avatar';
 import { Button } from '../../../components/ui/button';
 import { DataTable } from '../../../components/ui/data-table';
 import { EmptyState, InlineAlert, NoResultsState } from '../../../components/ui/feedback';
-import { FilterSelect } from '../../../components/ui/filter-select';
+import { SearchSelect } from '../../../components/ui/field';
 import { Card, PageHeader, StatCard } from '../../../components/ui/layout-primitives';
 import { PeriodSelector } from '../../../components/ui/period-selector';
 import { QueryView } from '../../../components/ui/query-view';
@@ -67,7 +67,7 @@ function StudentInvoice({ student, period }: { student: BillingStudent; period: 
             <p className="text-card-title text-base tabular-nums text-text">{formatRupiah(student.total_amount)}</p>
           </div>
           <Button
-            variant="secondary"
+            variant="primary"
             size="sm"
             icon={<Download aria-hidden className="size-4" />}
             loading={download.isPending}
@@ -113,18 +113,27 @@ export function BillingPage() {
       <PageHeader
         title="Penagihan Orang Tua"
         description={`Tagihan les ${formatPeriod(period)} per murid (berdasarkan tanggal les). Hanya sesi Valid dan Perlu revisi yang Disetujui yang ditagihkan.`}
+        actions={
+          <div className="flex flex-wrap items-end gap-3">
+        <div className="w-60 max-w-full">
+          <label htmlFor="billing-student-filter" className="mb-1.5 block text-sm font-medium text-text">Murid</label>
+          <SearchSelect
+            id="billing-student-filter"
+            placeholder="Cari nama murid…"
+            value={values.student_id}
+            onChange={(next) => update({ student_id: next })}
+            items={[
+              { value: '', label: 'Semua murid' },
+              ...(options.data?.students ?? []).map((student) => ({ value: student.id, label: student.full_name })),
+            ]}
+          />
+        </div>
+            <PeriodSelector value={period} onChange={setPeriod} />
+          </div>
+        }
       />
 
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-        <PeriodSelector value={period} onChange={setPeriod} hideLabel />
-        <FilterSelect
-          label="Murid"
-          allLabel="Semua murid"
-          value={values.student_id}
-          onChange={(next) => update({ student_id: next })}
-          options={(options.data?.students ?? []).map((student) => ({ value: student.id, label: student.full_name }))}
-        />
-      </div>
+
 
       <QueryView
         query={billing}
