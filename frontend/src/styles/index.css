@@ -24,6 +24,26 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* Grafik (Recharts): bagian yang tidak di-hover meredup halus; titik aktif membesar (hanya transform/opacity). */
+  .recharts-rectangle,
+  .recharts-sector {
+    transition: fill-opacity 220ms var(--ease-out);
+  }
+  .chart-dot {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: var(--animate-dot-in);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .recharts-rectangle,
+    .recharts-sector {
+      transition: none;
+    }
+    .chart-dot {
+      animation: none;
+    }
+  }
+
   :focus-visible {
     outline: 2px solid var(--color-focus-ring);
     outline-offset: 2px;

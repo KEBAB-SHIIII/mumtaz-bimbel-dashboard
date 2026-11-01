@@ -5,7 +5,7 @@ import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
 import { createFakeAdapter } from '../test/fake-api/fake-adapter';
 import { createFakeBackend } from '../test/fake-api/fake-backend';
 import { apiClient } from '../lib/api-client';
-import { choosePeriod, loginStaff, renderApp, useFakeBackend } from '../test/render';
+import { chooseFilter, choosePeriod, loginStaff, renderApp, useFakeBackend } from '../test/render';
 
 const tutorPassword = TEST_ONLY_CREDENTIALS.tutorPassword;
 const rowsOf = () => within(screen.getByRole('table')).getAllByRole('row').slice(1);
@@ -83,9 +83,9 @@ describe('Tutor: Riwayat Mengajar', () => {
 
   it('filter siswa hanya menampilkan siswa yang dipilih', async () => {
     useFakeBackend();
-    const user = await openHistory('farhan', '2026-10');
+    await openHistory('farhan', '2026-10');
     await screen.findByRole('table');
-    await user.selectOptions(screen.getByLabelText('Siswa'), 'Bima');
+    await chooseFilter('Siswa', 'Bima');
     await waitFor(() => expect(rowsOf().every((row) => within(row).queryByText('Bima') !== null)).toBe(true));
     expect(rowsOf().length).toBeGreaterThan(0);
   });

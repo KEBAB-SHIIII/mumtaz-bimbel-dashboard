@@ -6,8 +6,8 @@ import { Avatar } from '../../../components/ui/avatar';
 import { Button } from '../../../components/ui/button';
 import { DataTable } from '../../../components/ui/data-table';
 import { EmptyState, InlineAlert, NoResultsState } from '../../../components/ui/feedback';
-import { Select } from '../../../components/ui/field';
-import { Card, FilterBar, PageHeader, StatCard } from '../../../components/ui/layout-primitives';
+import { FilterSelect } from '../../../components/ui/filter-select';
+import { Card, PageHeader, StatCard } from '../../../components/ui/layout-primitives';
 import { PeriodSelector } from '../../../components/ui/period-selector';
 import { QueryView } from '../../../components/ui/query-view';
 import { SkeletonDataTable, SkeletonStatCards } from '../../../components/ui/skeleton';
@@ -115,18 +115,16 @@ export function BillingPage() {
         description={`Tagihan les ${formatPeriod(period)} per murid (berdasarkan tanggal les). Hanya sesi Valid dan Perlu revisi yang Disetujui yang ditagihkan.`}
       />
 
-      <FilterBar>
-        <PeriodSelector value={period} onChange={setPeriod} />
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="billing-student" className="text-sm font-medium text-text">Murid</label>
-          <Select id="billing-student" value={values.student_id} onChange={(event) => update({ student_id: event.target.value })} className="sm:w-52">
-            <option value="">Semua murid</option>
-            {options.data?.students.map((student) => (
-              <option key={student.id} value={student.id}>{student.full_name}</option>
-            ))}
-          </Select>
-        </div>
-      </FilterBar>
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <PeriodSelector value={period} onChange={setPeriod} hideLabel />
+        <FilterSelect
+          label="Murid"
+          allLabel="Semua murid"
+          value={values.student_id}
+          onChange={(next) => update({ student_id: next })}
+          options={(options.data?.students ?? []).map((student) => ({ value: student.id, label: student.full_name }))}
+        />
+      </div>
 
       <QueryView
         query={billing}

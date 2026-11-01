@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
-import { choosePeriod, loginStaff, renderApp, useFakeBackend } from '../test/render';
+import { chooseFilter, choosePeriod, loginStaff, renderApp, useFakeBackend } from '../test/render';
 
 const navLinks = async () =>
   within(await screen.findByRole('navigation', { name: 'Navigasi utama' }))
@@ -98,7 +98,7 @@ describe('Admin: validitas data (label AI) & status approval', () => {
     await user.click(await screen.findByRole('link', { name: 'Data Absensi' }));
     await screen.findByRole('heading', { name: 'Data Absensi', level: 1 });
     await choosePeriod('2026-10');
-    await user.selectOptions(screen.getByLabelText('Validitas'), 'needs_revision');
+    await chooseFilter('Validitas', 'Perlu revisi');
 
     // s03: Citra 5 Okt, Perlu revisi dengan approval menunggu.
     const approval = await screen.findByRole('combobox', { name: 'Status approval sesi Citra 5 Okt 2026' });

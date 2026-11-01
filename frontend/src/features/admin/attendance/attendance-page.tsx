@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Eye, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { Eye, Plus, RotateCcw, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import {
   approvalStatusSchema,
@@ -14,7 +14,8 @@ import { DataTable, rowNumber } from '../../../components/ui/data-table';
 import { ConfirmDialog } from '../../../components/ui/dialog';
 import { EmptyState, ErrorState, InlineAlert, NoResultsState } from '../../../components/ui/feedback';
 import { Select } from '../../../components/ui/field';
-import { Card, FilterBar, PageHeader } from '../../../components/ui/layout-primitives';
+import { Card, PageHeader } from '../../../components/ui/layout-primitives';
+import { FilterSelect } from '../../../components/ui/filter-select';
 import { PeriodSelector } from '../../../components/ui/period-selector';
 import { SearchInput } from '../../../components/ui/search-input';
 import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/skeleton';
@@ -179,13 +180,7 @@ export function AttendancePage() {
     <>
       <PageHeader
         title="Data Absensi"
-        description={`Sesi ${formatPeriod(period)} (berdasarkan tanggal les). Divalidasi otomatis oleh AI; hanya Valid dan Perlu revisi yang Disetujui masuk rekap gaji.`}
-        actions={
-          <>
-            <SheetsExportButton exporter={exporter} period={period} />
-            <Button icon={<Plus aria-hidden className="size-4" />} onClick={() => setForm({ session: null })}>Tambah sesi</Button>
-          </>
-        }
+        description={`Sesi ${formatPeriod(period)} berdasarkan tanggal les, divalidasi otomatis oleh AI. Hanya Valid dan Perlu revisi yang Disetujui masuk rekap gaji.`}
       />
       <SheetsExportResult exporter={exporter} />
       <SheetsExportDialog
@@ -193,48 +188,63 @@ export function AttendancePage() {
         totalSessions={!hasFilters && list.data && exporter.dialog?.period === period ? list.data.total : undefined}
       />
 
-      <FilterBar>
-        <PeriodSelector value={period} onChange={setPeriod} />
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="filter-validity" className="text-sm font-medium text-text">Validitas</label>
-          <Select id="filter-validity" value={values.validity} onChange={(e) => update({ validity: e.target.value })} className="sm:w-48">
-            <option value="">Semua validitas</option>
-            {VALIDITY_FILTERS.map((option) => (
-              <option key={option} value={option}>{VALIDITY_LABELS[option]}</option>
-            ))}
-          </Select>
+      {/* Toolbar ringkas: baris 1 cari + periode + aksi, baris 2 chip filter. */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div role="search" className="w-full sm:w-auto sm:min-w-44 sm:flex-1 lg:max-w-sm">
+            <label htmlFor="filter-search" className="sr-only">Cari sesi</label>
+            <SearchInput id="filter-search" value={values.search} onChange={(search) => update({ search })} placeholder="Cari tutor, siswa, mapel, materi" className="sm:w-full" />
+          </div>
+          <PeriodSelector value={period} onChange={setPeriod} hideLabel />
+          <div className="ms-auto flex shrink-0 items-center gap-2">
+            <SheetsExportButton exporter={exporter} period={period} />
+            <Button icon={<Plus aria-hidden className="size-4" />} onClick={() => setForm({ session: null })}>
+              <span className="max-sm:sr-only">Tambah sesi</span>
+            </Button>
+          </div>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="filter-tutor" className="text-sm font-medium text-text">Tutor</label>
-          <Select id="filter-tutor" value={values.tutor_id} onChange={(e) => update({ tutor_id: e.target.value })} className="sm:w-44">
-            <option value="">Semua tutor</option>
-            {options.data?.tutors.map((o) => <option key={o.id} value={o.id}>{o.full_name}</option>)}
-          </Select>
+        <div role="group" aria-label="Filter sesi" className="flex flex-wrap items-center gap-2">
+          <SlidersHorizontal aria-hidden className="me-0.5 size-4 shrink-0 text-muted max-sm:hidden" />
+          <FilterSelect
+            label="Validitas"
+            allLabel="Semua validitas"
+            value={values.validity}
+            onChange={(next) => update({ validity: next })}
+            options={VALIDITY_FILTERS.map((option) => ({ value: option, label: VALIDITY_LABELS[option] }))}
+          />
+          <FilterSelect
+            label="Tutor"
+            allLabel="Semua tutor"
+            value={values.tutor_id}
+            onChange={(next) => update({ tutor_id: next })}
+            options={(options.data?.tutors ?? []).map((o) => ({ value: o.id, label: o.full_name }))}
+          />
+          <FilterSelect
+            label="Siswa"
+            allLabel="Semua siswa"
+            value={values.student_id}
+            onChange={(next) => update({ student_id: next })}
+            options={(options.data?.students ?? []).map((o) => ({ value: o.id, label: o.full_name }))}
+          />
+          <FilterSelect
+            label="Mapel"
+            allLabel="Semua mapel"
+            value={values.subject_id}
+            onChange={(next) => update({ subject_id: next })}
+            options={(options.data?.subjects ?? []).map((o) => ({ value: o.id, label: o.name }))}
+          />
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-sm font-medium text-primary transition-colors duration-150 animate-pop-in hover:bg-primary-subtle pointer-coarse:h-11 motion-reduce:animate-none motion-reduce:transition-none"
+            >
+              <RotateCcw aria-hidden className="size-3.5" />
+              Reset filter
+            </button>
+          )}
         </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="filter-student" className="text-sm font-medium text-text">Siswa</label>
-          <Select id="filter-student" value={values.student_id} onChange={(e) => update({ student_id: e.target.value })} className="sm:w-44">
-            <option value="">Semua siswa</option>
-            {options.data?.students.map((o) => <option key={o.id} value={o.id}>{o.full_name}</option>)}
-          </Select>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="filter-subject" className="text-sm font-medium text-text">Mata pelajaran</label>
-          <Select id="filter-subject" value={values.subject_id} onChange={(e) => update({ subject_id: e.target.value })} className="sm:w-44">
-            <option value="">Semua mapel</option>
-            {options.data?.subjects.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </Select>
-        </div>
-        <div role="search" className="flex flex-col gap-1.5">
-          <label htmlFor="filter-search" className="text-sm font-medium text-text">Cari</label>
-          <SearchInput id="filter-search" value={values.search} onChange={(search) => update({ search })} placeholder="Tutor, siswa, mapel, materi" className="sm:w-60" />
-        </div>
-        {hasFilters && (
-          <Button variant="ghost" icon={<RotateCcw aria-hidden className="size-4" />} onClick={resetFilters}>
-            Reset filter
-          </Button>
-        )}
-      </FilterBar>
+      </div>
 
       <Card>
         {list.isError && !list.data ? (

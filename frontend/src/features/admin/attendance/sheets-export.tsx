@@ -77,13 +77,16 @@ type SheetsExport = ReturnType<typeof useSheetsExport>;
 
 export function SheetsExportButton({ exporter, period }: { exporter: SheetsExport; period: string }) {
   return (
+    // Ringkas di toolbar: teks terlihat "Ekspor", nama aksesibel lengkap (diawali teks yang terlihat).
     <Button
       variant="secondary"
-      icon={<FileSpreadsheet aria-hidden className="size-4" />}
+      icon={<FileSpreadsheet aria-hidden className="size-4 text-primary" />}
       loading={exporter.mutation.isPending}
+      aria-label="Ekspor Absensi Bulanan ke Google Sheets"
+      title="Ekspor absensi bulanan ke Google Sheets"
       onClick={() => exporter.open(period)}
     >
-      Ekspor Absensi Bulanan ke Google Sheets
+      <span className="max-sm:sr-only">Ekspor</span>
     </Button>
   );
 }

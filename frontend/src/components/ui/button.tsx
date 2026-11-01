@@ -12,6 +12,16 @@ const VARIANTS: Record<Variant, string> = {
   ghost: 'text-text hover:bg-surface-muted',
 };
 
+/**
+ * Kilau sekali lewat saat kursor masuk ke tombol utama. Diadaptasi dari ReactBits "Glare Hover"
+ * (https://reactbits.dev/animations/glare-hover), ditulis ulang dengan CSS + token: hanya `transform`,
+ * hanya perangkat ber-mouse, mati saat reduced motion. Dekoratif (`pointer-events: none`).
+ */
+const GLARE =
+  'overflow-hidden before:pointer-events-none before:absolute before:inset-y-0 before:start-0 before:w-1/3 before:-translate-x-[120%] ' +
+  'before:bg-linear-to-r before:from-transparent before:via-primary-foreground/30 before:to-transparent ' +
+  'pointer-fine:enabled:hover:before:animate-glare motion-reduce:before:hidden';
+
 /** 36px desktop (`sm` 32px); minimal 44px di perangkat sentuh (docs/design/02-tokens.md). */
 const SIZES: Record<Size, string> = {
   sm: 'h-8 gap-1.5 px-3 text-sm pointer-coarse:h-11',
@@ -56,6 +66,7 @@ export function Button({
         !isStatic && 'enabled:active:scale-[0.96]',
         'disabled:cursor-not-allowed disabled:opacity-60',
         VARIANTS[variant],
+        variant === 'primary' && !isStatic && GLARE,
         SIZES[size],
         className,
       )}

@@ -1,5 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import { formatPeriod } from '../lib/format';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { AppRoutes } from '../app/app-routes';
@@ -38,7 +39,16 @@ export async function loginStaff(username: string, password: string) {
   return user;
 }
 
-/** Pilih periode (`YYYY-MM`) dari dropdown Periode, seperti pengguna memilih bulan. */
+/** Pilih periode (`YYYY-MM`) dari dropdown Periode (Listbox), seperti pengguna memilih bulan. */
 export async function choosePeriod(period: string) {
-  fireEvent.change(await screen.findByLabelText('Periode'), { target: { value: period } });
+  const user = userEvent.setup();
+  await user.click(await screen.findByLabelText('Periode'));
+  await user.click(await screen.findByRole('option', { name: formatPeriod(period) }));
+}
+
+/** Pilih opsi dari chip filter (`FilterSelect`), mis. `chooseFilter('Validitas', 'Perlu revisi')`. */
+export async function chooseFilter(label: string, option: string) {
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: new RegExp(`^${label}`) }));
+  await user.click(await screen.findByRole('option', { name: option }));
 }

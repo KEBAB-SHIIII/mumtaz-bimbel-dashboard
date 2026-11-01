@@ -10,6 +10,7 @@ const TOKENS = {
   border: '--color-border',
   muted: '--color-muted',
   text: '--color-text',
+  surface: '--color-surface',
   surfaceMuted: '--color-surface-muted',
 } as const;
 

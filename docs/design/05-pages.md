@@ -41,7 +41,7 @@ Loading (skeleton sesuai bentuk konten, aturan di `04-components.md` § Skeleton
 
 Semua halaman memakai `QueryView`/`LoadingSwitch` (skeleton berbentuk konten → konten, error + "Coba lagi"), `NoResultsState` untuk filter/pencarian kosong (dengan "Reset filter"), dan `SearchInput` (debounce) menggantikan form "Cari". Penyimpangan yang disengaja:
 
-- **Filter validitas/status tetap `<select>`**, bukan chip: test yang ada memilih lewat label "Validitas"/"Status", dan dropdown lebih ringkas di HP. Bisa diganti `SegmentedControl` bila test ikut diperbarui.
+- **Filter = chip dropdown `FilterSelect`** (revisi owner 2026-11-02): menggantikan `<select>` bawaan di Data Absensi (Validitas, Tutor, Siswa, Mapel), Riwayat Mengajar (Status, Siswa), Penagihan (Murid), dan pemilih Anak. Toolbar Data Absensi dua baris: cari + periode + Ekspor/Tambah sesi, lalu chip filter + "Reset filter". Di HP tombol Ekspor & Tambah jadi ikon (nama aksesibel tetap).
 - **Master Data**: tab internal tetap ada sebagai pintasan pil di < 1024px (sidebar = drawer); disembunyikan di desktop karena submenu sidebar sudah menggantikannya.
 - **Dashboard Admin**: ringkasan validitas (progress bar) dan daftar aktivitas terbaru **belum** ditampilkan karena API ringkasan belum menyediakan datanya (kontrak API tidak diubah di tahap ini). Grafik pendapatan kini 2 seri bertumpuk (bersih bimbel `primary` + gaji tutor `accent-coral`; puncaknya = omzet kotor, tampil di tooltip). Warna grafik dibaca dari token saat runtime (`lib/theme-colors.ts`).
 - **Progress Anak**: grafik kecil per bulan belum ada karena API hanya memberi data per periode; diganti StatCard + timeline sesi.

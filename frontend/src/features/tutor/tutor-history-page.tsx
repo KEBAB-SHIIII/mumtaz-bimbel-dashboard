@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Eye, PencilLine } from 'lucide-react';
+import { Eye, PencilLine, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { sessionStatusSchema, type TutorSession } from '@mumtaz/contracts';
@@ -8,8 +8,8 @@ import { ApprovalBadge, SESSION_STATUS_LABELS, ValidityBadge } from '../../compo
 import { Button } from '../../components/ui/button';
 import { DataTable } from '../../components/ui/data-table';
 import { EmptyState, ErrorState, NoResultsState } from '../../components/ui/feedback';
-import { Select } from '../../components/ui/field';
-import { Card, FilterBar, PageHeader } from '../../components/ui/layout-primitives';
+import { FilterSelect } from '../../components/ui/filter-select';
+import { Card, PageHeader } from '../../components/ui/layout-primitives';
 import { PeriodSelector } from '../../components/ui/period-selector';
 import { LoadingSwitch, SkeletonDataTable } from '../../components/ui/skeleton';
 import { formatDuration, formatLessonDate, formatPeriod } from '../../lib/format';
@@ -72,27 +72,35 @@ export function TutorHistoryPage() {
   return (
     <>
       <PageHeader title="Riwayat Mengajar" description={`Sesi Anda pada ${formatPeriod(period)} (berdasarkan tanggal les).`} />
-      <FilterBar>
-        <PeriodSelector value={period} onChange={setPeriod} />
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="history-status" className="text-sm font-medium text-text">Status</label>
-          <Select id="history-status" value={values.status} onChange={(e) => update({ status: e.target.value })} className="sm:w-48">
-            <option value="">Semua status</option>
-            {sessionStatusSchema.options.map((option) => (
-              <option key={option} value={option}>{SESSION_STATUS_LABELS[option]}</option>
-            ))}
-          </Select>
+      <div className="flex flex-col gap-3">
+        <PeriodSelector value={period} onChange={setPeriod} hideLabel />
+        <div role="group" aria-label="Filter sesi" className="flex flex-wrap items-center gap-2">
+          <FilterSelect
+            label="Status"
+            allLabel="Semua status"
+            value={values.status}
+            onChange={(next) => update({ status: next })}
+            options={sessionStatusSchema.options.map((option) => ({ value: option, label: SESSION_STATUS_LABELS[option] }))}
+          />
+          <FilterSelect
+            label="Siswa"
+            allLabel="Semua siswa"
+            value={values.student_id}
+            onChange={(next) => update({ student_id: next })}
+            options={studentOptions.map(([id, name]) => ({ value: id, label: name }))}
+          />
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={() => update({ status: '', student_id: '' })}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-sm font-medium text-primary transition-colors duration-150 animate-pop-in hover:bg-primary-subtle pointer-coarse:h-11 motion-reduce:animate-none motion-reduce:transition-none"
+            >
+              <RotateCcw aria-hidden className="size-3.5" />
+              Reset filter
+            </button>
+          )}
         </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="history-student" className="text-sm font-medium text-text">Siswa</label>
-          <Select id="history-student" value={values.student_id} onChange={(e) => update({ student_id: e.target.value })} className="sm:w-48">
-            <option value="">Semua siswa</option>
-            {studentOptions.map(([id, name]) => (
-              <option key={id} value={id}>{name}</option>
-            ))}
-          </Select>
-        </div>
-      </FilterBar>
+      </div>
       <Card>
         {list.isError && !list.data ? (
           <ErrorState error={list.error} onRetry={() => void list.refetch()} />

@@ -1,7 +1,7 @@
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
 import { Menu } from 'lucide-react';
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { Outlet, useNavigate } from 'react-router';
+import { Outlet, useLocation, useNavigate } from 'react-router';
 import { ROLE_LABEL, useLogoutMutation, useSession } from '../../features/auth/session';
 import { cn } from '../../lib/cn';
 import { PageSkeleton } from '../ui/skeleton';
@@ -22,6 +22,7 @@ export function AppShell() {
   const user = useSession().data;
   const logout = useLogoutMutation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { collapsed, toggle } = useSidebarCollapsed();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
@@ -108,9 +109,12 @@ export function AppShell() {
 
           <main id="main" tabIndex={-1} className="flex flex-1 flex-col px-4 pb-8 focus:outline-none sm:px-6 lg:px-8">
             <div className="mx-auto flex w-full max-w-[90rem] flex-1 flex-col gap-4 lg:rounded-xl lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-sm">
-              <Suspense fallback={<PageSkeleton />}>
-                <Outlet />
-              </Suspense>
+              {/* Pindah halaman: isi frame memudar + naik 6px (keyframe), sidebar & header diam. */}
+              <div key={location.pathname} className="flex flex-1 flex-col gap-4 animate-fade-up motion-reduce:animate-none">
+                <Suspense fallback={<PageSkeleton />}>
+                  <Outlet />
+                </Suspense>
+              </div>
             </div>
           </main>
         </div>

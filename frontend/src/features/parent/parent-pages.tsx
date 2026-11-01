@@ -6,7 +6,7 @@ import type { ParentProgressItem, ParentStudent } from '@mumtaz/contracts';
 import { itemEnter } from '../../components/ui/animated-list';
 import { Avatar } from '../../components/ui/avatar';
 import { EmptyState, ErrorState } from '../../components/ui/feedback';
-import { Select } from '../../components/ui/field';
+import { FilterSelect } from '../../components/ui/filter-select';
 import { Card, PageHeader, StatCard } from '../../components/ui/layout-primitives';
 import { PeriodSelector } from '../../components/ui/period-selector';
 import { QueryView } from '../../components/ui/query-view';
@@ -29,14 +29,7 @@ function useSelectedStudent() {
 function StudentSelector({ items, selected, onSelect }: { items: ParentStudent[]; selected: ParentStudent; onSelect: (id: string) => void }) {
   if (items.length <= 1) return null;
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor="parent-student" className="text-sm font-medium text-text">Anak</label>
-      <Select id="parent-student" value={selected.id} onChange={(e) => onSelect(e.target.value)} className="sm:w-56">
-        {items.map((s) => (
-          <option key={s.id} value={s.id}>{s.full_name}</option>
-        ))}
-      </Select>
-    </div>
+    <FilterSelect label="Anak" value={selected.id} onChange={onSelect} options={items.map((student) => ({ value: student.id, label: student.full_name }))} />
   );
 }
 
@@ -140,7 +133,7 @@ function ParentPageFrame({ title, description, children }: { title: string; desc
       <PageHeader title={title} description={description} />
       <ChildCard student={selected}>
         <StudentSelector items={items} selected={selected} onSelect={select} />
-        <PeriodSelector value={period} onChange={setPeriod} />
+        <PeriodSelector value={period} onChange={setPeriod} hideLabel />
       </ChildCard>
       {children(selected, period)}
     </>

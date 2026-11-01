@@ -152,3 +152,12 @@ Komponen ada di `frontend/src/components/ui/`. Penyesuaian terhadap spesifikasi 
 - **Avatar**: DiceBear critters dibuat lokal, `@dicebear/core` + `critters.json` di-lazy import dan di-cache per seed. Latar pastel dipilih stabil dari seed. Sudah dipakai di sidebar (40px; 32px saat ciut) dan menu akun header.
 - **Motion**: komponen `m.*` ringan masuk bundle awal; fitur `domMax` (animasi + layout/`layoutId`) dimuat async lewat `LazyMotion` (`src/app/motion-features.ts`), tanpa grup chunk manual.
 - **ReactBits**: `CountUp`, `AnimatedList`, `FadeContent`, `SpotlightCard` (+ `trackSpotlight`/`SPOTLIGHT_CLASS` untuk `StatCard`). `StatCard` kini punya `icon`, `accent`, `count`, `index` (stagger 40ms); API lama (`label`, `value`, `hint`, `to`) tetap.
+
+## Revisi filter & animasi (2026-11-02)
+
+- **FilterSelect** (`ui/filter-select.tsx`): Headless UI Listbox berbentuk chip `h-8` (44px di layar sentuh). Label filter selalu terlihat; saat aktif chip menjadi `Label: Nilai` dengan latar `primary-subtle`. Panel opsi di portal (anchor), masuk scale 0.95 → 1 + fade 180ms, opsi masuk berurutan dengan keyframe `fade-up` (stagger 18ms, maksimal 10 opsi). Tanpa `allLabel` menjadi pemilih tunggal (mis. Anak).
+- **PeriodSelector**: tengahnya kini Listbox (daftar bulan berbahasa Indonesia, beranimasi) menggantikan `<select>`; `hideLabel` untuk toolbar ringkas (label tetap untuk pembaca layar).
+- **Keyframe baru** di tokens.css: `fade-up` (isi halaman saat pindah rute, opsi dropdown), `pop-in` (nilai chip/periode yang berganti, tombol Reset filter), `glare`. Semua hanya `transform`/`opacity` dan mati saat reduced motion.
+- **Glare Hover** (adaptasi ReactBits) pada tombol `primary`: kilau sekali lewat saat hover, hanya perangkat ber-mouse.
+- **Pindah halaman**: isi frame memudar + naik 6px (keyframe `fade-up`), sidebar & header diam.
+- **Hover grafik (Recharts)**: tooltip meluncur mengikuti kursor (220ms ease-out) dan muncul dengan `pop-in`; titik aktif grafik area bercincin putih dan membesar (keyframe `dot-in`); batang/potongan donat yang tidak di-hover meredup ke 40% (`fill-opacity` 220ms). Semua mati saat reduced motion.

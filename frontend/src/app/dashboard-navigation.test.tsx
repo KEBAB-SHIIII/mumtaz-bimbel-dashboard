@@ -1,3 +1,4 @@
+import userEvent from '@testing-library/user-event';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
@@ -39,7 +40,7 @@ describe('dashboard mengarahkan ke data di balik angka', () => {
 
     await user.click(screen.getByRole('link', { name: 'Disetujui' }));
     await screen.findByRole('heading', { name: 'Riwayat Mengajar', level: 1 });
-    expect(screen.getByLabelText('Status')).toHaveValue('approved');
+    expect(screen.getByRole('button', { name: /^Status/ })).toHaveTextContent('Disetujui');
   });
 
   it('periode tampil dalam bahasa Indonesia di semua browser (bukan input bulan bawaan)', async () => {
@@ -47,8 +48,10 @@ describe('dashboard mengarahkan ke data di balik angka', () => {
     renderApp('/login');
     await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
     await choosePeriod('2026-10');
-    const select = await screen.findByLabelText('Periode');
-    expect(select.tagName).toBe('SELECT');
-    expect(within(select).getByRole('option', { name: 'Oktober 2026' })).toBeInTheDocument();
+    // Bukan <input type="month"> bawaan (bahasa mengikuti browser): daftar bulan Listbox berbahasa Indonesia.
+    expect(document.querySelector('input[type="month"]')).toBeNull();
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText('Periode'));
+    expect(await screen.findByRole('option', { name: 'Oktober 2026' })).toHaveAttribute('aria-selected', 'true');
   });
 });

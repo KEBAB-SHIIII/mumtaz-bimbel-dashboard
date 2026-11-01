@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
-import { choosePeriod, loginStaff, renderApp, useFakeBackend } from '../test/render';
+import { chooseFilter, choosePeriod, loginStaff, renderApp, useFakeBackend } from '../test/render';
 
 async function openBilling(period: string) {
   renderApp('/login');
@@ -33,9 +33,9 @@ describe('Penagihan Orang Tua', () => {
 
   it('filter murid hanya menampilkan tagihan murid itu', async () => {
     useFakeBackend();
-    const user = await openBilling('2026-10');
+    await openBilling('2026-10');
     await screen.findByRole('table', { name: 'Rincian tagihan Aisyah Oktober 2026' });
-    await user.selectOptions(screen.getByLabelText('Murid'), 'Bima');
+    await chooseFilter('Murid', 'Bima');
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'Aisyah', level: 2 })).not.toBeInTheDocument());
     expect(screen.getByRole('heading', { name: 'Bima', level: 2 })).toBeInTheDocument();
   });

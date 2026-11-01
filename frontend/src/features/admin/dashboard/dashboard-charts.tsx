@@ -1,4 +1,4 @@
-import { useSyncExternalStore, type ReactNode } from 'react';
+import { useState, useSyncExternalStore, type ReactNode } from 'react';
 import {
   Area,
   AreaChart,
@@ -44,16 +44,19 @@ function usePrefersReducedMotion(): boolean {
   );
 }
 
-function chartStyle(colors: ThemeColors) {
+function chartStyle(colors: ThemeColors, animate: boolean) {
   return {
     axis: { tick: { fontSize: 12, fill: colors.muted }, tickLine: false, axisLine: false } as const,
-    // Tooltip putih bergaris tipis (Ref 2), tanpa jeda mengikuti kursor.
+    // Tooltip putih bergaris tipis (Ref 2) yang meluncur halus mengikuti kursor (220ms ease-out).
     tooltip: {
-      contentStyle: { borderRadius: 10, border: `1px solid ${colors.border}`, fontSize: 12, boxShadow: 'var(--shadow-md)' },
-      labelStyle: { fontWeight: 600, color: colors.text },
+      content: <ChartTooltip />,
       cursor: { stroke: colors.muted, strokeDasharray: '4 4' },
-      isAnimationActive: false,
+      isAnimationActive: animate,
+      animationDuration: 220,
+      animationEasing: 'ease-out',
     } as const,
+    /** Titik aktif grafik area: cincin putih + keyframe `dot-in`. */
+    activeDot: (fill: string) => ({ r: 5, strokeWidth: 2, stroke: colors.surface, fill, className: 'chart-dot' }),
     barCursor: { fill: colors.surfaceMuted },
     // Teks legenda netral: warna seri (mis. coral 4.27:1) tidak cukup kontras untuk teks.
     legend: {
@@ -61,6 +64,42 @@ function chartStyle(colors: ThemeColors) {
       wrapperStyle: { fontSize: 12 },
       formatter: (value: string) => <span style={{ color: colors.muted }}>{value}</span>,
     } as const,
+  };
+}
+
+interface TooltipItem {
+  name?: string | number;
+  value?: number | string | readonly (number | string)[];
+  color?: string;
+  payload?: { fill?: string };
+}
+
+/** Isi tooltip umum: label + titik warna seri + nilai tabular; muncul dengan keyframe `pop-in`. */
+function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: readonly TooltipItem[]; label?: string | number }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-[0.625rem] border border-border bg-surface px-3 py-2 text-meta shadow-md animate-pop-in motion-reduce:animate-none">
+      {label !== undefined && label !== '' && <p className="font-semibold text-text">{label}</p>}
+      <dl className="mt-0.5 flex flex-col gap-0.5">
+        {payload.map((item) => (
+          <div key={String(item.name)} className="flex items-center gap-2">
+            <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: item.color ?? item.payload?.fill }} />
+            <dt className="text-muted">{item.name}</dt>
+            <dd className="ms-auto ps-3 font-medium text-text tabular-nums">{String(item.value)}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+/** Indeks batang/potongan yang sedang di-hover; sisanya diredupkan (transisi `fill-opacity` di index.css). */
+function useHoverIndex() {
+  const [index, setIndex] = useState<number | null>(null);
+  return {
+    onMouseEnter: (_: unknown, next: number) => setIndex(next),
+    onMouseLeave: () => setIndex(null),
+    opacityOf: (i: number) => (index === null || index === i ? 1 : 0.4),
   };
 }
 
@@ -99,7 +138,7 @@ function RevenueTooltip({ active, payload, label }: { active?: boolean; payload?
   const point = payload?.[0]?.payload;
   if (!active || !point) return null;
   return (
-    <div className="rounded-[0.625rem] border border-border bg-surface px-3 py-2 text-meta shadow-md">
+    <div className="rounded-[0.625rem] border border-border bg-surface px-3 py-2 text-meta shadow-md animate-pop-in motion-reduce:animate-none">
       <p className="font-semibold text-text">{label}</p>
       <dl className="mt-1 grid grid-cols-[auto_auto] gap-x-4 gap-y-0.5 tabular-nums">
         <dt className="text-muted">Pendapatan bersih bimbel</dt>
@@ -120,7 +159,10 @@ function RevenueTooltip({ active, payload, label }: { active?: boolean; payload?
 export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['revenue_by_month'] }) {
   const animate = !usePrefersReducedMotion();
   const colors = useThemeColors();
-  const style = chartStyle(colors);
+  const style = chartStyle(colors, animate);
+  const pieHover = useHoverIndex();
+  const tutorHover = useHoverIndex();
+  const sourceHover = useHoverIndex();
   const revenueData = toRevenueChart(revenue);
   const pieColors = [colors.primary, colors.coral];
 
@@ -151,8 +193,8 @@ export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['r
               <YAxis {...style.axis} width={72} tickFormatter={formatCompactRupiah} />
               <Tooltip {...style.tooltip} content={<RevenueTooltip />} />
               <Legend {...style.legend} />
-              <Area type="monotone" stackId="revenue" dataKey="net" name="Pendapatan bersih bimbel" stroke={colors.primary} strokeWidth={2.5} fill="url(#revenueNetFill)" isAnimationActive={animate} />
-              <Area type="monotone" stackId="revenue" dataKey="salary" name="Gaji tutor" stroke={colors.coral} strokeWidth={2.5} fill="url(#revenueSalaryFill)" isAnimationActive={animate} />
+              <Area type="monotone" stackId="revenue" dataKey="net" name="Pendapatan bersih bimbel" stroke={colors.primary} strokeWidth={2.5} fill="url(#revenueNetFill)" activeDot={style.activeDot(colors.primary)} isAnimationActive={animate} />
+              <Area type="monotone" stackId="revenue" dataKey="salary" name="Gaji tutor" stroke={colors.coral} strokeWidth={2.5} fill="url(#revenueSalaryFill)" activeDot={style.activeDot(colors.coral)} isAnimationActive={animate} />
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -162,9 +204,20 @@ export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['r
             <PieChart>
               <Tooltip {...style.tooltip} />
               <Legend {...style.legend} />
-              <Pie data={SAMPLE_GRADE_COMPOSITION} dataKey="students" nameKey="tier" innerRadius="58%" outerRadius="80%" paddingAngle={3} stroke="none" isAnimationActive={animate}>
+              <Pie
+                data={SAMPLE_GRADE_COMPOSITION}
+                dataKey="students"
+                nameKey="tier"
+                innerRadius="58%"
+                outerRadius="80%"
+                paddingAngle={3}
+                stroke="none"
+                isAnimationActive={animate}
+                onMouseEnter={pieHover.onMouseEnter}
+                onMouseLeave={pieHover.onMouseLeave}
+              >
                 {SAMPLE_GRADE_COMPOSITION.map((entry, index) => (
-                  <Cell key={entry.tier} fill={pieColors[index % pieColors.length] ?? colors.primary} />
+                  <Cell key={entry.tier} fill={pieColors[index % pieColors.length] ?? colors.primary} fillOpacity={pieHover.opacityOf(index)} />
                 ))}
               </Pie>
             </PieChart>
@@ -180,7 +233,11 @@ export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['r
               <XAxis type="number" allowDecimals={false} {...style.axis} />
               <YAxis type="category" dataKey="name" width={72} {...style.axis} />
               <Tooltip {...style.tooltip} cursor={style.barCursor} />
-              <Bar dataKey="sessions" name="Sesi" fill={colors.primary} radius={[0, 6, 6, 0]} barSize={16} isAnimationActive={animate} />
+              <Bar dataKey="sessions" name="Sesi" fill={colors.primary} radius={[0, 6, 6, 0]} barSize={16} isAnimationActive={animate} onMouseEnter={tutorHover.onMouseEnter} onMouseLeave={tutorHover.onMouseLeave}>
+                {SAMPLE_TUTOR_RANKING.map((entry, index) => (
+                  <Cell key={entry.name} fillOpacity={tutorHover.opacityOf(index)} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -198,7 +255,7 @@ export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['r
               <XAxis dataKey="month" {...style.axis} />
               <YAxis allowDecimals={false} width={40} {...style.axis} />
               <Tooltip {...style.tooltip} />
-              <Area type="monotone" dataKey="students" name="Siswa" stroke={colors.primary} strokeWidth={2.5} fill="url(#studentGrowthFill)" isAnimationActive={animate} />
+              <Area type="monotone" dataKey="students" name="Siswa" stroke={colors.primary} strokeWidth={2.5} fill="url(#studentGrowthFill)" activeDot={style.activeDot(colors.primary)} isAnimationActive={animate} />
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -211,7 +268,11 @@ export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['r
               <XAxis type="number" allowDecimals={false} {...style.axis} />
               <YAxis type="category" dataKey="source" width={76} {...style.axis} />
               <Tooltip {...style.tooltip} cursor={style.barCursor} />
-              <Bar dataKey="students" name="Murid" fill={colors.coral} radius={[0, 6, 6, 0]} barSize={16} isAnimationActive={animate} />
+              <Bar dataKey="students" name="Murid" fill={colors.coral} radius={[0, 6, 6, 0]} barSize={16} isAnimationActive={animate} onMouseEnter={sourceHover.onMouseEnter} onMouseLeave={sourceHover.onMouseLeave}>
+                {SAMPLE_REGISTRATION_SOURCES.map((entry, index) => (
+                  <Cell key={entry.source} fillOpacity={sourceHover.opacityOf(index)} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
