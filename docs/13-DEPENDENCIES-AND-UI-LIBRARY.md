@@ -31,6 +31,9 @@ Headless UI bukan komponen yang sudah diberi tema visual. Agent harus memberi st
 | `recharts` | Grafik dashboard | Hanya grafik yang mendukung keputusan operasional; jangan tambah library chart kedua. |
 | `react-hook-form`, `zod`, `@hookform/resolvers` | Form dan validasi | Gunakan untuk form yang memiliki validasi; Zod schema API tetap didefinisikan di shared contracts bila lintas workspace. |
 | `@tanstack/react-table` | Sorting/filtering/pagination tabel | Gunakan untuk tabel absensi/master data yang memerlukan interaksi; elemen markup dan styling tetap buatan aplikasi. |
+| `motion` | Animasi (layout, `AnimatePresence`, `layoutId`) | Satu-satunya library animasi. Impor dari `motion/react`, muat lewat `LazyMotion` + `domAnimation` + komponen `m.*`, bungkus app dengan `MotionConfig reducedMotion="user"`. Overlay (Dialog/Menu/Listbox/Popover) cukup memakai transisi bawaan Headless UI. Aturan detail: `docs/design/04-components.md`. |
+| `@dicebear/core`, `@dicebear/styles` | Avatar otomatis gaya critters (CC0) | Generate SVG lokal, tanpa request ke API DiceBear. Impor hanya `@dicebear/styles/critters.json` secara lazy. Seed = ID internal akun/murid; dilarang memakai ID Akses Orang Tua atau data rahasia. |
+| `@fontsource-variable/inter` | Font Inter Variable (keputusan tim, `docs/design/02-tokens.md`) | Self-host; tidak memakai CDN Google Fonts. Font family hanya dirujuk lewat token `--font-sans`. |
 
 ### Dev dependencies — dibutuhkan
 
@@ -49,7 +52,7 @@ Headless UI bukan komponen yang sudah diberi tema visual. Agent harus memberi st
 |---|---|
 | `sonner` | Jika UI perlu toast untuk hasil background/action. Gunakan satu sistem notifikasi saja; inline feedback tetap lebih baik untuk error yang perlu dibaca sebelum lanjut. |
 | `clsx` | Membuat conditional class lebih mudah bila class logic mulai berulang. Tidak wajib untuk implementasi sederhana. |
-| Font package | Jangan pilih atau install font brand sekarang. Gunakan system font stack sementara; install font package hanya setelah typography diputuskan tim. |
+| Font package | Sudah diputuskan: `@fontsource-variable/inter` (lihat runtime dependencies). Jangan menambah font kedua. |
 
 Jangan menambahkan global state library seperti Redux/Zustand untuk MVP kecuali kebutuhan lintas halaman yang nyata muncul. TanStack Query untuk server state dan state lokal React biasanya cukup.
 
@@ -150,6 +153,8 @@ Gunakan native HTML semantics untuk link, form field, checkbox, table, dan butto
 Flowbite React memang memiliki komponen Tailwind yang siap pakai, tetapi baseline ini memilih Headless UI agar styling tetap dikontrol oleh design system ringan milik aplikasi dan tidak menghasilkan campuran visual dari dua sistem komponen.
 
 ## 7. Design direction sementara — referensi final menunggu tim
+
+> **Update:** referensi tim sudah disetujui. Arah visual final ada di [`docs/design/`](design/README.md) dan menggantikan bagian ini. Komponen salin-tempel dari ReactBits hanya boleh diadaptasi bila dependensinya sebatas `motion` atau CSS murni (tanpa GSAP, three.js, ogl).
 
 Tim akan menetapkan palet warna, typography, logo, dan referensi dashboard spesifik pada diskusi berikutnya. Bagian ini tidak menetapkan palette atau font final. Sampai referensi diterima, gunakan dashboard minimal/modern dengan token semantik netral dan mudah diganti.
 

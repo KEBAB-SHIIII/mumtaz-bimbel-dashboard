@@ -2,6 +2,8 @@
 
 ## 1. Status referensi visual
 
+> **Update:** referensi visual tim sudah diterima. Spesifikasi visual (palet, tipografi, layout, komponen, animasi) ada di [`docs/design/`](design/README.md) dan menggantikan bagian §1, §3, dan §13 dokumen ini. Disetujui owner pada 2026-11-01 dengan arah modern dan compact.
+
 **Keputusan final untuk palet warna, tipografi, logo, style, dan referensi gambar belum ditentukan oleh tim.** Agent jangan mengunci brand identity, memilih palette final, memasang font brand tertentu, atau menyatakan desain sudah sesuai referensi final sebelum owner memberikan hasil diskusi berikutnya.
 
 Untuk development sekarang, gunakan visual baseline yang netral dan mudah diganti: dashboard modern/minimal, terinspirasi pola dashboard SaaS yang umum dan referensi Dribbble yang akan dipilih tim. Jangan menyalin karya desainer tertentu secara pixel-perfect. Simpan warna, radius, spacing, shadow, dan typography sebagai semantic design tokens/CSS variables sehingga pilihan final nanti bisa diterapkan tanpa mengubah logika UI.
