@@ -1,4 +1,4 @@
-import { Dialog, DialogPanel, DialogTitle, Description } from '@headlessui/react';
+import { Description, Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '../../lib/cn';
@@ -21,25 +21,39 @@ interface ModalProps {
 export function Modal({ open, onClose, title, description, children, footer, size = 'md' }: ModalProps) {
   return (
     <Dialog open={open} onClose={onClose} className="relative z-50">
-      <div className="fixed inset-0 bg-black/40" aria-hidden />
-      <div className="fixed inset-0 flex items-end justify-center p-0 sm:items-center sm:p-4">
+      <DialogBackdrop
+        transition
+        className="fixed inset-0 bg-overlay transition-opacity duration-200 ease-out data-closed:opacity-0 motion-reduce:transition-none"
+      />
+      <div className="fixed inset-0 flex items-end justify-center sm:items-center sm:p-4">
         <DialogPanel
+          transition
           className={cn(
-            'flex max-h-[90dvh] w-full flex-col rounded-t-lg bg-surface shadow-md sm:rounded-lg',
+            'flex max-h-[90dvh] w-full flex-col bg-surface shadow-lg',
+            // HP: bottom sheet dari bawah 300ms. ≥ 640px: fade + scale 0.96 + naik 8px; masuk 250ms ease-out, keluar 180ms ease-in.
+            'rounded-t-xl pb-[env(safe-area-inset-bottom)] transition duration-300 ease-out data-closed:translate-y-full',
+            'sm:rounded-lg sm:pb-0 sm:duration-250 sm:data-closed:translate-y-2 sm:data-closed:scale-96 sm:data-closed:opacity-0',
+            'data-leave:duration-180 data-leave:ease-in motion-reduce:transition-none',
             size === 'lg' ? 'sm:max-w-2xl' : 'sm:max-w-md',
           )}
         >
-          <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
-            <div>
-              <DialogTitle className="text-base font-semibold text-text">{title}</DialogTitle>
-              {description && <Description className="mt-1 text-sm text-muted">{description}</Description>}
+          {/* Pegangan visual bottom sheet (HP saja). */}
+          <div aria-hidden className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border sm:hidden" />
+          <div className="flex items-start justify-between gap-4 px-5 pt-3 pb-3 sm:pt-4">
+            <div className="min-w-0">
+              <DialogTitle className="text-base font-semibold text-balance text-text">{title}</DialogTitle>
+              {description && <Description className="mt-1 text-sm text-pretty text-muted">{description}</Description>}
             </div>
-            <Button variant="ghost" size="sm" aria-label="Tutup" className="px-1.5" onClick={onClose}>
+            <Button variant="ghost" size="icon-sm" aria-label="Tutup" className="-me-1.5 -mt-1" onClick={onClose}>
               <X aria-hidden className="size-4" />
             </Button>
           </div>
-          <div className="overflow-y-auto px-5 py-4">{children}</div>
-          {footer && <div className="flex justify-end gap-2 border-t border-border px-5 py-3">{footer}</div>}
+          <div className="overflow-y-auto overscroll-contain px-5 pb-4">{children}</div>
+          {footer && (
+            <div className="flex flex-col-reverse gap-2 border-t border-border px-5 py-3 sm:flex-row sm:justify-end max-sm:*:w-full">
+              {footer}
+            </div>
+          )}
         </DialogPanel>
       </div>
     </Dialog>

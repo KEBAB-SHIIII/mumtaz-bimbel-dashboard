@@ -12,6 +12,8 @@
   --color-text: oklch(0.22 0.015 160);
   --color-muted: oklch(0.5 0.012 160);
   --color-border: oklch(0.92 0.006 160);
+  /* Batas kontrol form (input, select, segmented): ≥ 3:1 di surface/background/surface-muted. */
+  --color-border-strong: oklch(0.64 0.01 160);
 
   /* ── Brand hijau (Ref 1) ──────────────────────────────────────────────── */
   --color-primary: oklch(0.49 0.12 152);
@@ -28,6 +30,8 @@
   /* Tooltip: latar gelap + teks terang (kontras 17.24:1). */
   --color-surface-inverse: oklch(0.22 0.015 160);
   --color-text-inverse: oklch(1 0 0);
+  /* Garis 1px di tepi gambar/avatar: hitam murni 10% (bukan netral bernuansa). */
+  --color-image-outline: oklch(0 0 0 / 0.1);
 
   /* ── Status (selalu disertai label teks, bukan warna saja) ────────────── */
   /* base = titik/ikon/teks di atas surface · -subtle = latar badge · -strong = teks di atas -subtle */
@@ -112,6 +116,32 @@
   --duration-slow: 300ms;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --animate-shimmer: shimmer 1.5s ease-in-out infinite;
+  --animate-pulse-soft: pulse-soft 1.6s ease-in-out infinite;
+  --animate-progress: progress 1.1s ease-in-out infinite;
+
+  /* Hanya transform & opacity yang dianimasikan (docs/design/04-components.md). */
+  @keyframes shimmer {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes pulse-soft {
+    50% {
+      opacity: 0.35;
+    }
+  }
+  @keyframes progress {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(250%);
+    }
+  }
 
   /* Spacing base (Tailwind menurunkan skala dari nilai ini) */
   --spacing: 0.25rem;

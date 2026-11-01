@@ -16,6 +16,7 @@ Format OKLCH, semua nilai di dalam gamut sRGB (tidak butuh fallback P3).
 | `--color-text` | `oklch(0.22 0.015 160)` | Teks utama |
 | `--color-muted` | `oklch(0.5 0.012 160)` | Label, meta, placeholder. *Dikoreksi dari 0.52* agar tetap ≥ 5:1 di `surface-muted` dan `primary-subtle` |
 | `--color-border` | `oklch(0.92 0.006 160)` | Garis kartu dan tabel (dekoratif, 1.26:1; bukan batas satu-satunya untuk input) |
+| `--color-border-strong` | `oklch(0.64 0.01 160)` | Batas kontrol form (input, select, segmented): 3.35 / 3.12 / 3.03 terhadap `surface` / `background` / `surface-muted` |
 
 ### Brand (hijau Ref 1)
 
@@ -35,6 +36,7 @@ Format OKLCH, semua nilai di dalam gamut sRGB (tidak butuh fallback P3).
 | `--color-overlay` | `oklch(0.22 0.015 160 / 0.4)` | Scrim di belakang drawer dan dialog |
 | `--color-surface-inverse` | `oklch(0.22 0.015 160)` | Latar tooltip |
 | `--color-text-inverse` | `oklch(1 0 0)` | Teks tooltip (17.24:1 di atas `surface-inverse`) |
+| `--color-image-outline` | `oklch(0 0 0 / 0.1)` | Garis 1px di tepi gambar/avatar |
 
 ### Status (selalu dengan label teks)
 
@@ -93,7 +95,7 @@ Diukur dengan `culori` (WCAG 2) dan `apca-w3` (APCA Lc) dari nilai token di atas
 | Ikon aksen → latar pastel (green / blue / violet / orange / coral) | 3.53 / 4.02 / 4.46 / 3.61 / 3.66 | 58 / 62 / 65 / 59 / 58 | 3 |
 | Seri grafik `primary` / `accent-coral` → `surface` | 5.92 / 4.27 | 79 / 69 | 3 |
 
-Catatan: `--color-border` (1.26:1) hanya dekoratif. Input/select di Tahap 3 wajib punya penanda selain border tipis ini (mis. latar berbeda atau token border kontrol ≥ 3:1).
+Catatan: `--color-border` (1.26:1) hanya dekoratif. Sejak Tahap 3 input/select memakai `--color-border-strong` (≥ 3:1).
 
 ## Tipografi (Ref 3)
 
@@ -146,5 +148,7 @@ Skala final (token Tailwind `--text-*`, sudah membawa line-height, tracking, dan
 | `--ease-out` | `cubic-bezier(0.22, 1, 0.36, 1)` | Elemen masuk |
 | `--ease-in` | `cubic-bezier(0.4, 0, 1, 1)` | Elemen keluar |
 | Spring (Motion) | `{ type: 'spring', stiffness: 400, damping: 32 }` | Indikator tab, layout daftar |
+
+Animasi CSS: `--animate-shimmer` (skeleton, 1,5s), `--animate-pulse-soft` (titik "Menganalisis", avatar memuat), `--animate-progress` (bar refetch). Semuanya hanya `transform`/`opacity`.
 
 Saat `prefers-reduced-motion: reduce`, animasi gerak diganti fade instan (lihat `04-components.md`).

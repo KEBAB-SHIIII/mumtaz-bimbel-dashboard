@@ -4,7 +4,7 @@ import { useId, useState, type ButtonHTMLAttributes } from 'react';
 import { NavLink, useMatch } from 'react-router';
 import type { Role } from '@mumtaz/contracts';
 import { cn } from '../../lib/cn';
-import { InitialsAvatar } from './initials-avatar';
+import { Avatar } from '../ui/avatar';
 import { NAVIGATION, type NavItem } from './navigation';
 
 /** Ikuti --ease-out di tokens.css (Motion butuh nilai numerik). */
@@ -205,6 +205,8 @@ function BrandMark() {
 
 interface SidebarProps {
   role: Role;
+  /** ID internal akun: seed avatar. */
+  userId: string;
   fullName: string;
   roleLabel: string;
   onLogout: () => void;
@@ -217,7 +219,7 @@ interface SidebarProps {
 }
 
 /** Isi sidebar: brand, navigasi berkelompok, identitas pengguna + Keluar (docs/design/03-layout.md). */
-export function Sidebar({ role, fullName, roleLabel, onLogout, logoutPending, variant, collapsed = false, onToggleCollapse, onClose }: SidebarProps) {
+export function Sidebar({ role, userId, fullName, roleLabel, onLogout, logoutPending, variant, collapsed = false, onToggleCollapse, onClose }: SidebarProps) {
   const isCollapsed = variant === 'desktop' && collapsed;
   const onNavigate = variant === 'drawer' ? onClose : undefined;
 
@@ -246,7 +248,7 @@ export function Sidebar({ role, fullName, roleLabel, onLogout, logoutPending, va
       </div>
 
       <div className={cn('flex shrink-0 items-center gap-2.5 border-t border-border p-3', isCollapsed && 'flex-col')}>
-        <InitialsAvatar name={fullName} />
+        <Avatar seed={userId} name={fullName} size={isCollapsed ? 32 : 40} decorative />
         {!isCollapsed && (
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-text" title={fullName}>{fullName}</p>

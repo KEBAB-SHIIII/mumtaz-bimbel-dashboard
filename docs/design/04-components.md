@@ -34,7 +34,7 @@ Prinsip: **CSS/Tailwind** untuk micro-interaction (hover, press, warna), **trans
 
 | Komponen | Mekanisme | Animasi |
 |---|---|---|
-| **Button** | CSS | Hover: warna 150ms. Press: `scale(0.97)` 100ms. Loading: label fade ke spinner, lebar tombol tetap |
+| **Button** | CSS | Hover: warna 150ms. Press: `scale(0.96)` (nilai baku `/better-ui`; prop `static` mematikannya). Loading: isi jadi transparan + spinner di tengah, lebar tombol dan nama aksesibel tetap |
 | **Chip filter / SegmentedTabs** | Motion `layoutId` | Latar "pil" aktif meluncur ke chip yang diklik (spring `stiffness 400, damping 32`) |
 | **Isi tab** | Motion `AnimatePresence mode="wait"` | Isi lama fade out 120ms, isi baru fade + naik 6px 200ms |
 | **Dialog / modal** | Headless UI `transition` (`data-closed`, `data-enter`, `data-leave`) | Backdrop fade 200ms. Panel fade + `scale 0.96→1` + naik 8px; masuk 250ms `--ease-out`, keluar 180ms `--ease-in` |
@@ -136,3 +136,19 @@ import critters from '@dicebear/styles/critters.json' with { type: 'json' };
 - Latar avatar memakai warna pastel dari token aksen. Ukuran 32px (header/tabel), 40px (sidebar), 72px (profil).
 - `alt=""` bila nama ditampilkan di sebelahnya. Jika tidak, `alt` berisi nama.
 - Tidak ada fitur upload foto. Avatar tidak bisa diatur manual.
+
+## Implementasi Tahap 3 (2026-11-02)
+
+Komponen ada di `frontend/src/components/ui/`. Penyesuaian terhadap spesifikasi di atas:
+
+- **Badge**: pill + titik sesuai tabel. Pemetaan tone mengikuti dokumen ini (Perlu revisi = `warning`, bukan biru seperti versi lama). Validitas belum ada (`Menunggu validasi`, AI masih menganalisis) = `info` dengan titik berdenyut. Label tidak berubah. Pergantian status: badge baru memudar masuk 180ms tanpa exit, supaya tidak pernah ada dua label status sekaligus (juga untuk pembaca layar).
+- **DataTable**: header Ref 3 tanpa ikon sort, karena backend belum mendukung pengurutan (tidak menampilkan affordance palsu). Baris 44px, baris baru fade + naik 6px dengan stagger 20ms (maksimal 10). Refetch: data lama redup 60% + bar progres 2px di atas. < 640px: daftar berpemisah garis (bukan kartu di dalam kartu). Judul = kolom `meta.cardTitle` atau kolom pertama selain `no`; aksi (`meta.stickyRight`) di kanan atas; sembunyikan kolom lewat `meta.cardHidden`.
+- **Field**: batas kontrol memakai token baru `--color-border-strong` (≥ 3:1) karena border adalah satu-satunya penanda bentuk input. Opsi `SearchSelect` dirender di portal (anchor) agar tidak terpotong kartu/dialog.
+- **Dialog**: transisi sesuai tabel; di HP menjadi bottom sheet dengan pegangan, safe area, tombol footer lebar penuh (aksi utama di atas).
+- **PeriodSelector**: satu kontrol tersegmentasi `‹ bulan ›` dengan label "Periode" tetap terlihat.
+- **SegmentedControl** (RadioGroup) untuk filter cepat dan **SegmentedTabs** (TabGroup) untuk ganti tampilan; keduanya memakai indikator `layoutId` (Motion `domMax`). Headless UI melepas panel lama seketika, jadi hanya isi baru yang beranimasi (fade + naik 6px).
+- **SearchInput**: debounce 250ms, Enter menerapkan langsung, Escape/× mengosongkan dan mengembalikan fokus; ikon × masuk/keluar dengan scale 0.25→1 + blur 4px (spring 0.3s, bounce 0).
+- **Skeleton**: `useDelayedSkeleton` (150ms / minimal 300ms), `LoadingSwitch` (skeleton → konten crossfade), `PageSkeleton` untuk fallback rute lazy, dan varian `SkeletonStatCards`, `SkeletonChart`, `SkeletonTable`, `SkeletonCardList`, `SkeletonForm`, `SkeletonProfile`.
+- **Avatar**: DiceBear critters dibuat lokal, `@dicebear/core` + `critters.json` di-lazy import dan di-cache per seed. Latar pastel dipilih stabil dari seed. Sudah dipakai di sidebar (40px; 32px saat ciut) dan menu akun header.
+- **Motion**: komponen `m.*` ringan masuk bundle awal; fitur `domMax` (animasi + layout/`layoutId`) dimuat async lewat `LazyMotion` (`src/app/motion-features.ts`), tanpa grup chunk manual.
+- **ReactBits**: `CountUp`, `AnimatedList`, `FadeContent`, `SpotlightCard` (+ `trackSpotlight`/`SPOTLIGHT_CLASS` untuk `StatCard`). `StatCard` kini punya `icon`, `accent`, `count`, `index` (stagger 40ms); API lama (`label`, `value`, `hint`, `to`) tetap.

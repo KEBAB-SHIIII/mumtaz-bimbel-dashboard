@@ -3,8 +3,6 @@ import { useId } from 'react';
 import { periodSchema, type Period } from '@mumtaz/contracts';
 import { formatPeriod } from '../../lib/format';
 import { currentPeriod, shiftPeriod } from '../../lib/period';
-import { Button } from './button';
-import { Select } from './field';
 
 /** Rentang pilihan: 2 tahun ke belakang s.d. akhir tahun depan, terbaru di atas. */
 function periodOptions(value: Period): Period[] {
@@ -23,19 +21,22 @@ function periodOptions(value: Period): Period[] {
  */
 export function PeriodSelector({ value, onChange }: { value: string; onChange: (period: string) => void }) {
   const id = useId();
+  const stepClass =
+    'grid w-9 shrink-0 place-items-center text-muted transition-colors duration-150 hover:bg-surface-muted hover:text-text pointer-coarse:w-11 focus-visible:-outline-offset-2 motion-reduce:transition-none';
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-sm font-medium text-text">
         Periode
       </label>
-      <div className="flex items-center gap-1">
-        <Button variant="secondary" size="md" aria-label="Bulan sebelumnya" className="px-2.5" onClick={() => onChange(shiftPeriod(value, -1))}>
+      {/* Satu kontrol tersegmentasi (Ref 2): ‹ bulan › dengan batas bersama. */}
+      <div className="flex h-9 w-fit items-stretch overflow-hidden rounded-md border border-border-strong bg-surface shadow-xs pointer-coarse:h-11">
+        <button type="button" aria-label="Bulan sebelumnya" className={stepClass} onClick={() => onChange(shiftPeriod(value, -1))}>
           <ChevronLeft aria-hidden className="size-4" />
-        </Button>
-        <Select
+        </button>
+        <select
           id={id}
           value={value}
-          className="w-44"
+          className="w-40 border-x border-border bg-transparent px-3 text-sm font-medium text-text tabular-nums focus-visible:-outline-offset-2 max-sm:text-base pointer-coarse:text-base"
           onChange={(event) => {
             if (periodSchema.safeParse(event.target.value).success) onChange(event.target.value);
           }}
@@ -45,10 +46,10 @@ export function PeriodSelector({ value, onChange }: { value: string; onChange: (
               {formatPeriod(period)}
             </option>
           ))}
-        </Select>
-        <Button variant="secondary" size="md" aria-label="Bulan berikutnya" className="px-2.5" onClick={() => onChange(shiftPeriod(value, 1))}>
+        </select>
+        <button type="button" aria-label="Bulan berikutnya" className={stepClass} onClick={() => onChange(shiftPeriod(value, 1))}>
           <ChevronRight aria-hidden className="size-4" />
-        </Button>
+        </button>
       </div>
     </div>
   );

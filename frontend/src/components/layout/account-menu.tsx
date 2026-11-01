@@ -2,12 +2,13 @@ import { Menu, MenuButton, MenuItem, MenuItems, MenuSeparator } from '@headlessu
 import { LogOut, UserRound } from 'lucide-react';
 import { Link } from 'react-router';
 import type { Role } from '@mumtaz/contracts';
-import { InitialsAvatar } from './initials-avatar';
+import { Avatar } from '../ui/avatar';
 
 const MENU_ITEM =
   'flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-sm text-text data-focus:bg-surface-muted pointer-coarse:h-11';
 
 interface AccountMenuProps {
+  userId: string;
   fullName: string;
   role: Role;
   roleLabel: string;
@@ -15,14 +16,14 @@ interface AccountMenuProps {
 }
 
 /** Avatar di header: identitas pengguna + pintasan Profil (Tutor) dan Keluar. */
-export function AccountMenu({ fullName, role, roleLabel, onLogout }: AccountMenuProps) {
+export function AccountMenu({ userId, fullName, role, roleLabel, onLogout }: AccountMenuProps) {
   return (
     <Menu>
       <MenuButton
         aria-label={`Menu akun ${fullName}`}
         className="grid size-10 shrink-0 place-items-center rounded-full transition-colors duration-150 hover:bg-surface data-open:bg-surface pointer-coarse:size-11 motion-reduce:transition-none"
       >
-        <InitialsAvatar name={fullName} />
+        <Avatar seed={userId} name={fullName} decorative />
       </MenuButton>
       <MenuItems
         transition
@@ -30,7 +31,7 @@ export function AccountMenu({ fullName, role, roleLabel, onLogout }: AccountMenu
         className="z-50 w-64 origin-top-right rounded-lg border border-border bg-surface p-1.5 shadow-md [--anchor-gap:0.5rem] focus:outline-none transition duration-150 ease-out data-closed:scale-95 data-closed:opacity-0 motion-reduce:transition-none"
       >
         <div className="flex items-center gap-2.5 px-2.5 py-2">
-          <InitialsAvatar name={fullName} />
+          <Avatar seed={userId} name={fullName} size={40} decorative />
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-text">{fullName}</p>
             <p className="truncate text-meta text-muted">{roleLabel}</p>

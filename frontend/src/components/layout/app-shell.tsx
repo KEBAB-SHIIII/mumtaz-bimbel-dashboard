@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router';
 import { ROLE_LABEL, useLogoutMutation, useSession } from '../../features/auth/session';
 import { cn } from '../../lib/cn';
-import { LoadingState } from '../ui/feedback';
+import { PageSkeleton } from '../ui/skeleton';
 import { AccountMenu } from './account-menu';
 import { HeaderSlotContext } from './header-slot';
 import { NavSearch } from './nav-search';
@@ -49,6 +49,7 @@ export function AppShell() {
 
   const sidebarProps = {
     role: user.role,
+    userId: user.id,
     fullName: user.full_name,
     roleLabel: ROLE_LABEL[user.role],
     onLogout: handleLogout,
@@ -102,12 +103,12 @@ export function AppShell() {
             <div ref={setTitleSlot} className="min-w-0 flex-1" />
             <div ref={setActionsSlot} className="hidden items-center gap-2 lg:flex lg:empty:hidden" />
             <NavSearch role={user.role} />
-            <AccountMenu fullName={user.full_name} role={user.role} roleLabel={ROLE_LABEL[user.role]} onLogout={handleLogout} />
+            <AccountMenu userId={user.id} fullName={user.full_name} role={user.role} roleLabel={ROLE_LABEL[user.role]} onLogout={handleLogout} />
           </header>
 
           <main id="main" tabIndex={-1} className="flex flex-1 flex-col px-4 pb-8 focus:outline-none sm:px-6 lg:px-8">
             <div className="mx-auto flex w-full max-w-[90rem] flex-1 flex-col gap-6 lg:rounded-xl lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-sm">
-              <Suspense fallback={<LoadingState label="Memuat halaman…" />}>
+              <Suspense fallback={<PageSkeleton />}>
                 <Outlet />
               </Suspense>
             </div>
