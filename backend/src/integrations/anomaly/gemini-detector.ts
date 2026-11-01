@@ -1,12 +1,14 @@
 import { GoogleGenAI, type GenerateContentParameters } from '@google/genai';
 import { z } from 'zod';
-import { findingSeveritySchema, type AnomalyFindingCandidate } from '@mumtaz/contracts';
+import { findingSeveritySchema, sessionValiditySchema, type AnomalyFindingCandidate } from '@mumtaz/contracts';
 import { toGeminiJsonSchema } from './gemini-schema.js';
 import { humanizeAliases, pseudonymize } from './pseudonymize.js';
-import { AnomalyProviderError, type AnomalyDetectionInput, type AnomalyDetector } from './types.js';
+import { AnomalyProviderError, type AnomalyDetection, type AnomalyDetectionInput, type AnomalyDetector } from './types.js';
 
 /** Bentuk output yang diminta dari model (juga dikirim sebagai JSON Schema). */
 const modelOutputSchema = z.object({
+  validity: sessionValiditySchema,
+  validity_reason: z.string().min(1).max(600),
   classifications: z.array(
     z.object({
       candidate_ref: z.string().regex(/^C\d+$/),
@@ -36,15 +38,18 @@ const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 const RETRY_DELAY_MS = 500;
 
 const SYSTEM_INSTRUCTION = [
-  'Anda membantu Admin bimbel menyaring catatan sesi les yang perlu diperiksa.',
-  'Anda hanya MENGKLASIFIKASIKAN kandidat; Anda tidak memutuskan sesi diterima/ditolak dan tidak menilai honor.',
-  'Kemiripan data bukan bukti kecurangan: dua sesi mirip bisa sama-sama valid. Gunakan bahasa netral.',
+  'Anda memvalidasi catatan sesi les sebuah bimbel dan memberi label validitas data.',
+  'Label "validity" (pilih satu):',
+  '- "rejected": data duplikat — sesi yang sama sudah tercatat (tutor, siswa, mapel, tanggal, dan durasi sama).',
+  '- "needs_revision": durasi melebihi duration_outlier_minutes, ATAU jam mulai setelah late_start_after, ATAU kejanggalan lain yang perlu dikonfirmasi tutor.',
+  '- "valid": tidak ada masalah.',
+  'Kemiripan data bukan bukti kecurangan: siswa yang sama dengan tutor lain di hari yang sama bisa sah. Gunakan bahasa netral.',
+  'Admin dapat mengoreksi label Anda; tulis "validity_reason" sebagai penjelasan singkat yang bisa dibaca tutor.',
   'Data memakai alias (S0 = sesi yang dianalisis, S1.. = pembanding, T/P/M = tutor/siswa/mapel).',
   'Klasifikasikan SETIAP kandidat pada field "candidates" tepat satu kali (candidate_ref).',
   'Tambahkan "additional_findings" hanya untuk pola tidak biasa LAIN yang belum tercakup kandidat; jangan mengulang kandidat. Biasanya kosong.',
   'related_ref pada additional_findings diisi alias sesi pembanding (S1, S2, ...) atau null; jangan isi S0.',
-  'duration_outlier_minutes adalah heuristik yang dapat dikonfigurasi, bukan aturan resmi; jangan menyebutnya pelanggaran.',
-  'Tulis reason dan evidence_summary dalam Bahasa Indonesia, maksimal dua kalimat, tanpa menyebut alias.',
+  'Tulis validity_reason, reason, dan evidence_summary dalam Bahasa Indonesia, maksimal dua kalimat, tanpa menyebut alias.',
 ].join('\n');
 
 /** Antarmuka minimal klien Gemini (di-inject agar dapat dites tanpa credential). */
@@ -58,8 +63,8 @@ export interface GeminiDetectorOptions {
 }
 
 /**
- * Detektor live berbasis Gemini (`@google/genai`). Payload dipseudonimkan;
- * output divalidasi Zod dan dipetakan kembali ke ID internal. Output yang tidak
+ * Detektor live berbasis Gemini (`@google/genai`) — baseline LLM untuk label validitas (revisi PM),
+ * akan diganti model tim AI. Payload dipseudonimkan; output divalidasi Zod dan dipetakan kembali ke ID internal. Output yang tidak
  * lengkap/tidak dikenal dianggap invalid (status `failed`), bukan hasil parsial.
  */
 export class GeminiAnomalyDetector implements AnomalyDetector {
@@ -72,7 +77,7 @@ export class GeminiAnomalyDetector implements AnomalyDetector {
     this.client = client;
   }
 
-  async detect(input: AnomalyDetectionInput, { signal }: { signal: AbortSignal }): Promise<AnomalyFindingCandidate[]> {
+  async detect(input: AnomalyDetectionInput, { signal }: { signal: AbortSignal }): Promise<AnomalyDetection> {
     const { payload, sessionIdOf, candidateIndexOf } = pseudonymize(input);
 
     const request: GenerateContentParameters = {
@@ -134,7 +139,7 @@ export class GeminiAnomalyDetector implements AnomalyDetector {
         suggested_action: 'review',
       });
     }
-    return findings;
+    return { findings, validity: output.validity, validity_reason: humanizeAliases(output.validity_reason) };
   }
 
   /** Satu retry untuk error transien (429/5xx); pesan error tidak memuat payload/credential. */

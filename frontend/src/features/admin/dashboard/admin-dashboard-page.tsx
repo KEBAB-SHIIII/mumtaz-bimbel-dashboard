@@ -1,29 +1,30 @@
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight } from 'lucide-react';
-import { Link } from 'react-router';
-import { StatusBadge } from '../../../components/ui/badge';
-import { EmptyState, ErrorState, LoadingState } from '../../../components/ui/feedback';
-import { Card, PageHeader, StatCard } from '../../../components/ui/layout-primitives';
+import { Suspense, lazy } from 'react';
+import { ErrorState, LoadingState } from '../../../components/ui/feedback';
+import { PageHeader, StatCard } from '../../../components/ui/layout-primitives';
 import { PeriodSelector } from '../../../components/ui/period-selector';
-import { formatDuration, formatLessonDate, formatPeriod, formatRupiah } from '../../../lib/format';
+import { formatPeriod, formatRupiah } from '../../../lib/format';
 import { usePeriodParam } from '../../../lib/period';
 import { queryKeys } from '../../../lib/query-keys';
-import { fetchAdminAttendance, fetchAdminDashboard } from '../api';
+import { fetchAdminDashboard } from '../api';
+
+// Library grafik dimuat terpisah: judul & kartu metrik tampil tanpa menunggu chunk grafik.
+const DashboardCharts = lazy(() => import('./dashboard-charts').then((m) => ({ default: m.DashboardCharts })));
 
 export function AdminDashboardPage() {
   const [period, setPeriod] = usePeriodParam();
-  const summary = useQuery({ queryKey: queryKeys.admin.dashboard(period), queryFn: () => fetchAdminDashboard(period) });
-  const pendingFilters = { period, status: 'pending' as const, page: 1, page_size: 5 };
-  const pending = useQuery({
-    queryKey: queryKeys.admin.attendance(pendingFilters),
-    queryFn: () => fetchAdminAttendance(pendingFilters),
+  const summary = useQuery({
+    queryKey: queryKeys.admin.dashboard(period),
+    queryFn: () => fetchAdminDashboard(period),
+    // Angka & grafik pendapatan mengikuti data terbaru tanpa muat ulang halaman.
+    refetchInterval: 60_000,
   });
 
   return (
     <>
       <PageHeader
         title="Dashboard"
-        description={`Ringkasan operasional ${formatPeriod(period)} (berdasarkan tanggal les).`}
+        description={`Ringkasan ${formatPeriod(period)} (berdasarkan tanggal les).`}
         actions={<PeriodSelector value={period} onChange={setPeriod} />}
       />
 
@@ -32,54 +33,24 @@ export function AdminDashboardPage() {
       ) : summary.isError ? (
         <ErrorState error={summary.error} onRetry={() => void summary.refetch()} />
       ) : (
-        <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <StatCard label="Tutor aktif" value={summary.data.active_tutors} to="/admin/master-data/tutor" />
-          <StatCard label="Siswa aktif" value={summary.data.active_students} to="/admin/master-data/siswa" />
-          <StatCard label="Sesi bulan ini" value={summary.data.total_sessions} to={`/admin/absensi?period=${period}`} />
-          <StatCard label="Menunggu verifikasi" value={summary.data.status_counts.pending} to={`/admin/absensi?period=${period}&status=pending`} />
-          <StatCard label="Disetujui" value={summary.data.status_counts.approved} to={`/admin/absensi?period=${period}&status=approved`} />
-          <StatCard label="Perlu revisi" value={summary.data.status_counts.revision_requested} to={`/admin/absensi?period=${period}&status=revision_requested`} />
-          <StatCard label="Temuan anomali belum direview" value={summary.data.anomaly_findings_pending_review} />
+        <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard label="Total tutor aktif" value={summary.data.active_tutors} to="/admin/master-data/tutor" />
+          <StatCard label="Total siswa" value={summary.data.students_with_sessions} hint={<span className="text-xs text-muted">Yang punya sesi bulan ini</span>} to={`/admin/absensi?period=${period}`} />
+          <StatCard label="Total sesi bulan ini" value={summary.data.total_sessions} to={`/admin/absensi?period=${period}`} />
           <StatCard
-            label="Estimasi honor (sesi disetujui)"
-            value={formatRupiah(summary.data.honor.estimated_amount)}
-            to={`/admin/honor?period=${period}`}
+            label="Total omzet kotor"
+            value={formatRupiah(summary.data.gross_revenue)}
+            hint={<span className="text-xs text-muted">Sebelum gaji tutor &amp; potongan</span>}
+            to={`/admin/penagihan?period=${period}`}
           />
         </dl>
       )}
 
-      <Card
-        title="Sesi menunggu verifikasi"
-        actions={
-          <Link to={`/admin/absensi?period=${period}&status=pending`} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-            Lihat semua <ArrowRight aria-hidden className="size-4" />
-          </Link>
-        }
-      >
-        {pending.isPending ? (
-          <LoadingState />
-        ) : pending.isError ? (
-          <ErrorState error={pending.error} onRetry={() => void pending.refetch()} />
-        ) : pending.data.items.length === 0 ? (
-          <EmptyState title="Tidak ada sesi yang menunggu verifikasi" description="Semua sesi pada periode ini sudah ditinjau." />
-        ) : (
-          <ul className="divide-y divide-border">
-            {pending.data.items.map((item) => (
-              <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
-                <div>
-                  <p className="font-medium text-text">
-                    {item.student_name} · {item.subject_name}
-                  </p>
-                  <p className="text-muted">
-                    {item.tutor_name} · {formatLessonDate(item.lesson_date)} · {formatDuration(item.duration_minutes)}
-                  </p>
-                </div>
-                <StatusBadge status={item.status} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      {summary.data && (
+        <Suspense fallback={<LoadingState label="Memuat grafik…" />}>
+          <DashboardCharts revenue={summary.data.revenue_by_month} />
+        </Suspense>
+      )}
     </>
   );
 }

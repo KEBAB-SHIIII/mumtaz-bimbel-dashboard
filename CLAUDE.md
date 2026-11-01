@@ -14,10 +14,11 @@ Membangun aplikasi full-stack TypeScript berbasis role (Admin, Tutor, Orang Tua)
 
 1. **Source of Truth Operasional**: Neon PostgreSQL adalah satu-satunya sumber kebenaran operasional data.
 2. **Alur Submit Tutor**:
-   - Tutor Dashboard $\rightarrow$ Express API $\rightarrow$ validasi Zod $\rightarrow$ Simpan ke Neon dengan `status='pending'` dan `anomaly_analysis_status='pending'`.
+   - Tutor Dashboard $\rightarrow$ Express API $\rightarrow$ validasi Zod $\rightarrow$ Simpan ke Neon dengan `status='pending'` dan `anomaly_analysis_status='pending'`. Tutor mengisi jam mulai–selesai (durasi dihitung backend) dan 1–3 mata pelajaran per sesi.
    - **Dilarang keras**: Submit tutor TIDAK BOLEH memanggil Google Sheets API.
-3. **Verifikasi Admin**:
-   - Admin meninjau sesi manual. Hanya sesi berstatus `approved` yang dihitung ke estimasi honor tutor.
+3. **Validitas Data (keputusan owner D-25)**:
+   - Setelah submit, AI (baseline LLM Gemini, akan diganti model tim AI) melabeli validitas: **Valid** langsung dihitung ke honor & tagihan; **Perlu revisi** (durasi > 180 menit / mulai di atas 21.00) ditahan — Tutor dapat mengedit, Admin memilih status approval (hasil banding via WA); **Ditolak** (duplikat) ditahan, Tutor tidak dapat mengedit, Admin dapat menghapus.
+   - Hanya sesi berstatus efektif `approved` yang dihitung. Admin memiliki CRUD penuh atas sesi dan dapat mengoreksi label AI kapan saja.
 4. **Ekspor Google Sheets (Admin On-Demand)**:
    - Google Sheets HANYA menerima data saat Admin menekan tombol ekspor bulanan (berdasarkan `lesson_date` bulan `YYYY-MM`).
    - Ekspor standar hanya berisi **8 kolom mentah**: `no`, `nama tutor`, `nama murid`, `kelas`, `asal sekolah`, `mata pelajaran`, `tanggal les`, `durasi les`.
@@ -29,14 +30,14 @@ Membangun aplikasi full-stack TypeScript berbasis role (Admin, Tutor, Orang Tua)
    - Dilarang menggunakan ID publik, NPM siswa, atau nomor berurutan sebagai kredensial Orang Tua. Simpan hanya digest HMAC dengan `PARENT_ACCESS_CODE_PEPPER`.
    - Session berbasis cookie HttpOnly/SameSite dengan server-side session store (Neon PostgreSQL). Jangan simpan credential sesi di `localStorage`.
    - CSRF protection wajib untuk setiap request mutasi (`GET /auth/csrf` -> memory token).
-6. **Modul Deteksi Anomali**:
-   - Berfungsi mengklasifikasikan kandidat anomali/duplikasi (`suspected_duplicate`) dan menyimpan temuan di tabel `anomaly_flags`.
-   - AI **TIDAK PERNAH** mengambil keputusan otomatis untuk menyetujui/menolak sesi atau mengubah hitungan honor. Admin yang memegang keputusan akhir.
-   - Kegagalan AI/screening tidak boleh membatalkan penyimpanan sesi absensi.
+6. **Modul Deteksi Anomali & Validitas**:
+   - Rule engine membentuk kandidat (duplikat, durasi, jam mulai); tanpa kandidat sesi langsung Valid tanpa memanggil model. Temuan disimpan di `anomaly_flags`.
+   - LLM memberi label validitas untuk sesi berkandidat (D-25). Label AI tidak pernah menimpa keputusan Admin, dan Admin selalu dapat mengoreksinya.
+   - Kegagalan AI/screening tidak boleh membatalkan penyimpanan sesi absensi; sesi tetap menunggu validasi dan Admin menetapkan manual.
    - Unit tests offline WAJIB menggunakan deterministic fake detector, bukan fake live.
-7. **Honor**:
-   - Satu tarif tunggal per sesi dari konfigurasi `HONOR_RATE_PER_SESSION` (default Rp50.000), sama untuk semua tutor dan dikunci ke `lesson_sessions.rate_amount_snapshot` saat sesi disetujui (keputusan owner D-22/D-24; tarif resmi UMKM O-01 terbuka).
-   - Tidak ada penugasan tutor maupun tabel tarif: Tutor memilih murid dan mata pelajaran sendiri saat absen. Tidak ada badge/label "Tarif demo".
+7. **Tarif & Honor (D-25)**:
+   - Tarif les per jenjang (`backend/src/services/billing/tariff.ts`): SD 1-3 Rp50.000/jam, SD 4-6 Rp70.000/jam; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×. Kelas mentok SD 6. Potongan Admin Rp10.000 flat per sesi; honor tutor = tarif kotor − potongan. Nilai ini hardcode sementara (tarif resmi UMKM O-01 terbuka).
+   - Tarif kotor & potongan dikunci ke `rate_amount_snapshot` / `admin_fee_snapshot` saat sesi dihitung. Tidak ada penugasan tutor maupun tabel tarif (D-24).
 8. **Satu Mode: Production** (keputusan owner D-23):
    - Aplikasi selalu berjalan dengan `NODE_ENV=production`, satu file env `backend/.env`, satu database Neon (branch production), Gemini, dan spreadsheet yang sama — termasuk saat development.
    - Tidak ada mode demo/dev, seed sintetis, atau reset data. Jangan menghapus/TRUNCATE data atau menulis data sintetis ke Neon tanpa persetujuan eksplisit owner. Test otomatis memakai PGlite + fixture, bukan Neon.

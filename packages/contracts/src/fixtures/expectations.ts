@@ -26,12 +26,12 @@ export const EXPECTED_SESSION_IDS_BY_PERIOD: Record<Period, string[]> = {
 export const EXPECTED_EXPORT_ROWS_2026_10: SheetExportRow[] = [
   [1, 'Farhan', 'Aisyah', '3 SD', 'SD Harapan Bangsa', 'Matematika', '01/10/2026', '90 menit'],
   [2, 'Farhan', 'Bima', '5 SD', 'SD Pelita Ilmu', 'Bahasa Inggris', '03/10/2026', '60 menit'],
-  [3, 'Noreen', 'Citra', '2 SMP', 'SMP Tunas Mulia', 'IPA', '05/10/2026', '90 menit'],
-  [4, 'Noreen', 'Citra', '2 SMP', 'SMP Tunas Mulia', 'IPA', '06/10/2026', '75 menit'],
+  [3, 'Noreen', 'Citra', '5 SD', 'SD Tunas Mulia', 'IPA', '05/10/2026', '90 menit'],
+  [4, 'Noreen', 'Citra', '5 SD', 'SD Tunas Mulia', 'IPA', '06/10/2026', '75 menit'],
   [5, 'Farhan', 'Bima', '5 SD', 'SD Pelita Ilmu', 'Bahasa Inggris', '10/10/2026', '60 menit'],
   [6, 'Farhan', 'Bima', '5 SD', 'SD Pelita Ilmu', 'Bahasa Inggris', '10/10/2026', '60 menit'],
-  [7, 'Noreen', 'Citra', '2 SMP', 'SMP Tunas Mulia', 'IPA', '10/10/2026', '60 menit'],
-  [8, 'Noreen', 'Citra', '2 SMP', 'SMP Tunas Mulia', 'IPA', '12/10/2026', '240 menit'],
+  [7, 'Noreen', 'Citra', '5 SD', 'SD Tunas Mulia', 'IPA', '10/10/2026', '60 menit'],
+  [8, 'Noreen', 'Citra', '5 SD', 'SD Tunas Mulia', 'IPA', '12/10/2026', '240 menit'],
   [9, 'Farhan', 'Aisyah', '3 SD', 'SD Harapan Bangsa', 'Matematika', '31/10/2026', '90 menit'],
 ];
 
@@ -44,26 +44,27 @@ export const EXPECTED_EXPORT_SESSION_ORDER_2026_10 = [
 /** Payroll Oktober 2026: hanya `approved` × tarif snapshot Rp50.000 (tarif tunggal, D-24). */
 export const EXPECTED_PAYROLL_2026_10 = {
   period: '2026-10',
-  total_estimated_amount: '200000',
+  /** Total kotor, potongan Admin (pendapatan bersih bimbel), dan gaji yang dibayarkan. */
+  totals: { gross_amount: '200000', admin_fee_amount: '40000', net_amount: '160000' },
   tutors: [
     {
       tutor_id: TUTOR_IDS.tutorA,
       tutor_name: 'Farhan',
-      approved_sessions: 3,
-      pending_sessions: 2,
-      revision_requested_sessions: 0,
-      rejected_sessions: 0,
-      estimated_amount: '150000',
+      counted_sessions: 3,
+      not_counted_sessions: 2,
+      gross_amount: '150000',
+      admin_fee_amount: '30000',
+      net_amount: '120000',
       approved_session_ids: [SESSION_IDS.s01, SESSION_IDS.s05, SESSION_IDS.s08],
     },
     {
       tutor_id: TUTOR_IDS.tutorB,
       tutor_name: 'Noreen',
-      approved_sessions: 1,
-      pending_sessions: 1,
-      revision_requested_sessions: 1,
-      rejected_sessions: 1,
-      estimated_amount: '50000',
+      counted_sessions: 1,
+      not_counted_sessions: 3,
+      gross_amount: '50000',
+      admin_fee_amount: '10000',
+      net_amount: '40000',
       approved_session_ids: [SESSION_IDS.s11],
     },
   ],

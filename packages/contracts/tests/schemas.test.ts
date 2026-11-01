@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   PAGE_SIZE_MAX,
   SHEET_EXPORT_HEADERS,
-  anomalyReviewRequestSchema,
   changePasswordRequestSchema,
   createParentRequestSchema,
   createTutorRequestSchema,
@@ -12,6 +11,11 @@ import {
   isFutureLessonDate,
   isManagedSheetTitle,
   isoDateSchema,
+  approvalStatusOf,
+  durationBetween,
+  trailingPeriods,
+  sessionStatusFor,
+  setValidityRequestSchema,
   loginRequestSchema,
   normalizeParentAccessCode,
   paginationQuerySchema,
@@ -19,7 +23,6 @@ import {
   periodDateRange,
   periodOfDate,
   periodSchema,
-  sessionDecisionRequestSchema,
   sheetExportRequestSchema,
   sheetTitleForPeriod,
   submitAttendanceRequestSchema,
@@ -111,22 +114,36 @@ describe('submit absensi', () => {
   });
 });
 
-describe('keputusan review', () => {
-  it('approved boleh tanpa catatan; revisi & tolak wajib alasan', () => {
-    expect(sessionDecisionRequestSchema.safeParse({ decision: 'approved' }).success).toBe(true);
-    expect(sessionDecisionRequestSchema.safeParse({ decision: 'revision_requested' }).success).toBe(false);
-    expect(sessionDecisionRequestSchema.safeParse({ decision: 'rejected', admin_note: ' ' }).success).toBe(false);
-    expect(sessionDecisionRequestSchema.safeParse({ decision: 'rejected', admin_note: 'Tidak ada jadwal.' }).success).toBe(true);
+describe('validitas data & status approval (revisi PM)', () => {
+  it('Valid langsung dihitung; Ditolak ditahan; Perlu revisi mengikuti approval Admin', () => {
+    expect(sessionStatusFor('valid')).toBe('approved');
+    expect(sessionStatusFor('rejected')).toBe('rejected');
+    expect(sessionStatusFor('needs_revision')).toBe('revision_requested');
+    expect(sessionStatusFor('needs_revision', 'approved')).toBe('approved');
+    expect(sessionStatusFor('needs_revision', 'rejected')).toBe('rejected');
+    expect(approvalStatusOf('needs_revision', 'revision_requested')).toBe('pending');
+    expect(approvalStatusOf('needs_revision', 'approved')).toBe('approved');
+    expect(approvalStatusOf('valid', 'approved')).toBeNull();
   });
 
-  it('tidak menerima status pending atau nilai lain', () => {
-    expect(sessionDecisionRequestSchema.safeParse({ decision: 'pending' }).success).toBe(false);
+  it('approval hanya untuk Perlu revisi; catatan Admin opsional', () => {
+    expect(setValidityRequestSchema.safeParse({ validity: 'valid' }).success).toBe(true);
+    expect(setValidityRequestSchema.safeParse({ validity: 'needs_revision', approval: 'approved' }).success).toBe(true);
+    expect(setValidityRequestSchema.safeParse({ validity: 'needs_revision' }).success).toBe(false);
+    expect(setValidityRequestSchema.safeParse({ validity: 'valid', approval: 'approved' }).success).toBe(false);
+    expect(setValidityRequestSchema.safeParse({ validity: 'pending' }).success).toBe(false);
   });
 
-  it('Admin tidak boleh mengirim superseded/pending_review pada review anomali', () => {
-    expect(anomalyReviewRequestSchema.safeParse({ review_status: 'false_positive', review_note: 'Valid.' }).success).toBe(true);
-    expect(anomalyReviewRequestSchema.safeParse({ review_status: 'superseded', review_note: 'x' }).success).toBe(false);
-    expect(anomalyReviewRequestSchema.safeParse({ review_status: 'pending_review', review_note: 'x' }).success).toBe(false);
+  it('trailingPeriods: N bulan terakhir s.d. periode, urut lama → baru, melewati pergantian tahun', () => {
+    expect(trailingPeriods('2026-10', 3)).toEqual(['2026-08', '2026-09', '2026-10']);
+    expect(trailingPeriods('2027-02', 4)).toEqual(['2026-11', '2026-12', '2027-01', '2027-02']);
+  });
+
+  it('durasi dihitung dari jam mulai–selesai pada hari yang sama', () => {
+    expect(durationBetween('18:45', '19:45')).toBe(60);
+    expect(durationBetween('16:00', '17:30')).toBe(90);
+    expect(durationBetween('19:00', '19:00')).toBeNull();
+    expect(durationBetween('21:00', '08:00')).toBeNull();
   });
 });
 

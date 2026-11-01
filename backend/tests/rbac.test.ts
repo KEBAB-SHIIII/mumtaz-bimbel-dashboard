@@ -17,7 +17,7 @@ afterAll(() => t.close());
 const adminPaths = [
   '/admin/dashboard/summary?period=2026-10',
   '/admin/attendance?period=2026-10',
-  '/admin/recap?period=2026-10',
+  '/admin/billing?period=2026-10',
   '/admin/payroll/preview?period=2026-10',
   '/admin/tutors',
   '/admin/students',

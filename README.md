@@ -2,7 +2,7 @@
 
 Blueprint capstone Asah untuk membantu Bimbel Mumtaz Sampit memindahkan pencatatan sesi les tutor ke aplikasi, melakukan review absensi, membuat rekap bulanan, menghitung estimasi honor, dan menampilkan riwayat pembelajaran anak.
 
-> **Status:** Phase 01–09 selesai (QA: `docs/20-QA-REPORT.md`): fondasi monorepo, shared contracts, backend (database, auth, role guard, master data, absensi, rekap, honor), dashboard tiga role, modul anomali (rule engine + Gemini + review Admin), alur submission–review termasuk revisi oleh Tutor, rekap & estimasi honor yang dapat ditelusuri ke sesi, serta ekspor absensi bulanan ke Google Sheets atas tindakan Admin. Honor memakai satu tarif tunggal Rp50.000 per sesi dari konfigurasi; Tutor memilih murid & mapel sendiri (tanpa penugasan) dan password tutor dibuat sistem + reset oleh Admin (D-24).
+> **Status:** Phase 01–09 selesai (QA: `docs/20-QA-REPORT.md`): fondasi monorepo, shared contracts, backend (database, auth, role guard, master data, absensi, penagihan, honor), dashboard tiga role, modul anomali (rule engine + Gemini + review Admin), alur submission–review termasuk revisi oleh Tutor, rekap & estimasi honor yang dapat ditelusuri ke sesi, serta ekspor absensi bulanan ke Google Sheets atas tindakan Admin. Honor memakai satu tarif tunggal Rp50.000 per sesi dari konfigurasi; Tutor memilih murid & mapel sendiri (tanpa penugasan) dan password tutor dibuat sistem + reset oleh Admin (D-24).
 
 ## Satu mode: production
 
@@ -135,7 +135,7 @@ Jangan pasang shadcn/ui tanpa persetujuan owner. Palet warna, typography, logo, 
 
 ## Tarif honor
 
-Satu tarif **Rp50.000 per sesi** dari konfigurasi `HONOR_RATE_PER_SESSION` berlaku untuk semua tutor (keputusan owner D-24), dikunci ke sesi saat disetujui sehingga bulan lalu tidak berubah bila tarif diganti. Tidak ada penugasan tutor maupun master data tarif: Tutor memilih murid dan mata pelajaran sendiri saat absen. Tarif resmi UMKM masih O-01. Hanya sesi approved dihitung.
+Tarif les per jenjang: **SD 1-3 Rp50.000/jam, SD 4-6 Rp70.000/jam** (≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×), dengan **potongan Admin Rp10.000 per sesi** (keputusan owner D-25, hardcode sementara di `backend/src/services/billing/tariff.ts`). Tarif kotor ditagihkan ke orang tua (Penagihan + invoice PDF); honor tutor = kotor − potongan. Nilainya dikunci ke sesi saat dihitung sehingga bulan lalu tidak berubah. Tidak ada penugasan tutor maupun master tarif (D-24).
 
 ## Mulai dari dokumentasi
 

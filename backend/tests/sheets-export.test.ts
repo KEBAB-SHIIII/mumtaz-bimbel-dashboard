@@ -149,7 +149,7 @@ describe('POST /admin/reports/google-sheets/attendance', () => {
     const callsBefore = exporter.calls.length;
     const tutor = await as.tutorA(t.app);
     await tutor
-      .post('/tutor/attendance', { ...validSubmitRequest, client_submission_id: '00000000-0000-4000-9000-000000000900', student_id: STUDENT_IDS.murid1, subject_id: SUBJECT_IDS.matematika })
+      .post('/tutor/attendance', { ...validSubmitRequest, client_submission_id: '00000000-0000-4000-9000-000000000900', student_id: STUDENT_IDS.murid1, subject_ids: [SUBJECT_IDS.matematika] })
       .expect(201);
     expect(exporter.calls.length).toBe(callsBefore);
   });

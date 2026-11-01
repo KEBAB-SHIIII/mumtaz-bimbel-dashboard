@@ -19,26 +19,29 @@ async function openHistory(username: string, period: string) {
   return user;
 }
 
-describe('Tutor: revisi sesi (revision_requested → pending)', () => {
-  it('melihat alasan Admin, merevisi, lalu status kembali menunggu verifikasi', async () => {
+describe('Tutor: revisi sesi Perlu revisi → menunggu validasi ulang', () => {
+  it('melihat pesan Admin, merevisi jam & mapel, lalu sesi divalidasi ulang', async () => {
     useFakeBackend();
     // Noreen punya sesi Citra 5 Okt 2026 berstatus "Perlu revisi" (fixture s03).
     const user = await openHistory('noreen', '2026-10');
 
     await user.click(await screen.findByRole('button', { name: 'Revisi sesi Citra 5 Okt 2026' }));
     const dialog = await screen.findByRole('dialog', { name: 'Detail sesi' });
-    expect(within(dialog).getByText('Durasi tidak sesuai jadwal; mohon periksa kembali.')).toBeInTheDocument();
+    expect(within(dialog).getByText(/Durasi tidak sesuai jadwal; mohon periksa kembali\./)).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole('button', { name: 'Revisi sesi' }));
     const form = await screen.findByRole('dialog', { name: 'Revisi sesi' });
-    // Form terisi dari data sesi; nama tutor dari akun login, tidak bisa diubah.
-    expect(within(form).getByLabelText(/^Nama tutor/)).toHaveValue('Noreen');
-    expect(within(form).getByLabelText(/^Durasi les/)).toHaveValue(90);
-    await user.clear(within(form).getByLabelText(/^Durasi les/));
-    await user.type(within(form).getByLabelText(/^Durasi les/), '60');
+    // Form terisi dari data sesi; nama tutor dari akun login (wajib, tidak bisa diubah).
+    expect(within(form).getByLabelText(/^Nama tutor \(wajib\)/)).toHaveValue('Noreen');
+    expect(within(form).getByRole('checkbox', { name: 'IPA' })).toBeChecked();
+    // Sesi lama belum punya jam → Tutor mengisi jam mulai & selesai; durasi dihitung otomatis.
+    await user.type(within(form).getByLabelText(/^Jam mulai/), '15:00');
+    await user.type(within(form).getByLabelText(/^Jam selesai/), '16:00');
+    expect(within(form).getByText('60 menit')).toBeInTheDocument();
+    await user.click(within(form).getByRole('checkbox', { name: 'Matematika' }));
     await user.click(within(form).getByRole('button', { name: 'Kirim revisi' }));
 
-    expect(await within(await screen.findByRole('dialog', { name: 'Detail sesi' })).findByText('Revisi terkirim dan menunggu verifikasi ulang')).toBeInTheDocument();
+    expect(await within(await screen.findByRole('dialog', { name: 'Detail sesi' })).findByText('Revisi terkirim')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Tutup' }));
     // Daftar ikut diperbarui: tidak ada lagi sesi yang perlu revisi.
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Revisi sesi Citra 5 Okt 2026' })).not.toBeInTheDocument());
@@ -62,7 +65,7 @@ describe('Tutor: revisi sesi (revision_requested → pending)', () => {
     const user = await openHistory('farhan', '2026-10');
     await user.click(await screen.findByRole('button', { name: 'Detail sesi Aisyah 1 Okt 2026' }));
     const dialog = await screen.findByRole('dialog', { name: 'Detail sesi' });
-    expect(within(dialog).getByText('Disetujui')).toBeInTheDocument();
+    expect(within(dialog).getByText('Valid')).toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: 'Revisi sesi' })).not.toBeInTheDocument();
   });
 });
@@ -113,7 +116,7 @@ describe('Tutor: Riwayat Mengajar', () => {
 });
 
 describe('Admin: status analisis tidak ditampilkan', () => {
-  it('tidak ada kolom/filter/badge status analisis; status review tetap terlihat', async () => {
+  it('tidak ada kolom/filter/badge status analisis; validitas tetap terlihat', async () => {
     useFakeBackend();
     renderApp('/login');
     const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);

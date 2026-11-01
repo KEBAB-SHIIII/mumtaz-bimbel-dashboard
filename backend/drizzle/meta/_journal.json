@@ -36,6 +36,20 @@
       "when": 1793364813834,
       "tag": "0004_drop_assignments_rates",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793528016407,
+      "tag": "0005_session_validity_multi_subject",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793528030504,
+      "tag": "0006_drop_session_subject_id",
+      "breakpoints": true
     }
   ]
 }

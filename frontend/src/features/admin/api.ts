@@ -2,13 +2,13 @@ import type { z } from 'zod';
 import {
   adminAttendanceDetailSchema,
   adminAttendanceListItemSchema,
+  adminAttendanceOptionsSchema,
   adminDashboardSummarySchema,
-  anomalyFindingSchema,
   paginatedSchema,
   parentAccessCodeIssuedSchema,
   parentSchema,
   payrollPreviewResponseSchema,
-  recapResponseSchema,
+  billingResponseSchema,
   sheetExportResponseSchema,
   sheetExportRunSchema,
   studentSchema,
@@ -16,10 +16,10 @@ import {
   tutorCredentialIssuedSchema,
   tutorSchema,
   type AdminAttendanceListQuery,
-  type AnomalyReviewRequest,
+  type AdminCreateAttendanceRequest,
+  type AdminUpdateAttendanceRequest,
   type Paginated,
-  type RecapGroupBy,
-  type SessionDecisionRequest,
+  type SetValidityRequest,
   type SheetExportRequest,
 } from '@mumtaz/contracts';
 import { apiClient } from '../../lib/api-client';
@@ -36,13 +36,24 @@ async function get<S extends z.ZodType>(schema: S, url: string, params?: QueryPa
   return schema.parse(data);
 }
 
-// --- Dashboard, rekap, honor -------------------------------------------------
+// --- Dashboard, penagihan, honor -------------------------------------------------
 
 export const fetchAdminDashboard = (period: string) =>
   get(adminDashboardSummarySchema, '/admin/dashboard/summary', { period });
 
-export const fetchRecap = (period: string, groupBy: RecapGroupBy) =>
-  get(recapResponseSchema, '/admin/recap', { period, group_by: groupBy });
+export const fetchBilling = (period: string, studentId?: string) =>
+  get(billingResponseSchema, '/admin/billing', { period, student_id: studentId });
+
+/** Unduh invoice PDF satu murid (Axios + cookie session); nama file dari header server. */
+export async function downloadInvoice(studentId: string, period: string): Promise<{ blob: Blob; fileName: string }> {
+  const response = await apiClient.get<Blob>(`/admin/billing/${encodeURIComponent(studentId)}/invoice.pdf`, {
+    params: { period },
+    responseType: 'blob',
+  });
+  const disposition = String(response.headers['content-disposition'] ?? '');
+  const fileName = /filename="([^"]+)"/.exec(disposition)?.[1] ?? `tagihan-${period}.pdf`;
+  return { blob: response.data, fileName };
+}
 
 export const fetchPayrollPreview = (period: string) =>
   get(payrollPreviewResponseSchema, '/admin/payroll/preview', { period });
@@ -57,9 +68,26 @@ export const fetchAdminAttendance = (filters: AttendanceFilters) =>
 export const fetchAdminAttendanceDetail = (id: string) =>
   get(adminAttendanceDetailSchema, `/admin/attendance/${encodeURIComponent(id)}`);
 
-export async function decideAttendance(id: string, input: SessionDecisionRequest) {
-  const { data } = await apiClient.patch<unknown>(`/admin/attendance/${encodeURIComponent(id)}/decision`, input);
+export const fetchAdminAttendanceOptions = () => get(adminAttendanceOptionsSchema, '/admin/attendance-options');
+
+/** Koreksi label validitas AI / pilih status approval sesi Perlu revisi. */
+export async function setAttendanceValidity(id: string, input: SetValidityRequest) {
+  const { data } = await apiClient.patch<unknown>(`/admin/attendance/${encodeURIComponent(id)}/validity`, input);
   return adminAttendanceDetailSchema.parse(data);
+}
+
+export async function createAttendance(input: AdminCreateAttendanceRequest) {
+  const { data } = await apiClient.post<unknown>('/admin/attendance', input);
+  return adminAttendanceDetailSchema.parse(data);
+}
+
+export async function updateAttendance(id: string, input: AdminUpdateAttendanceRequest) {
+  const { data } = await apiClient.put<unknown>(`/admin/attendance/${encodeURIComponent(id)}`, input);
+  return adminAttendanceDetailSchema.parse(data);
+}
+
+export async function deleteAttendance(id: string) {
+  await apiClient.delete(`/admin/attendance/${encodeURIComponent(id)}`);
 }
 
 // --- Master Data -------------------------------------------------------------------
@@ -108,14 +136,6 @@ export async function createParent(body: object) {
 export async function rotateParentAccessCode(id: string) {
   const { data } = await apiClient.post<unknown>(`/admin/parents/${encodeURIComponent(id)}/rotate-access-code`);
   return parentAccessCodeIssuedSchema.parse(data);
-}
-
-// --- Review temuan anomali ---------------------------------------------------------
-
-/** Mencatat review temuan; tidak mengubah status sesi (keputusan sesi terpisah). */
-export async function reviewAnomalyFinding(id: string, input: AnomalyReviewRequest) {
-  const { data } = await apiClient.patch<unknown>(`/admin/anomalies/${encodeURIComponent(id)}/review`, input);
-  return anomalyFindingSchema.parse(data);
 }
 
 // --- Ekspor Google Sheets (on-demand Admin) ------------------------------------------

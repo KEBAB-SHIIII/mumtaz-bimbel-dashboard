@@ -18,6 +18,10 @@ export function resolveFixtureSession(session: FixtureLessonSession) {
   const tutor = must(fixtureTutors.find((t) => t.id === session.tutor_id), `tutor ${session.tutor_id}`);
   const tutorUser = must(fixtureUsers.find((u) => u.id === tutor.user_id), `user ${tutor.user_id}`);
   const student = must(fixtureStudents.find((s) => s.id === session.student_id), `student ${session.student_id}`);
-  const subject = must(fixtureSubjects.find((s) => s.id === session.subject_id), `subject ${session.subject_id}`);
-  return { session, tutor, tutorUser, student, subject };
+  const subjects = session.subject_ids
+    .map((id) => must(fixtureSubjects.find((s) => s.id === id), `subject ${id}`))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  /** Nama mapel digabung koma (urut abjad), seperti kolom "mata pelajaran" di API/ekspor. */
+  const subjectName = subjects.map((s) => s.name).join(', ');
+  return { session, tutor, tutorUser, student, subjects, subjectName };
 }

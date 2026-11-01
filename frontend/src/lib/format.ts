@@ -22,6 +22,12 @@ export function formatTimestamp(iso: string): string {
   }).format(new Date(iso))} WIB`;
 }
 
+/** Jam les "16:00"–"17:30" → "16.00–17.30 WIB"; sesi lama tanpa jam → "—". */
+export function formatLessonTime(start: string | null, end: string | null): string {
+  if (!start || !end) return '—';
+  return `${start.replace(':', '.')}–${end.replace(':', '.')} WIB`;
+}
+
 /** `YYYY-MM` → "Oktober 2026". */
 export function formatPeriod(period: string): string {
   const [y, m] = period.split('-').map(Number) as [number, number];

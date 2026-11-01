@@ -141,7 +141,7 @@ describe('expected outcomes', () => {
         a.session.lesson_date.localeCompare(b.session.lesson_date) ||
         a.tutorUser.full_name.localeCompare(b.tutorUser.full_name) ||
         a.student.full_name.localeCompare(b.student.full_name) ||
-        a.subject.name.localeCompare(b.subject.name) ||
+        a.subjectName.localeCompare(b.subjectName) ||
         a.session.id.localeCompare(b.session.id),
       );
 
@@ -151,7 +151,7 @@ describe('expected outcomes', () => {
       r.student.full_name,
       r.student.grade,
       r.student.school_name,
-      r.subject.name,
+      r.subjectName,
       formatSheetDate(r.session.lesson_date),
       formatSheetDuration(r.session.duration_minutes),
     ]);
@@ -165,26 +165,29 @@ describe('expected outcomes', () => {
     expect(new Set(resolved.map((r) => r.session.status)).size).toBe(4);
   });
 
-  it('payroll Oktober: hanya approved × tarif snapshot', () => {
-    let total = 0;
+  it('payroll Oktober: hanya approved; kotor − potongan Admin = bersih tutor', () => {
+    const totals = { gross: 0, fee: 0 };
     for (const expected of EXPECTED_PAYROLL_2026_10.tutors) {
       const own = fixtureSessions
         .filter((s) => isDateInPeriod(s.lesson_date, '2026-10'))
         .map(resolveFixtureSession)
         .filter((r) => r.tutor.id === expected.tutor_id);
       const approved = own.filter((r) => r.session.status === 'approved');
-      const count = (status: string) => own.filter((r) => r.session.status === status).length;
       // Integer rupiah: aman tanpa floating error untuk fixture ini.
-      const amount = approved.reduce((sum, r) => sum + Number(r.session.rate_amount_snapshot), 0);
-      total += amount;
+      const gross = approved.reduce((sum, r) => sum + Number(r.session.rate_amount_snapshot), 0);
+      const fee = approved.reduce((sum, r) => sum + Number(r.session.admin_fee_snapshot), 0);
+      totals.gross += gross;
+      totals.fee += fee;
 
       expect(approved.map((r) => r.session.id).sort()).toEqual([...expected.approved_session_ids].sort());
-      expect(count('pending')).toBe(expected.pending_sessions);
-      expect(count('revision_requested')).toBe(expected.revision_requested_sessions);
-      expect(count('rejected')).toBe(expected.rejected_sessions);
-      expect(String(amount)).toBe(expected.estimated_amount);
+      expect(own.length - approved.length).toBe(expected.not_counted_sessions);
+      expect([String(gross), String(fee), String(gross - fee)]).toEqual([expected.gross_amount, expected.admin_fee_amount, expected.net_amount]);
     }
-    expect(String(total)).toBe(EXPECTED_PAYROLL_2026_10.total_estimated_amount);
+    expect(EXPECTED_PAYROLL_2026_10.totals).toEqual({
+      gross_amount: String(totals.gross),
+      admin_fee_amount: String(totals.fee),
+      net_amount: String(totals.gross - totals.fee),
+    });
   });
 
   it('examples/anomaly-response.json valid dan cocok dengan expected fake detector', () => {

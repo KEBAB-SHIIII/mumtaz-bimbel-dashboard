@@ -4,9 +4,13 @@
  * docs/04 (diverifikasi test terhadap schema kontrak). Bukan data Neon.
  */
 import {
+  approvalStatusOf,
+  durationBetween,
   isDateInPeriod,
   normalizeParentAccessCode,
+  sessionStatusFor,
   sheetTitleForPeriod,
+  trailingPeriods,
   spreadsheetUrl,
   type AdminAttendanceDetail,
   type AdminAttendanceListItem,
@@ -15,8 +19,11 @@ import {
   type ErrorCode,
   type Parent,
   type PayrollPreviewResponse,
-  type RecapResponse,
+  type TutorPayrollResponse,
+  type ApprovalStatus,
+  type BillingResponse,
   type SessionStatus,
+  type SessionValidity,
   type SheetExportRun,
   type Student,
   type Subject,
@@ -46,6 +53,7 @@ export interface FakeRequest {
 export interface FakeResponse {
   status: number;
   data: unknown;
+  headers?: Record<string, string>;
 }
 
 const FIXED_TIMESTAMP = '2026-09-01T00:00:00.000Z';
@@ -120,18 +128,35 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
       student_name: student?.full_name ?? '',
       grade: student?.grade ?? '',
       school_name: student?.school_name ?? '',
-      subject_id: s.subject_id,
-      subject_name: subjects.find((su) => su.id === s.subject_id)?.name ?? '',
+      ...subjectsOf(s),
       lesson_date: s.lesson_date,
+      start_time: s.start_time,
+      end_time: s.end_time,
       duration_minutes: s.duration_minutes,
     };
   };
+
+  /** Mapel sesi urut nama: ID sejajar dengan nama, nama digabung koma (seperti backend). */
+  const subjectsOf = (s: FixtureLessonSession) => {
+    const list = s.subject_ids
+      .map((id) => subjects.find((su) => su.id === id))
+      .filter((su): su is Subject => su !== undefined)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return { subject_ids: list.map((su) => su.id), subject_name: list.map((su) => su.name).join(', ') };
+  };
+
+  const validityOf = (s: FixtureLessonSession) => ({
+    validity: s.validity,
+    approval_status: approvalStatusOf(s.validity, s.status),
+    validity_reason: s.validity_reason,
+  });
 
   const toFinding = (f: (typeof flags)[number]): AnomalyFinding => ({ ...f });
 
   const toListItem = (s: FixtureLessonSession): AdminAttendanceListItem => ({
     ...core(s),
     status: s.status,
+    ...validityOf(s),
     anomaly_analysis_status: s.anomaly_analysis_status,
     findings: flags
       .filter((f) => f.lesson_session_id === s.id)
@@ -146,6 +171,7 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
     learning_notes: s.learning_notes,
     next_focus: s.next_focus,
     status: s.status,
+    ...validityOf(s),
     anomaly_analysis_status: s.anomaly_analysis_status,
     findings: flags.filter((f) => f.lesson_session_id === s.id).map(toFinding),
     submitted_at: s.submitted_at,
@@ -159,6 +185,7 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
     learning_notes: s.learning_notes,
     next_focus: s.next_focus,
     status: s.status,
+    ...validityOf(s),
     admin_note: s.admin_note,
     submitted_at: s.submitted_at,
     reviewed_at: s.reviewed_at,
@@ -213,37 +240,34 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
     return counts;
   };
 
-  /** Fake payroll: approved × snapshot (nilai fixture bilangan bulat rupiah). */
+  /** Fake payroll: approved × snapshot; bersih = kotor − potongan Admin (nilai fixture bilangan bulat rupiah). */
   const payroll = (period: string, tutorId?: string): PayrollPreviewResponse => {
     const rows = inPeriod(period).filter((s) => !tutorId || s.tutor_id === tutorId);
     const byTutor = new Map<string, FixtureLessonSession[]>();
-    for (const row of rows) {
-      const id = row.tutor_id;
-      byTutor.set(id, [...(byTutor.get(id) ?? []), row]);
-    }
-    let total = 0;
+    for (const row of rows) byTutor.set(row.tutor_id, [...(byTutor.get(row.tutor_id) ?? []), row]);
+    const totals = { gross: 0, fee: 0 };
     const tutorsOut = [...byTutor.entries()].map(([id, own]) => {
-      const counts = statusCounts(own);
-      const priced = own.filter((s) => s.status === 'approved' && s.rate_amount_snapshot !== null);
-      const amount = priced.reduce((sum, s) => sum + Number(s.rate_amount_snapshot), 0);
-      total += amount;
+      const counted = (s: FixtureLessonSession) => s.status === 'approved' && s.rate_amount_snapshot !== null;
+      const priced = own.filter(counted);
+      const gross = priced.reduce((sum, s) => sum + Number(s.rate_amount_snapshot), 0);
+      const fee = priced.reduce((sum, s) => sum + Number(s.admin_fee_snapshot ?? 0), 0);
+      totals.gross += gross;
+      totals.fee += fee;
       return {
         tutor_id: id,
         tutor_name: tutorName(id),
-        approved_sessions: counts.approved,
-        pending_sessions: counts.pending,
-        revision_requested_sessions: counts.revision_requested,
-        rejected_sessions: counts.rejected,
-        estimated_amount: String(amount),
-        rate_lines: priced.length
-          ? [{ rate_amount: priced[0]?.rate_amount_snapshot ?? '0', sessions: priced.length, subtotal: String(amount), session_ids: priced.map((s) => s.id).sort() }]
-          : [],
-        approved_sessions_without_rate: counts.approved - priced.length,
+        counted_sessions: priced.length,
+        not_counted_sessions: own.length - priced.length,
+        gross_amount: String(gross),
+        admin_fee_amount: String(fee),
+        net_amount: String(gross - fee),
+        approved_sessions_without_rate: own.filter((s) => s.status === 'approved').length - priced.length,
         sessions: [...own]
           .sort((a, b) => a.lesson_date.localeCompare(b.lesson_date) || a.id.localeCompare(b.id))
           .map((s) => {
             const c = core(s);
-            const counted = s.status === 'approved' && s.rate_amount_snapshot !== null;
+            const isCounted = counted(s);
+            const lineFee = Number(s.admin_fee_snapshot ?? 0);
             return {
               session_id: s.id,
               lesson_date: s.lesson_date,
@@ -251,14 +275,80 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
               subject_name: c.subject_name,
               duration_minutes: s.duration_minutes,
               status: s.status,
-              rate_amount: counted ? s.rate_amount_snapshot : null,
-              amount: counted ? s.rate_amount_snapshot : null,
-              counted,
+              ...validityOf(s),
+              counted: isCounted,
+              gross_amount: isCounted ? String(Number(s.rate_amount_snapshot)) : null,
+              admin_fee: isCounted ? String(lineFee) : null,
+              net_amount: isCounted ? String(Number(s.rate_amount_snapshot) - lineFee) : null,
             };
-          }),
+          })
+          .map(({ validity_reason: _reason, ...line }) => line),
       };
     });
-    return { period, tutors: tutorsOut, total_estimated_amount: String(total), warnings: [] };
+    return {
+      period,
+      tutors: tutorsOut,
+      totals: { gross_amount: String(totals.gross), admin_fee_amount: String(totals.fee), net_amount: String(totals.gross - totals.fee) },
+      warnings: [],
+    };
+  };
+
+  /** Honor Saya: hanya nominal bersih (meniru `GET /tutor/me/payroll`). */
+  const tutorPayroll = (period: string, tutorId: string): TutorPayrollResponse => {
+    const tutor = payroll(period, tutorId).tutors[0];
+    return {
+      period,
+      counted_sessions: tutor?.counted_sessions ?? 0,
+      not_counted_sessions: tutor?.not_counted_sessions ?? 0,
+      net_amount: tutor?.net_amount ?? '0',
+      sessions: (tutor?.sessions ?? []).map(({ gross_amount: _gross, admin_fee: _fee, ...line }) => line),
+      warnings: [],
+    };
+  };
+
+  /** Penagihan: sesi approved bertarif snapshot per murid (meniru `GET /admin/billing`). */
+  const billing = (period: string, studentId?: string): BillingResponse => {
+    const rows = inPeriod(period)
+      .filter((s) => s.status === 'approved' && s.rate_amount_snapshot !== null && (!studentId || s.student_id === studentId))
+      .sort((a, b) => a.lesson_date.localeCompare(b.lesson_date) || a.id.localeCompare(b.id));
+    const byStudent = new Map<string, FixtureLessonSession[]>();
+    for (const row of rows) byStudent.set(row.student_id, [...(byStudent.get(row.student_id) ?? []), row]);
+    const studentsOut = [...byStudent.entries()]
+      .map(([id, list]) => {
+        const c = core(list[0] as FixtureLessonSession);
+        const total = list.reduce((sum, s) => sum + Number(s.rate_amount_snapshot), 0);
+        return {
+          student_id: id,
+          student_name: c.student_name,
+          grade: c.grade,
+          school_name: c.school_name,
+          parent_names: links.filter((l) => l.student_id === id).map((l) => users.find((u) => u.id === l.parent_user_id)?.full_name ?? '').filter(Boolean),
+          sessions: list.length,
+          total_amount: String(total),
+          lines: list.map((s) => {
+            const line = core(s);
+            return {
+              session_id: s.id,
+              lesson_date: s.lesson_date,
+              start_time: s.start_time,
+              end_time: s.end_time,
+              tutor_name: line.tutor_name,
+              subject_name: line.subject_name,
+              duration_minutes: s.duration_minutes,
+              amount: String(Number(s.rate_amount_snapshot)),
+            };
+          }),
+        };
+      })
+      .sort((a, b) => a.student_name.localeCompare(b.student_name));
+    const totalAmount = studentsOut.reduce((sum, s) => sum + Number(s.total_amount), 0);
+    return {
+      period,
+      students: studentsOut,
+      total_sessions: studentsOut.reduce((sum, s) => sum + s.sessions, 0),
+      total_amount: String(totalAmount),
+      warnings: [],
+    };
   };
 
   const requireCsrf = (req: FakeRequest) => {
@@ -267,12 +357,60 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
     }
   };
 
-  /** Murid & mapel pilihan Tutor harus ada dan aktif (tanpa penugasan). */
-  const validateChoice = (body: Record<string, unknown>) => {
+  /** Murid & semua mapel pilihan harus ada dan aktif (tanpa penugasan); durasi dari jam. Mengembalikan durasi. */
+  const validateChoice = (body: Record<string, unknown>): number => {
     const details: { field: string; message: string }[] = [];
     if (!students.some((st) => st.id === body.student_id && st.is_active)) details.push({ field: 'student_id', message: 'Murid tidak ditemukan atau tidak aktif' });
-    if (!subjects.some((su) => su.id === body.subject_id && su.is_active)) details.push({ field: 'subject_id', message: 'Mata pelajaran tidak ditemukan atau tidak aktif' });
-    if (details.length > 0) throw new FakeError(422, 'VALIDATION_FAILED', 'Validasi gagal', details);
+    const subjectIds = Array.isArray(body.subject_ids) ? body.subject_ids : [];
+    if (subjectIds.length === 0 || !subjectIds.every((id) => subjects.some((su) => su.id === id && su.is_active))) {
+      details.push({ field: 'subject_ids', message: 'Mata pelajaran tidak ditemukan atau tidak aktif' });
+    }
+    const duration = durationBetween(String(body.start_time ?? ''), String(body.end_time ?? ''));
+    if (duration === null) details.push({ field: 'end_time', message: 'Jam selesai harus setelah jam mulai' });
+    if (details.length > 0 || duration === null) throw new FakeError(422, 'VALIDATION_FAILED', 'Validasi gagal', details);
+    return duration;
+  };
+
+  /** Field editable dari body (setelah `validateChoice`). */
+  const editableOf = (body: Record<string, unknown>, duration: number) => ({
+    student_id: String(body.student_id),
+    subject_ids: (body.subject_ids as unknown[]).map(String),
+    lesson_date: String(body.lesson_date),
+    start_time: String(body.start_time),
+    end_time: String(body.end_time),
+    duration_minutes: duration,
+    learning_material: String(body.learning_material),
+    learning_notes: typeof body.learning_notes === 'string' && body.learning_notes ? body.learning_notes : null,
+    next_focus: typeof body.next_focus === 'string' && body.next_focus ? body.next_focus : null,
+  });
+
+  /** Sesi baru selalu menunggu validasi AI (fake tidak menjalankan AI). */
+  const newSession = (tutorId: string, clientSubmissionId: string, body: Record<string, unknown>, duration: number): FixtureLessonSession => {
+    const timestamp = now().toISOString();
+    return {
+      id: nextId('8000'),
+      client_submission_id: clientSubmissionId,
+      tutor_id: tutorId,
+      ...editableOf(body, duration),
+      status: 'pending',
+      validity: null,
+      validity_reason: null,
+      anomaly_analysis_status: 'pending',
+      rate_amount_snapshot: null,
+      admin_fee_snapshot: null,
+      reviewed_by_user_id: null,
+      submitted_at: timestamp,
+      reviewed_at: null,
+      updated_at: timestamp,
+      admin_note: null,
+    };
+  };
+
+  /** Tarif fake (meniru mesin tarif backend): SD 1-3 Rp50.000/jam, SD 4-6 Rp70.000/jam. */
+  const fakeGross = (s: FixtureLessonSession) => {
+    const grade = students.find((st) => st.id === s.student_id)?.grade ?? '';
+    const hourly = /^[1-3] SD$/.test(grade) ? 50_000 : /^[4-6] SD$/.test(grade) ? 70_000 : 0;
+    return hourly + Math.max(0, Math.floor((s.duration_minutes - 60) / 30)) * hourly * 0.5;
   };
 
   // --- routes ------------------------------------------------------------------
@@ -325,16 +463,19 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
       (req) => {
         requireRole('admin');
         const rows = inPeriod(req.params.period ?? '');
-        const ids = new Set(rows.map((r) => r.id));
-        const p = payroll(req.params.period ?? '');
+        const gross = rows.filter((r) => r.status === 'approved').reduce((sum, r) => sum + Number(r.rate_amount_snapshot ?? 0), 0);
         return ok({
           period: req.params.period,
           active_tutors: tutors.filter((t) => t.is_active && t.login_active).length,
-          active_students: students.filter((s) => s.is_active).length,
+          students_with_sessions: new Set(rows.map((r) => r.student_id)).size,
           total_sessions: rows.length,
-          status_counts: statusCounts(rows),
-          anomaly_findings_pending_review: flags.filter((f) => f.review_status === 'pending_review' && ids.has(f.lesson_session_id)).length,
-          honor: { estimated_amount: p.total_estimated_amount },
+          gross_revenue: String(gross),
+          revenue_by_month: trailingPeriods(req.params.period ?? '', 6).map((month) => {
+            const counted = inPeriod(month).filter((r) => r.status === 'approved' && r.rate_amount_snapshot !== null);
+            const monthGross = counted.reduce((sum, r) => sum + Number(r.rate_amount_snapshot), 0);
+            const fee = counted.reduce((sum, r) => sum + Number(r.admin_fee_snapshot ?? 0), 0);
+            return { period: month, gross_revenue: String(monthGross), tutor_salary: String(monthGross - fee), net_revenue: String(fee) };
+          }),
         });
       },
     ],
@@ -343,10 +484,11 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
       /^\/admin\/attendance$/,
       (req) => {
         requireRole('admin');
-        const { status, anomaly_status, tutor_id, student_id, subject_id, search } = req.params;
+        const { status, validity, anomaly_status, tutor_id, student_id, subject_id, search } = req.params;
+        const validityMatches = (v: SessionValidity | null) => !validity || (validity === 'unvalidated' ? v === null : v === validity);
         const rows = inPeriod(req.params.period ?? '')
           .map(toListItem)
-          .filter((i) => (!status || i.status === status) && (!anomaly_status || i.anomaly_analysis_status === anomaly_status) && (!tutor_id || i.tutor_id === tutor_id) && (!student_id || i.student_id === student_id) && (!subject_id || i.subject_id === subject_id))
+          .filter((i) => (!status || i.status === status) && validityMatches(i.validity) && (!anomaly_status || i.anomaly_analysis_status === anomaly_status) && (!tutor_id || i.tutor_id === tutor_id) && (!student_id || i.student_id === student_id) && (!subject_id || i.subject_ids.includes(subject_id)))
           .filter((i) => !search || [i.tutor_name, i.student_name, i.subject_name].some((v) => matches(v, search)))
           .sort((a, b) => b.lesson_date.localeCompare(a.lesson_date) || b.submitted_at.localeCompare(a.submitted_at));
         return ok(paginate(rows, req.params));
@@ -363,80 +505,94 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
       },
     ],
     [
+      'get',
+      /^\/admin\/attendance-options$/,
+      () => {
+        requireRole('admin');
+        return ok({
+          students: students.filter((st) => st.is_active).map(({ id, full_name, grade, school_name }) => ({ id, full_name, grade, school_name })).sort((x, y) => x.full_name.localeCompare(y.full_name)),
+          subjects: subjects.filter((su) => su.is_active).map(({ id, name }) => ({ id, name })).sort((x, y) => x.name.localeCompare(y.name)),
+          tutors: tutors.filter((t) => t.is_active && t.login_active).map(({ id, full_name }) => ({ id, full_name })).sort((x, y) => x.full_name.localeCompare(y.full_name)),
+        });
+      },
+    ],
+    [
+      'post',
+      /^\/admin\/attendance$/,
+      (req) => {
+        requireRole('admin');
+        if (!tutors.some((t) => t.id === req.body.tutor_id)) throw new FakeError(422, 'VALIDATION_FAILED', 'Validasi gagal', [{ field: 'tutor_id', message: 'Tutor tidak ditemukan' }]);
+        const duration = validateChoice(req.body);
+        const session = newSession(String(req.body.tutor_id), nextId('9a00'), req.body, duration);
+        sessions.push(session);
+        return ok(toDetail(session), 201);
+      },
+    ],
+    [
+      'put',
+      /^\/admin\/attendance\/([^/]+)$/,
+      (req, [id]) => {
+        requireRole('admin');
+        const s = sessions.find((row) => row.id === id);
+        if (!s) throw new FakeError(404, 'NOT_FOUND', 'Sesi tidak ditemukan');
+        const duration = validateChoice(req.body);
+        Object.assign(s, { tutor_id: String(req.body.tutor_id), ...editableOf(req.body, duration), updated_at: now().toISOString() });
+        if (s.status === 'approved') s.rate_amount_snapshot = String(fakeGross(s));
+        return ok(toDetail(s));
+      },
+    ],
+    [
+      'delete',
+      /^\/admin\/attendance\/([^/]+)$/,
+      (_req, [id]) => {
+        requireRole('admin');
+        const index = sessions.findIndex((row) => row.id === id);
+        if (index < 0) throw new FakeError(404, 'NOT_FOUND', 'Sesi tidak ditemukan');
+        sessions.splice(index, 1);
+        for (let i = flags.length - 1; i >= 0; i -= 1) if (flags[i]?.lesson_session_id === id) flags.splice(i, 1);
+        return ok(null, 204);
+      },
+    ],
+    [
       'patch',
-      /^\/admin\/attendance\/([^/]+)\/decision$/,
+      /^\/admin\/attendance\/([^/]+)\/validity$/,
       (req, [id]) => {
         const admin = requireRole('admin');
         const s = sessions.find((row) => row.id === id);
         if (!s) throw new FakeError(404, 'NOT_FOUND', 'Sesi tidak ditemukan');
-        if (s.status !== 'pending') throw new FakeError(409, 'SESSION_STATE_CONFLICT', 'Hanya sesi berstatus pending yang dapat diputuskan');
-        const decision = req.body.decision as SessionStatus;
-        const note = typeof req.body.admin_note === 'string' ? req.body.admin_note.trim() : '';
-        if (decision !== 'approved' && !note) throw new FakeError(422, 'VALIDATION_FAILED', 'Validasi gagal', [{ field: 'admin_note', message: 'Wajib diisi' }]);
+        const validity = req.body.validity as SessionValidity;
+        const approval = (req.body.approval ?? 'pending') as ApprovalStatus;
+        const status = sessionStatusFor(validity, approval);
         Object.assign(s, {
-          status: decision,
-          admin_note: note || null,
+          validity,
+          status,
+          ...(typeof req.body.admin_note === 'string' ? { admin_note: req.body.admin_note } : {}),
           reviewed_by_user_id: admin.id,
           reviewed_at: now().toISOString(),
           updated_at: now().toISOString(),
-          ...(decision === 'approved' ? { rate_amount_snapshot: '50000' } : {}),
+          rate_amount_snapshot: status === 'approved' ? String(fakeGross(s)) : null,
+          admin_fee_snapshot: status === 'approved' ? '10000' : null,
         });
         return ok(toDetail(s));
       },
     ],
     [
-      'patch',
-      /^\/admin\/anomalies\/([^/]+)\/review$/,
-      (req, [id]) => {
-        const admin = requireRole('admin');
-        const flag = flags.find((f) => f.id === id);
-        if (!flag) throw new FakeError(404, 'NOT_FOUND', 'Temuan anomali tidak ditemukan');
-        if (flag.review_status === 'superseded') {
-          throw new FakeError(409, 'SESSION_STATE_CONFLICT', 'Temuan sudah digantikan oleh revisi sesi dan tidak dapat direview');
-        }
-        const status = req.body.review_status;
-        const note = typeof req.body.review_note === 'string' ? req.body.review_note.trim() : '';
-        if ((status !== 'confirmed_anomaly' && status !== 'false_positive' && status !== 'resolved') || !note) {
-          throw new FakeError(422, 'VALIDATION_FAILED', 'Validasi gagal');
-        }
-        // Hanya temuan yang berubah; status sesi tidak disentuh.
-        Object.assign(flag, { review_status: status, review_note: note, reviewed_by_user_id: admin.id, reviewed_at: now().toISOString() });
-        return ok(toFinding(flag));
+      'get',
+      /^\/admin\/billing$/,
+      (req) => {
+        requireRole('admin');
+        return ok(billing(req.params.period ?? '', req.params.student_id));
       },
     ],
     [
       'get',
-      /^\/admin\/recap$/,
-      (req) => {
+      /^\/admin\/billing\/([^/]+)\/invoice\.pdf$/,
+      (req, [id]) => {
         requireRole('admin');
-        const groupBy = (req.params.group_by ?? 'tutor') as RecapResponse['group_by'];
-        const groups = new Map<string, RecapResponse['groups'][number]>();
-        for (const s of inPeriod(req.params.period ?? '')) {
-          const c = core(s);
-          const key = groupBy === 'tutor' ? { id: c.tutor_id, label: c.tutor_name } : groupBy === 'student' ? { id: c.student_id, label: c.student_name } : { id: c.subject_id, label: c.subject_name };
-          const g = groups.get(key.id) ?? { key_id: key.id, key_label: key.label, total_sessions: 0, approved_sessions: 0, pending_sessions: 0, revision_requested_sessions: 0, rejected_sessions: 0, approved_duration_minutes: 0, session_ids: [] };
-          g.total_sessions += 1;
-          g.session_ids.push(s.id);
-          if (s.status === 'approved') {
-            g.approved_sessions += 1;
-            g.approved_duration_minutes += s.duration_minutes;
-          } else if (s.status === 'pending') g.pending_sessions += 1;
-          else if (s.status === 'revision_requested') g.revision_requested_sessions += 1;
-          else g.rejected_sessions += 1;
-          groups.set(key.id, g);
-        }
-        const sorted = [...groups.values()].sort((a, b) => a.key_label.localeCompare(b.key_label));
-        const sum = (key: 'total_sessions' | 'approved_sessions' | 'pending_sessions' | 'revision_requested_sessions' | 'rejected_sessions' | 'approved_duration_minutes') =>
-          sorted.reduce((total, g) => total + g[key], 0);
-        const totals = {
-          total_sessions: sum('total_sessions'),
-          approved_sessions: sum('approved_sessions'),
-          pending_sessions: sum('pending_sessions'),
-          revision_requested_sessions: sum('revision_requested_sessions'),
-          rejected_sessions: sum('rejected_sessions'),
-          approved_duration_minutes: sum('approved_duration_minutes'),
-        };
-        return ok({ period: req.params.period, group_by: groupBy, groups: sorted, totals });
+        const student = billing(req.params.period ?? '', id).students[0];
+        if (!student) throw new FakeError(404, 'NOT_FOUND', 'Tagihan murid pada periode ini tidak ditemukan');
+        const fileName = `tagihan-${req.params.period}-${student.student_name.toLowerCase()}.pdf`;
+        return { status: 200, data: new Blob(['%PDF-fake'], { type: 'application/pdf' }), headers: { 'content-disposition': `attachment; filename="${fileName}"` } };
       },
     ],
     [
@@ -600,8 +756,8 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
         const user = requireRole('tutor');
         const tutorId = tutorIdOf(user);
         const rows = inPeriod(req.params.period ?? '').filter((s) => s.tutor_id === tutorId);
-        const p = payroll(req.params.period ?? '', tutorId);
-        return ok({ period: req.params.period, status_counts: statusCounts(rows), honor: { estimated_amount: p.total_estimated_amount } });
+        const p = tutorPayroll(req.params.period ?? '', tutorId);
+        return ok({ period: req.params.period, status_counts: statusCounts(rows), honor: { estimated_amount: p.net_amount } });
       },
     ],
     [
@@ -624,28 +780,8 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
         const existing = sessions.find((s) => s.client_submission_id === body.client_submission_id);
         const response = (s: FixtureLessonSession) => ({ session: { id: s.id, client_submission_id: s.client_submission_id, status: s.status, anomaly_analysis_status: s.anomaly_analysis_status, submitted_at: s.submitted_at } });
         if (existing) return ok(response(existing), 201);
-        validateChoice(body);
-        const timestamp = now().toISOString();
-        const session: FixtureLessonSession = {
-          id: nextId('8000'),
-          client_submission_id: String(body.client_submission_id),
-          tutor_id: tutorId,
-          student_id: String(body.student_id),
-          subject_id: String(body.subject_id),
-          lesson_date: String(body.lesson_date),
-          duration_minutes: Number(body.duration_minutes),
-          learning_material: String(body.learning_material),
-          learning_notes: typeof body.learning_notes === 'string' ? body.learning_notes : null,
-          next_focus: typeof body.next_focus === 'string' ? body.next_focus : null,
-          status: 'pending',
-          anomaly_analysis_status: 'pending',
-          rate_amount_snapshot: null,
-          reviewed_by_user_id: null,
-          submitted_at: timestamp,
-          reviewed_at: null,
-          updated_at: timestamp,
-          admin_note: null,
-        };
+        const duration = validateChoice(body);
+        const session = newSession(tutorId, String(body.client_submission_id), body, duration);
         sessions.push(session);
         return ok(response(session), 201);
       },
@@ -670,19 +806,17 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
         const session = sessions.find((s) => s.id === id);
         if (!session || session.tutor_id !== tutorId) throw new FakeError(404, 'NOT_FOUND', 'Sesi tidak ditemukan');
         if (session.status !== 'revision_requested') {
-          throw new FakeError(409, 'SESSION_STATE_CONFLICT', 'Sesi hanya dapat direvisi saat berstatus revision_requested');
+          throw new FakeError(409, 'SESSION_STATE_CONFLICT', 'Sesi hanya dapat direvisi saat berstatus Perlu revisi');
         }
-        validateChoice(req.body);
+        const duration = validateChoice(req.body);
         const timestamp = now().toISOString();
         Object.assign(session, {
-          student_id: String(req.body.student_id),
-          subject_id: String(req.body.subject_id),
-          lesson_date: String(req.body.lesson_date),
-          duration_minutes: Number(req.body.duration_minutes),
-          learning_material: String(req.body.learning_material),
-          learning_notes: typeof req.body.learning_notes === 'string' ? req.body.learning_notes : null,
-          next_focus: typeof req.body.next_focus === 'string' ? req.body.next_focus : null,
+          ...editableOf(req.body, duration),
           status: 'pending',
+          validity: null,
+          validity_reason: null,
+          rate_amount_snapshot: null,
+          admin_fee_snapshot: null,
           anomaly_analysis_status: 'pending',
           submitted_at: timestamp,
           updated_at: timestamp,
@@ -696,7 +830,7 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
         return ok({ session: toTutorSession(session) });
       },
     ],
-    ['get', /^\/tutor\/me\/payroll$/, (req) => ok(payroll(req.params.period ?? '', tutorIdOf(requireRole('tutor'))))],
+    ['get', /^\/tutor\/me\/payroll$/, (req) => ok(tutorPayroll(req.params.period ?? '', tutorIdOf(requireRole('tutor'))))],
     [
       'patch',
       /^\/tutor\/me\/password$/,

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import {
   attendanceOptionsSchema,
   paginatedSchema,
-  payrollPreviewResponseSchema,
+  tutorPayrollResponseSchema,
   submitAttendanceResponseSchema,
   tutorDashboardSummarySchema,
   tutorSessionSchema,
@@ -52,5 +52,5 @@ export async function reviseAttendance(id: string, input: ReviseAttendanceReques
 
 export async function fetchTutorPayroll(period: string) {
   const { data } = await apiClient.get<unknown>('/tutor/me/payroll', { params: { period } });
-  return payrollPreviewResponseSchema.parse(data);
+  return tutorPayrollResponseSchema.parse(data);
 }

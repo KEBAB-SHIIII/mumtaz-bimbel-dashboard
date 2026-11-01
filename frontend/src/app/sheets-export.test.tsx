@@ -3,23 +3,24 @@ import { describe, expect, it } from 'vitest';
 import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
 import { choosePeriod, loginStaff, renderApp, useFakeBackend } from '../test/render';
 
-async function openRecap(period: string) {
+/** Ekspor Sheets ada di halaman Data Absensi (revisi PM; sebelumnya di Rekap). */
+async function openAttendance(period: string) {
   renderApp('/login');
   const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
-  await user.click(await screen.findByRole('link', { name: 'Rekap' }));
-  await screen.findByRole('heading', { name: 'Rekap', level: 1 });
+  await user.click(await screen.findByRole('link', { name: 'Data Absensi' }));
+  await screen.findByRole('heading', { name: 'Data Absensi', level: 1 });
   await choosePeriod(period);
   return user;
 }
 
 const exportButton = () => screen.getByRole('button', { name: 'Ekspor Absensi Bulanan ke Google Sheets' });
 
-describe('Ekspor Google Sheets (Rekap)', () => {
+describe('Ekspor Google Sheets (Data Absensi)', () => {
   it('konfirmasi menampilkan periode, tab, total submission, dan peringatan semua status; sukses tercatat di riwayat', async () => {
     useFakeBackend();
-    const user = await openRecap('2026-10');
+    const user = await openAttendance('2026-10');
     await screen.findByText('Belum ada ekspor');
-    await waitFor(() => expect(screen.getByRole('table', { name: /Rekap Oktober 2026/ }).querySelector('tfoot')).not.toBeNull());
+    await waitFor(() => expect(within(screen.getByRole('table', { name: /Data absensi Oktober 2026/ })).getAllByRole('row')).toHaveLength(10));
 
     await user.click(exportButton());
     const dialog = await screen.findByRole('dialog', { name: 'Ekspor absensi ke Google Sheets' });
@@ -42,7 +43,7 @@ describe('Ekspor Google Sheets (Rekap)', () => {
   it('periode kosong + tab berisi → konfirmasi kedua (danger) sebelum mengganti dengan laporan kosong', async () => {
     const backend = useFakeBackend();
     backend.seedSheetTab('Absensi 2026-12', 4);
-    const user = await openRecap('2026-12');
+    const user = await openAttendance('2026-12');
     await screen.findByText('Belum ada sesi');
 
     await user.click(exportButton());
@@ -57,7 +58,7 @@ describe('Ekspor Google Sheets (Rekap)', () => {
 
   it('periode kosong + tab belum ada → langsung sukses tanpa konfirmasi kedua', async () => {
     useFakeBackend();
-    const user = await openRecap('2026-12');
+    const user = await openAttendance('2026-12');
     await user.click(exportButton());
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Ekspor sekarang' }));
     expect(await screen.findByText(/0 baris ditulis ke tab Absensi 2026-12/)).toBeInTheDocument();
@@ -66,7 +67,7 @@ describe('Ekspor Google Sheets (Rekap)', () => {
   it('Google gagal → pesan aman di dialog, run gagal di riwayat, "Coba lagi" membuka konfirmasi lagi', async () => {
     const backend = useFakeBackend();
     backend.failNextSheetExport();
-    const user = await openRecap('2026-10');
+    const user = await openAttendance('2026-10');
     await user.click(exportButton());
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Ekspor sekarang' }));
@@ -84,7 +85,7 @@ describe('Ekspor Google Sheets (Rekap)', () => {
 
   it('Batal menutup dialog tanpa memanggil ekspor', async () => {
     useFakeBackend();
-    const user = await openRecap('2026-10');
+    const user = await openAttendance('2026-10');
     await user.click(exportButton());
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Batal' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());

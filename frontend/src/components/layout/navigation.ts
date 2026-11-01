@@ -1,11 +1,11 @@
 import {
   BookOpenText,
-  CalendarCheck,
   ClipboardList,
   Database,
   History,
   LayoutDashboard,
   NotebookPen,
+  ReceiptText,
   UserRound,
   Wallet,
   type LucideIcon,
@@ -28,7 +28,7 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
   admin: [
     { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
     { to: '/admin/absensi', label: 'Data Absensi', icon: ClipboardList },
-    { to: '/admin/rekap', label: 'Rekap', icon: CalendarCheck },
+    { to: '/admin/penagihan', label: 'Penagihan', icon: ReceiptText },
     { to: '/admin/honor', label: 'Honor Tutor', icon: Wallet },
     { to: '/admin/master-data', label: 'Master Data', icon: Database },
   ],

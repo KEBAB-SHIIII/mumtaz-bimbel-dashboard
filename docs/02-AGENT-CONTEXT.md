@@ -53,7 +53,7 @@ Bangun aplikasi full-stack TypeScript untuk Bimbel Mumtaz Sampit: form absensi s
 
 ## Honor demo
 
-- Honor memakai tarif tunggal per sesi dari konfigurasi `HONOR_RATE_PER_SESSION` (default 50000), dikunci ke sesi saat approve (D-24); tidak ada tabel penugasan/tarif.
+- Honor tutor = tarif les per jenjang (SD 1-3 Rp50.000/jam, SD 4-6 Rp70.000/jam; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×) dikurangi potongan Admin Rp10.000 per sesi, dikunci ke `rate_amount_snapshot`/`admin_fee_snapshot` saat sesi dihitung (D-25); tidak ada tabel penugasan/tarif. Tutor hanya melihat pendapatan bersihnya.
 - Hanya sesi `approved` masuk honor estimasi.
 - Jangan menyebarkan angka 50000 sebagai konstanta ke komponen/service; kalkulasi membaca `tutor_rates`/snapshot.
 - Tandai nominal dari tarif demo dengan badge kecil "Tarif demo" di halaman Honor (D-20); jangan memakai label panjang di dashboard/halaman lain.

@@ -1,8 +1,7 @@
 import { z } from 'zod';
-import { requiredText, timestampSchema, uuidSchema } from './common.js';
+import { timestampSchema, uuidSchema } from './common.js';
 import {
   anomalyAnalysisStatusSchema,
-  anomalyReviewDecisionSchema,
   anomalyReviewStatusSchema,
   findingSeveritySchema,
   findingTypeSchema,
@@ -55,9 +54,3 @@ export const anomalyFindingSchema = z.object({
 });
 export type AnomalyFinding = z.infer<typeof anomalyFindingSchema>;
 
-/** `PATCH /admin/anomalies/:id/review`. Tidak mengubah status sesi. */
-export const anomalyReviewRequestSchema = z.strictObject({
-  review_status: anomalyReviewDecisionSchema,
-  review_note: requiredText(5000),
-});
-export type AnomalyReviewRequest = z.infer<typeof anomalyReviewRequestSchema>;

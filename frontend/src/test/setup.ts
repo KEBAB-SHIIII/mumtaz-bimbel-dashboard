@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach } from 'vitest';
 import { apiClient, setCsrfToken } from '../lib/api-client';
 
@@ -9,6 +9,9 @@ globalThis.ResizeObserver ??= class {
   unobserve() {}
   disconnect() {}
 };
+
+// Halaman di-lazy-load (chunk terpisah); saat banyak test berjalan paralel, memuatnya bisa > 1 detik.
+configure({ asyncUtilTimeout: 3_000 });
 
 const originalAdapter = apiClient.defaults.adapter;
 

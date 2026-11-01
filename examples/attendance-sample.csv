@@ -1,21 +1,21 @@
 ﻿no,nama tutor,nama murid,kelas,asal sekolah,mata pelajaran,tanggal les,durasi les
 1,Farhan,Aisyah,3 SD,SD Harapan Bangsa,Matematika,01/10/2026,90 menit
 2,Noreen,Bima,5 SD,SD Pelita Ilmu,Bahasa Inggris,01/10/2026,60 menit
-3,Farhan,Citra,2 SMP,SD Harapan Bangsa,Matematika,02/10/2026,75 menit
-4,Fazrin,Dimas,6 SD,SMP Tunas Mulia,IPA,02/10/2026,90 menit
+3,Farhan,Citra,5 SD,SD Harapan Bangsa,Matematika,02/10/2026,75 menit
+4,Fazrin,Dimas,6 SD,SD Tunas Mulia,IPA,02/10/2026,90 menit
 5,Noreen,Aisyah,3 SD,SD Harapan Bangsa,Matematika,03/10/2026,60 menit
 6,Farhan,Eka,4 SD,SD Pelita Ilmu,Mengaji,04/10/2026,60 menit
 7,Fazrin,Bima,5 SD,SD Pelita Ilmu,Bahasa Indonesia,05/10/2026,90 menit
-8,Farhan,Fikri,1 SMA,SMP Tunas Mulia,Matematika,06/10/2026,240 menit
-9,Noreen,Citra,2 SMP,SD Harapan Bangsa,Bahasa Inggris,07/10/2026,60 menit
-10,Fazrin,Dimas,6 SD,SMP Tunas Mulia,IPA,08/10/2026,75 menit
+8,Farhan,Fikri,1 SD,SD Tunas Mulia,Matematika,06/10/2026,240 menit
+9,Noreen,Citra,5 SD,SD Harapan Bangsa,Bahasa Inggris,07/10/2026,60 menit
+10,Fazrin,Dimas,6 SD,SD Tunas Mulia,IPA,08/10/2026,75 menit
 11,Farhan,Aisyah,3 SD,SD Harapan Bangsa,Matematika,09/10/2026,90 menit
 12,Noreen,Eka,4 SD,SD Pelita Ilmu,Mengaji,10/10/2026,60 menit
-13,Fazrin,Fikri,1 SMA,SMP Tunas Mulia,Bahasa Indonesia,11/10/2026,90 menit
-14,Farhan,Dimas,6 SD,SMP Tunas Mulia,IPA,12/10/2026,60 menit
+13,Fazrin,Fikri,1 SD,SD Tunas Mulia,Bahasa Indonesia,11/10/2026,90 menit
+14,Farhan,Dimas,6 SD,SD Tunas Mulia,IPA,12/10/2026,60 menit
 15,Noreen,Bima,5 SD,SD Pelita Ilmu,Bahasa Inggris,13/10/2026,45 menit
-16,Bayu,Citra,2 SMP,SD Harapan Bangsa,Matematika,14/10/2026,60 menit
+16,Bayu,Citra,5 SD,SD Harapan Bangsa,Matematika,14/10/2026,60 menit
 17,Fazrin,Aisyah,3 SD,SD Harapan Bangsa,IPA,15/10/2026,90 menit
 18,Farhan,Eka,4 SD,SD Pelita Ilmu,Calistung,16/10/2026,
-19,Noreen,Fikri,1 SMA,SMP Tunas Mulia,Mengaji,17/10/2026,60 menit
-20,Fazrin,Dimas,6 SD,SMP Tunas Mulia,IPA,08/10/2026,75 menit
+19,Noreen,Fikri,1 SD,SD Tunas Mulia,Mengaji,17/10/2026,60 menit
+20,Fazrin,Dimas,6 SD,SD Tunas Mulia,IPA,08/10/2026,75 menit

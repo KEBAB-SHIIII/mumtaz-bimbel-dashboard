@@ -39,5 +39,7 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     css: false,
+    // Alur UI multi-langkah (login → halaman lazy → form) di jsdom paralel butuh lebih dari default 5 detik.
+    testTimeout: 15_000,
   },
 });

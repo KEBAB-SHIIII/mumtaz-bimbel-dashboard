@@ -9,7 +9,7 @@ export * from './auth.js';
 export * from './master-data.js';
 export * from './attendance.js';
 export * from './anomaly.js';
-export * from './recap.js';
+export * from './billing.js';
 export * from './payroll.js';
 export * from './dashboard.js';
 export * from './sheet-export.js';

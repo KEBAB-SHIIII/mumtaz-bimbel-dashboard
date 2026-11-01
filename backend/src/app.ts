@@ -54,7 +54,6 @@ export function createApp({
     db,
     now,
     parentAccessCodePepper: env.PARENT_ACCESS_CODE_PEPPER,
-    honor: { ratePerSession: String(env.HONOR_RATE_PER_SESSION) },
     attendance: { maxDurationMinutes: env.ATTENDANCE_MAX_DURATION_MINUTES },
   };
   const sessionConfig = buildSessionConfig(env);
@@ -93,7 +92,7 @@ export function createApp({
   api.use(csrfProtection(env.FRONTEND_ORIGIN));
   api.use(loadAuth(ctx));
   api.use(authRouter(ctx, limiters, sessionConfig));
-  api.use(adminRouter(ctx, { exporter: sheetsExporter, logger }));
+  api.use(adminRouter(ctx, { exporter: sheetsExporter, logger }, anomalyQueue));
   api.use(tutorRouter(ctx, limiters, anomalyQueue));
   api.use(parentRouter(ctx));
 

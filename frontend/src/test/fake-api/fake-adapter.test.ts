@@ -25,12 +25,12 @@ describe('fake API adapter mengikuti kontrak (data sintetis)', () => {
     if (!first) throw new Error('list kosong');
     await admin.fetchAdminAttendanceDetail(first.id);
     const payroll = await admin.fetchPayrollPreview('2026-10');
-    expect(payroll.total_estimated_amount).toBe('200000');
+    expect(payroll.totals).toEqual({ gross_amount: '200000', admin_fee_amount: '40000', net_amount: '160000' });
     // Total dapat ditelusuri ke rincian sesi.
     const counted = payroll.tutors.flatMap((t) => t.sessions).filter((line) => line.counted);
-    expect(counted.reduce((sum, line) => sum + Number(line.amount), 0)).toBe(200000);
-    const recap = await admin.fetchRecap('2026-10', 'tutor');
-    expect(recap.totals.total_sessions).toBe(9);
+    expect(counted.reduce((sum, line) => sum + Number(line.net_amount), 0)).toBe(160000);
+    const billing = await admin.fetchBilling('2026-10');
+    expect(billing).toMatchObject({ total_sessions: 4, total_amount: '200000' });
     for (const entity of ['tutors', 'students', 'parents', 'subjects'] as const) {
       await admin.fetchMasterData(entity, { page: 1, page_size: 20 });
     }
@@ -53,9 +53,10 @@ describe('fake API adapter mengikuti kontrak (data sintetis)', () => {
     const body = {
       client_submission_id: '00000000-0000-4000-9000-000000000500',
       student_id: options.students[0]?.id ?? '',
-      subject_id: options.subjects[0]?.id ?? '',
+      subject_ids: [options.subjects[0]?.id ?? ''],
       lesson_date: '2026-10-20',
-      duration_minutes: 90,
+      start_time: '16:00',
+      end_time: '17:30',
       learning_material: 'Materi demo',
     };
     const created = await tutor.submitAttendance(body);

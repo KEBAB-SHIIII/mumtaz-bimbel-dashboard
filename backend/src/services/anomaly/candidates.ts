@@ -9,6 +9,11 @@ export const COMPARISON_WINDOW_DAYS = 7;
 /** Batas jumlah sesi pembanding yang dikirim ke detektor (hemat token & PII minimum). */
 export const MAX_COMPARISONS = 30;
 
+const sameSubjects = (a: AnomalySessionSnapshot, b: AnomalySessionSnapshot) =>
+  a.subject_ids.length === b.subject_ids.length && a.subject_ids.every((id, index) => id === b.subject_ids[index]);
+const sharesSubject = (a: AnomalySessionSnapshot, b: AnomalySessionSnapshot) =>
+  a.subject_ids.some((id) => b.subject_ids.includes(id));
+
 const byEarliest = (a: AnomalySessionSnapshot, b: AnomalySessionSnapshot) =>
   a.submitted_at.localeCompare(b.submitted_at) || a.id.localeCompare(b.id);
 
@@ -31,7 +36,7 @@ export function generateCandidates(
     (other) =>
       other.tutor_id === target.tutor_id &&
       other.student_id === target.student_id &&
-      other.subject_id === target.subject_id &&
+      sameSubjects(other, target) &&
       other.lesson_date === target.lesson_date &&
       other.duration_minutes === target.duration_minutes,
   );
@@ -43,12 +48,12 @@ export function generateCandidates(
       default_severity: 'medium',
     });
   } else {
-    // Murid & mapel sama pada tanggal sama yang dicatat tutor lain.
+    // Murid & mapel (beririsan) sama pada tanggal sama yang dicatat tutor lain.
     const sameStudent = earlier.find(
       (other) =>
         other.tutor_id !== target.tutor_id &&
         other.student_id === target.student_id &&
-        other.subject_id === target.subject_id &&
+        sharesSubject(other, target) &&
         other.lesson_date === target.lesson_date,
     );
     if (sameStudent) {
@@ -65,6 +70,15 @@ export function generateCandidates(
     candidates.push({
       finding_type: 'duration_outlier',
       signal: 'duration_above_threshold',
+      related_lesson_session_id: null,
+      default_severity: 'low',
+    });
+  }
+
+  if (target.start_time !== null && target.start_time > config.lateStartAfter) {
+    candidates.push({
+      finding_type: 'late_start',
+      signal: 'start_after_threshold',
       related_lesson_session_id: null,
       default_severity: 'low',
     });

@@ -14,7 +14,7 @@ const StudentsPage = lazy(() => import('../features/admin/master-data/students-p
 const SubjectsPage = lazy(() => import('../features/admin/master-data/subjects-page').then((m) => ({ default: m.SubjectsPage })));
 const TutorsPage = lazy(() => import('../features/admin/master-data/tutors-page').then((m) => ({ default: m.TutorsPage })));
 const AdminPayrollPage = lazy(() => import('../features/admin/payroll/payroll-page').then((m) => ({ default: m.AdminPayrollPage })));
-const RecapPage = lazy(() => import('../features/admin/recap/recap-page').then((m) => ({ default: m.RecapPage })));
+const BillingPage = lazy(() => import('../features/admin/billing/billing-page').then((m) => ({ default: m.BillingPage })));
 const ParentDashboardPage = lazy(() => import('../features/parent/parent-pages').then((m) => ({ default: m.ParentDashboardPage })));
 const ParentHistoryPage = lazy(() => import('../features/parent/parent-pages').then((m) => ({ default: m.ParentHistoryPage })));
 const AttendanceFormPage = lazy(() => import('../features/tutor/attendance-form-page').then((m) => ({ default: m.AttendanceFormPage })));
@@ -37,7 +37,9 @@ export function AppRoutes() {
       <Route path="admin" element={<RequireRole role="admin"><AppShell /></RequireRole>}>
         <Route index element={<AdminDashboardPage />} />
         <Route path="absensi" element={<AttendancePage />} />
-        <Route path="rekap" element={<RecapPage />} />
+        <Route path="penagihan" element={<BillingPage />} />
+        {/* Rekap diganti Penagihan Orang Tua (revisi PM); tautan lama tetap berfungsi. */}
+        <Route path="rekap" element={<Navigate to="/admin/penagihan" replace />} />
         <Route path="honor" element={<AdminPayrollPage />} />
         <Route path="master-data" element={<MasterDataLayout />}>
           <Route index element={<Navigate to="tutor" replace />} />

@@ -194,8 +194,8 @@
     {
       "id": "00000000-0000-4000-8003-000000000003",
       "full_name": "Citra",
-      "grade": "2 SMP",
-      "school_name": "SMP Tunas Mulia",
+      "grade": "5 SD",
+      "school_name": "SD Tunas Mulia",
       "is_active": true
     },
     {
@@ -215,15 +215,15 @@
     {
       "id": "00000000-0000-4000-8003-000000000006",
       "full_name": "Fikri",
-      "grade": "1 SMP",
-      "school_name": "SMP Tunas Mulia",
+      "grade": "4 SD",
+      "school_name": "SD Tunas Mulia",
       "is_active": true
     },
     {
       "id": "00000000-0000-4000-8003-000000000007",
       "full_name": "Gita",
-      "grade": "3 SMP",
-      "school_name": "SMP Bina Insani",
+      "grade": "6 SD",
+      "school_name": "SD Bina Insani",
       "is_active": true
     },
     {
@@ -236,8 +236,8 @@
     {
       "id": "00000000-0000-4000-8003-000000000009",
       "full_name": "Intan",
-      "grade": "1 SMA",
-      "school_name": "SMA Cendekia",
+      "grade": "1 SD",
+      "school_name": "SD Cendekia",
       "is_active": true
     },
     {
@@ -250,8 +250,8 @@
     {
       "id": "00000000-0000-4000-8003-000000000011",
       "full_name": "Kirana",
-      "grade": "2 SMA",
-      "school_name": "SMA Cendekia",
+      "grade": "2 SD",
+      "school_name": "SD Cendekia",
       "is_active": true
     },
     {

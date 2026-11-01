@@ -4,19 +4,26 @@ import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
 import { choosePeriod, loginStaff, renderApp, useFakeBackend } from '../test/render';
 
 describe('dashboard mengarahkan ke data di balik angka', () => {
-  it('Admin: kartu "Menunggu verifikasi" membuka Data Absensi terfilter, dengan aksi "Tinjau"', async () => {
+  it('Admin: empat kartu metrik (omzet kotor per jenjang); kartu sesi membuka Data Absensi periode itu', async () => {
     useFakeBackend();
     renderApp('/login');
     const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
     await screen.findByRole('heading', { name: 'Dashboard', level: 1 });
     await choosePeriod('2026-10');
 
-    await user.click(await screen.findByRole('link', { name: 'Menunggu verifikasi' }));
+    const omzet = (await screen.findByRole('link', { name: 'Total omzet kotor' })).closest('div');
+    if (!omzet) throw new Error('kartu omzet tidak ada');
+    await waitFor(() => expect(omzet).toHaveTextContent(/Rp\s?200\.000/));
+    expect(screen.queryByText('Menunggu verifikasi')).not.toBeInTheDocument();
+    // Grafik dimuat lazy (chunk terpisah) setelah kartu metrik. Grafik pendapatan memakai data asli
+    // (tanpa label), empat grafik lain masih data contoh.
+    expect(await screen.findAllByText('Data contoh')).toHaveLength(4);
+    const revenue = screen.getByRole('heading', { name: 'Pendapatan per bulan' }).closest('section');
+    expect(revenue).not.toHaveTextContent('Data contoh');
+
+    await user.click(screen.getByRole('link', { name: 'Total sesi bulan ini' }));
     await screen.findByRole('heading', { name: 'Data Absensi', level: 1 });
-    expect(screen.getByLabelText('Status')).toHaveValue('pending');
-    const table = await screen.findByRole('table');
-    await waitFor(() => expect(within(table).getAllByRole('button', { name: /^Tinjau sesi/ })).toHaveLength(3));
-    expect(within(table).queryByRole('button', { name: /^Lihat detail sesi/ })).not.toBeInTheDocument();
+    await waitFor(() => expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(10)); // header + 9
   });
 
   it('Tutor: dashboard menampilkan sesi terbaru dan kartu status membuka riwayat terfilter', async () => {

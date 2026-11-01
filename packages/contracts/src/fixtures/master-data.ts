@@ -97,9 +97,9 @@ export const fixtureTutors: FixtureTutor[] = [
 const SCHOOL = {
   harapan: 'SD Harapan Bangsa',
   pelita: 'SD Pelita Ilmu',
-  tunas: 'SMP Tunas Mulia',
-  bina: 'SMP Bina Insani',
-  cendekia: 'SMA Cendekia',
+  tunas: 'SD Tunas Mulia',
+  bina: 'SD Bina Insani',
+  cendekia: 'SD Cendekia',
 } as const;
 
 const student = (id: string, full_name: string, grade: string, school_name: string): FixtureStudent => ({
@@ -113,15 +113,15 @@ const student = (id: string, full_name: string, grade: string, school_name: stri
 export const fixtureStudents: FixtureStudent[] = [
   student(STUDENT_IDS.murid1, 'Aisyah', '3 SD', SCHOOL.harapan),
   student(STUDENT_IDS.murid2, 'Bima', '5 SD', SCHOOL.pelita),
-  student(STUDENT_IDS.murid3, 'Citra', '2 SMP', SCHOOL.tunas),
+  student(STUDENT_IDS.murid3, 'Citra', '5 SD', SCHOOL.tunas),
   student(STUDENT_IDS.dimas, 'Dimas', '4 SD', SCHOOL.harapan),
   student(STUDENT_IDS.eka, 'Eka', '6 SD', SCHOOL.pelita),
-  student(STUDENT_IDS.fikri, 'Fikri', '1 SMP', SCHOOL.tunas),
-  student(STUDENT_IDS.gita, 'Gita', '3 SMP', SCHOOL.bina),
+  student(STUDENT_IDS.fikri, 'Fikri', '4 SD', SCHOOL.tunas),
+  student(STUDENT_IDS.gita, 'Gita', '6 SD', SCHOOL.bina),
   student(STUDENT_IDS.hana, 'Hana', '2 SD', SCHOOL.harapan),
-  student(STUDENT_IDS.intan, 'Intan', '1 SMA', SCHOOL.cendekia),
+  student(STUDENT_IDS.intan, 'Intan', '1 SD', SCHOOL.cendekia),
   student(STUDENT_IDS.joko, 'Joko', '5 SD', SCHOOL.pelita),
-  student(STUDENT_IDS.kirana, 'Kirana', '2 SMA', SCHOOL.cendekia),
+  student(STUDENT_IDS.kirana, 'Kirana', '2 SD', SCHOOL.cendekia),
   student(STUDENT_IDS.lutfi, 'Lutfi', '4 SD', SCHOOL.harapan),
 ];
 

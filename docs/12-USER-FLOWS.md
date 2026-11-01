@@ -97,7 +97,7 @@ Jika model belum dikonfigurasi, gunakan fake detector hanya pada development/tes
 1. Admin memilih periode `YYYY-MM` di `Rekap` atau `Honor Tutor`.
 2. Backend memfilter sesi memakai `lesson_date`, bukan `submitted_at`/`reviewed_at`.
 3. Rekap menampilkan jumlah sesi per status, serta durasi approved; drill-down mengarah ke sesi sumber.
-4. Honor menggunakan hanya sesi approved × tarif tunggal per sesi dari konfigurasi (default Rp50.000, dikunci saat approve; D-24).
+4. Honor hanya dari sesi yang dihitung: tarif les per jenjang dikurangi potongan Admin Rp10.000 per sesi, dikunci saat sesi divalidasi (D-25).
 5. Tutor melihat hasil yang sama dari endpoint terpisah dengan scope dirinya sendiri.
 6. Status pembayaran aktual bukan scope MVP.
 
@@ -126,7 +126,7 @@ Jika model belum dikonfigurasi, gunakan fake detector hanya pada development/tes
 1. Admin mengelola Tutor, Siswa, Orang Tua/Wali/ID Akses, dan Mata Pelajaran. Tidak ada penugasan tutor atau tarif per penugasan: Tutor memilih murid dan mapel sendiri saat absen (D-24).
 2. Tutor baru: Admin mengisi nama + username; sistem membuat password acak yang tampil sekali untuk disampaikan privat. Tutor menggantinya di Profil; lupa password → Admin menekan Reset password.
 3. Untuk parent, Admin menghubungkan satu/multi siswa dan membuat/merotasi ID akses; kode mentah hanya terlihat sekali dan disampaikan secara privat.
-4. Tarif honor tunggal per sesi dikelola lewat konfigurasi server (`HONOR_RATE_PER_SESSION`), bukan Master Data.
+4. Tarif les per jenjang & potongan Admin ada di kode backend (`services/billing/tariff.ts`, hardcode sementara — O-01), bukan Master Data.
 5. Master data yang sudah dipakai dalam sesi dinonaktifkan/diarsipkan, bukan dihapus keras.
 
 ## 11. State dan feedback

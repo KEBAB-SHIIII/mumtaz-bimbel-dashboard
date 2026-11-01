@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import {
   adminAttendanceListQuerySchema,
-  anomalyReviewRequestSchema,
+  adminCreateAttendanceRequestSchema,
+  adminUpdateAttendanceRequestSchema,
   createParentRequestSchema,
   createStudentRequestSchema,
   createSubjectRequestSchema,
@@ -9,8 +10,9 @@ import {
   idParamSchema,
   masterDataListQuerySchema,
   periodQuerySchema,
-  recapQuerySchema,
-  sessionDecisionRequestSchema,
+  billingQuerySchema,
+  invoiceQuerySchema,
+  setValidityRequestSchema,
   sheetExportHistoryQuerySchema,
   sheetExportRequestSchema,
   updateParentRequestSchema,
@@ -21,11 +23,15 @@ import {
 import { authOf, requireRole } from '../auth/middleware.js';
 import { parseInput } from '../lib/validation.js';
 import {
-  decideAttendance,
+  adminCreateAttendance,
+  adminUpdateAttendance,
+  deleteAttendance,
   getAdminAttendanceDetail,
   listAdminAttendance,
+  listAdminAttendanceOptions,
+  setAttendanceValidity,
 } from '../services/attendance/attendance-service.js';
-import { reviewFinding } from '../services/anomaly/anomaly-review.js';
+import type { AnomalyQueue } from '../services/anomaly/anomaly-worker.js';
 import type { ServiceContext } from '../services/context.js';
 import { getAdminDashboardSummary } from '../services/dashboard-service.js';
 import * as parents from '../services/master-data/parents.js';
@@ -33,24 +39,41 @@ import * as students from '../services/master-data/students.js';
 import * as subjects from '../services/master-data/subjects.js';
 import * as tutors from '../services/master-data/tutors.js';
 import { getPayrollPreview } from '../services/payroll-service.js';
-import { getRecap } from '../services/recap-service.js';
+import { getBilling, getStudentBilling } from '../services/billing/billing-service.js';
+import { invoiceFileName, renderInvoicePdf } from '../services/billing/invoice-pdf.js';
 import { exportAttendanceToSheets, listExportHistory, type ExportDeps } from '../services/exports/attendance-export-service.js';
 
 const idOf = (params: unknown) => parseInput(idParamSchema, params).id;
 
 /** Semua route `/admin/*` — role Admin saja (role guard di level router). */
-export function adminRouter(ctx: ServiceContext, exportDeps: ExportDeps) {
+export function adminRouter(ctx: ServiceContext, exportDeps: ExportDeps, anomalyQueue: AnomalyQueue) {
   const router = Router();
   router.use('/admin', requireRole('admin'));
 
-  // --- Dashboard, rekap, honor --------------------------------------------
+  // --- Dashboard, penagihan, honor --------------------------------------------
   router.get('/admin/dashboard/summary', async (req, res) => {
     const { period } = parseInput(periodQuerySchema, req.query);
     res.json(await getAdminDashboardSummary(ctx, period));
   });
 
-  router.get('/admin/recap', async (req, res) => {
-    res.json(await getRecap(ctx, parseInput(recapQuerySchema, req.query)));
+  /** Penagihan Orang Tua: sesi yang dihitung per murid + total tagihan (menggantikan Rekap). */
+  router.get('/admin/billing', async (req, res) => {
+    res.json(await getBilling(ctx, parseInput(billingQuerySchema, req.query)));
+  });
+
+  /** Invoice PDF satu murid untuk satu periode. */
+  router.get('/admin/billing/:id/invoice.pdf', async (req, res) => {
+    const { period } = parseInput(invoiceQuerySchema, req.query);
+    const student = await getStudentBilling(ctx, idOf(req.params), period);
+    const pdf = await renderInvoicePdf({ period, student, now: ctx.now() });
+    res
+      .status(200)
+      .set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${invoiceFileName(period, student.student_name)}"`,
+        'Cache-Control': 'no-store',
+      })
+      .send(pdf);
   });
 
   router.get('/admin/payroll/preview', async (req, res) => {
@@ -77,15 +100,32 @@ export function adminRouter(ctx: ServiceContext, exportDeps: ExportDeps) {
     res.json(await getAdminAttendanceDetail(ctx, idOf(req.params)));
   });
 
-  router.patch('/admin/attendance/:id/decision', async (req, res) => {
-    const input = parseInput(sessionDecisionRequestSchema, req.body);
-    res.json(await decideAttendance(ctx, authOf(req).userId, idOf(req.params), input));
+  router.get('/admin/attendance-options', async (_req, res) => {
+    res.json(await listAdminAttendanceOptions(ctx));
   });
 
-  /** Review temuan anomali — terpisah dari keputusan sesi; status sesi tidak berubah. */
-  router.patch('/admin/anomalies/:id/review', async (req, res) => {
-    const input = parseInput(anomalyReviewRequestSchema, req.body);
-    res.json(await reviewFinding(ctx, authOf(req).userId, idOf(req.params), input));
+  /** CRUD penuh Admin (revisi PM): koreksi bila AI salah label atau data keliru. */
+  router.post('/admin/attendance', async (req, res) => {
+    const session = await adminCreateAttendance(ctx, parseInput(adminCreateAttendanceRequestSchema, req.body));
+    // Sesi catatan Admin divalidasi AI seperti submit Tutor.
+    anomalyQueue.enqueue(session.id);
+    res.status(201).json(session);
+  });
+
+  router.put('/admin/attendance/:id', async (req, res) => {
+    const input = parseInput(adminUpdateAttendanceRequestSchema, req.body);
+    res.json(await adminUpdateAttendance(ctx, idOf(req.params), input));
+  });
+
+  router.delete('/admin/attendance/:id', async (req, res) => {
+    await deleteAttendance(ctx, idOf(req.params));
+    res.status(204).end();
+  });
+
+  /** Koreksi label validitas AI / pilih status approval sesi Perlu revisi. */
+  router.patch('/admin/attendance/:id/validity', async (req, res) => {
+    const input = parseInput(setValidityRequestSchema, req.body);
+    res.json(await setAttendanceValidity(ctx, authOf(req).userId, idOf(req.params), input));
   });
 
   // --- Master Data: tanpa DELETE; gunakan soft deactivation (`is_active`) ----

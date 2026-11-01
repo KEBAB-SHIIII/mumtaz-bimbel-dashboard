@@ -189,21 +189,7 @@ Tutor only. Backend mengambil tutor dari session, bukan dari query yang dikirim 
 
 Tutor only; hanya jika sesi milik tutor itu berstatus `revision_requested`. Field revisi yang diizinkan adalah `student_id` dan `subject_id` (murid/mapel aktif; Tutor boleh memperbaiki pilihan yang salah), `lesson_date`, `duration_minutes`, `learning_material`, `learning_notes`, dan `next_focus`. Sesi tutor lain tidak dapat dibuka atau diambil alih (`404`). Identitas tutor, status, tarif/snapshot, catatan admin, dan metadata review tidak dapat diubah dari payload Tutor. Setelah resubmit record yang sama kembali ke `pending` dan `submitted_at` diperbarui ke waktu pengiriman payload terbaru; kosongkan `reviewed_by_user_id`, `reviewed_at`, dan `admin_note` karena metadata review baseline hanya berlaku untuk payload saat ini (riwayat review penuh tidak disimpan pada MVP). Reset `anomaly_analysis_status` ke `pending`, tandai finding dari payload lama `superseded` dengan `review_note="superseded_by_revision"`, lalu jadwalkan analisis ulang satu kali. Untuk retry setelah respons hilang: jika sesi sudah `pending` dan semua field editable sama dengan payload yang baru saja diterima, kembalikan `200` untuk record yang sama tanpa mengubah timestamp atau menjadwalkan analisis ulang; jika state/payload tidak cocok, kembalikan `409 SESSION_STATE_CONFLICT`. Terapkan perubahan status secara atomik/conditional di database.
 
-Working default O-15: baseline **tidak menyediakan endpoint generik untuk Admin mengubah field sesi atau menghapus sesi**; Admin hanya melakukan keputusan review. Tutor mengoreksi sesi melalui `revision_requested`. `approved`/`rejected` terminal tanpa reopen adalah working default, bukan keputusan bisnis yang sudah dikonfirmasi. Jika UMKM memerlukan edit langsung/reopen/delete, ubah API, state machine, dan audit history bersama-sama.
-
-### `PATCH /admin/attendance/:id/decision`
-
-Admin only. Endpoint hanya menerima sesi berstatus `pending`; `approved` dan `rejected` terminal adalah working default MVP (O-15, belum dikonfirmasi sebagai kebijakan bisnis). Sesi `revision_requested` menunggu koreksi Tutor dan tidak dapat diputuskan ulang sebelum Tutor mengirim revisi yang mengembalikan sesi ke `pending`. Untuk koreksi setelah keputusan final, jangan mengubah baris diam-diam; konfirmasi kebutuhan reopen/correction dan tambahkan alur audit bila disetujui. Request:
-
-```json
-{ "decision": "approved", "admin_note": "Catatan sudah diperiksa." }
-```
-
-`decision`: `approved`, `revision_requested`, atau `rejected`. Alasan wajib untuk revisi/penolakan. Backend menyimpan Admin dan timestamp keputusan. Finding anomali tidak menggantikan keputusan Admin.
-
-### `PATCH /admin/anomalies/:id/review`
-
-Admin only. Menerima keputusan manual `confirmed_anomaly`, `false_positive`, atau `resolved`, beserta `review_note`. `superseded` bukan nilai yang boleh dikirim Admin; sistem menggunakannya saat Tutor merevisi payload. Review anomaly tidak otomatis mengubah status sesi; Admin membuat keputusan sesi melalui endpoint keputusan absensi terpisah.
+> **D-25 (revisi PM, Stand Up #6):** keputusan review per baris oleh Admin dihapus. `PATCH /admin/attendance/:id/decision` dan `PATCH /admin/anomalies/:id/review` tidak ada lagi. Validitas data dilabeli AI dan dapat dikoreksi Admin; Admin juga mendapat CRUD penuh atas sesi. Lihat "Detail implementasi D-25" di bawah.
 
 ## 6. Riwayat pembelajaran Orang Tua
 
@@ -217,17 +203,17 @@ Parent only. Backend memeriksa relasi parent-child setiap request. Hanya kembali
 
 ## 7. Rekap dan Honor
 
-### `GET /admin/recap?period=2026-10&group_by=tutor`
+### `GET /admin/billing?period=2026-10&student_id=`
 
-Admin only. `group_by`: `tutor`, `student`, `subject`. Response berisi jumlah sesi per status, durasi approved, dan drill-down/session IDs sesuai izin.
+Admin only. Menggantikan `GET /admin/recap` (D-25): tagihan orang tua per murid. Lihat "Detail implementasi D-25 — Penagihan Orang Tua".
 
 ### `GET /admin/payroll/preview?period=2026-10`
 
-Admin only. Mengembalikan estimasi honor per tutor, jumlah sesi approved, nilai per sesi, jumlah sesi yang pending/revision/rejected (tidak masuk nominal). Memakai **tarif tunggal per sesi** dari konfigurasi `HONOR_RATE_PER_SESSION` (default Rp50.000; D-24) yang dikunci ke `lesson_sessions.rate_amount_snapshot` saat sesi disetujui, bukan konstanta tersebar. Hanya sesi approved dihitung. Jangan menampilkan status sudah dibayar tanpa fitur payment tracking.
+Admin only. Per tutor: `counted_sessions`, `not_counted_sessions`, `gross_amount` (subtotal tarif les), `admin_fee_amount` (potongan Admin), `net_amount` (pendapatan bersih tutor), dan rincian sesi (`gross_amount`/`admin_fee`/`net_amount` per sesi). `totals`: `gross_amount` (pendapatan kotor), `admin_fee_amount` (pendapatan bersih bimbel), `net_amount` (gaji yang harus dibayarkan). Nominal dari snapshot yang dikunci saat sesi dihitung (D-25). Jangan menampilkan status sudah dibayar tanpa fitur payment tracking.
 
 ### `GET /tutor/me/payroll?period=2026-10`
 
-Tutor only. Perhitungan yang sama dari service backend, terbatas ke tutor login. Tampilkan nominal sebagai estimasi.
+Tutor only. Perhitungan yang sama, terbatas ke tutor login, dan HANYA nominal bersih (`TutorPayrollResponse`: `counted_sessions`, `not_counted_sessions`, `net_amount`, sesi dengan `net_amount`). Tarif kotor dan potongan Admin tidak pernah dikirim ke Tutor (D-25). `GET /tutor/dashboard/summary` → `honor.estimated_amount` = pendapatan bersih.
 
 ## 8. Ekspor laporan ke Google Sheets
 
@@ -352,6 +338,28 @@ Schema Zod di `packages/contracts/src/` adalah bentuk implementasi kontrak ini. 
 
 - Endpoint `/admin/tutor-assignments*`, `/admin/tutor-rates*`, dan `GET /tutor/me/assignments` dihapus. Tutor memilih murid dan mata pelajaran sendiri lewat `GET /tutor/attendance-options` (semua murid & mapel aktif).
 - `POST /tutor/attendance` dan `PATCH /tutor/me/attendance/:id` memakai `student_id` + `subject_id` menggantikan `assignment_id`. Respons sesi memuat `tutor_id/student_id/subject_id` langsung (tanpa `assignment_id`).
-- Honor: tarif tunggal `HONOR_RATE_PER_SESSION` (default 50000) dikunci ke `rate_amount_snapshot` saat approve; mengganti konfigurasi tidak mengubah sesi yang sudah disetujui. Field `is_demo_assumption`/`rate_type` dihapus dari kontrak payroll dan dashboard.
+- Honor (digantikan D-25): tarif tunggal `HONOR_RATE_PER_SESSION` (default 50000) dikunci ke `rate_amount_snapshot` saat approve; mengganti konfigurasi tidak mengubah sesi yang sudah disetujui. Field `is_demo_assumption`/`rate_type` dihapus dari kontrak payroll dan dashboard.
 - `POST /admin/tutors` tanpa `initial_password` → `{ tutor, temporary_password }` (sekali tampil); `POST /admin/tutors/:id/reset-password` baru.
 - Candidate anomali: sinyal `same_tutor_student_subject_date_duration` menggantikan `same_assignment_date_duration`.
+
+### Detail implementasi D-25 — validitas AI, jam les, multi-mapel, CRUD Admin
+
+- **Payload sesi** (`POST /tutor/attendance`, `PATCH /tutor/me/attendance/:id`, `POST/PUT /admin/attendance`): `subject_ids` (1–3 mapel unik, tarif tetap per sesi), `start_time` + `end_time` (`HH:MM`, WIB, selesai > mulai pada hari yang sama). `duration_minutes` TIDAK diterima dari body; backend menghitungnya dari jam. `subject_id` tunggal ditolak.
+- **Respons sesi**: `subject_ids`, `subject_name` (nama digabung koma, urut abjad), `start_time`/`end_time` (`null` untuk sesi lama), `validity` (`valid|needs_revision|rejected|null`), `approval_status` (`pending|approved|rejected`, hanya untuk `needs_revision`), `validity_reason`.
+- **Validitas** (setelah commit, asynchronous): rule engine membentuk kandidat (duplikat persis, murid+mapel+tanggal sama oleh tutor lain, durasi > `ANOMALY_DURATION_OUTLIER_MINUTES`=180, mulai setelah `ANOMALY_LATE_START_AFTER`=21:00). Tanpa kandidat → **Valid** tanpa memanggil model. Ada kandidat → LLM (baseline Gemini, akan diganti model tim AI) memberi label + alasan. Provider tidak ada/gagal → sesi tetap `pending` (menunggu validasi), Admin menetapkan manual. Hasil AI hanya ditulis bila sesi masih `pending`.
+- **Status efektif** `status` diturunkan dari validitas: `valid → approved`, `rejected → rejected`, `needs_revision → revision_requested | approved | rejected` sesuai approval. Hanya `approved` yang dihitung (honor, tagihan, Progress Anak).
+- `PATCH /admin/attendance/:id/validity` body `{ validity, approval? (wajib & hanya untuk needs_revision), admin_note? }` → `200 AdminAttendanceDetail`. Koreksi label AI atau status approval hasil banding via WA; berlaku dari status apa pun.
+- `GET /admin/attendance-options` → murid & mapel aktif + tutor aktif (form Admin). `POST /admin/attendance` (tutor_id + payload) → `201`, divalidasi AI seperti submit Tutor. `PUT /admin/attendance/:id` mengoreksi data tanpa mengubah validitas (snapshot dihitung ulang bila sesi dihitung). `DELETE /admin/attendance/:id` → `204`, menghapus sesi + temuannya (rujukan temuan sesi lain dilepas).
+- Tutor hanya dapat merevisi sesi `needs_revision` dengan approval `pending`; revisi → `pending` + analisis ulang. Sesi Ditolak tidak dapat diedit Tutor.
+- **Tarif** (`services/billing/tariff.ts`): per jam SD 1-3 Rp50.000, SD 4-6 Rp70.000; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×. Potongan Admin Rp10.000 flat per sesi. Saat dihitung, `rate_amount_snapshot` (kotor) & `admin_fee_snapshot` dikunci. Kelas siswa dibatasi `1 SD`–`6 SD`. `HONOR_RATE_PER_SESSION` dihapus.
+- `GET /admin/dashboard/summary` → `{ period, active_tutors, students_with_sessions, total_sessions, gross_revenue }` (omzet kotor = Σ tarif sesi yang dihitung).
+- Filter `GET /admin/attendance` menambah `validity` (`valid|needs_revision|rejected|unvalidated`). Ekspor Google Sheets dipindah ke halaman Data Absensi; kolom "mata pelajaran" berisi nama mapel digabung koma.
+- Migration 0005–0006: tabel `lesson_session_subjects`, kolom `start_time/end_time/validity/validity_reason/admin_fee_snapshot`, finding `late_start`; data lama dipertahankan (status lama → validitas).
+
+
+### Detail implementasi D-25 — Penagihan Orang Tua (menggantikan Rekap)
+
+- `GET /admin/recap` dihapus. Penggantinya `GET /admin/billing?period=&student_id=` → `BillingResponse { period, students[], total_sessions, total_amount, warnings[] }`. Per murid: `student_name`, `grade`, `school_name`, `parent_names[]`, `sessions`, `total_amount`, `lines[]` (`lesson_date`, `start_time`/`end_time`, `tutor_name`, `subject_name`, `duration_minutes`, `amount` = tarif les sesi itu).
+- Hanya sesi yang dihitung (`status=approved`: Valid, atau Perlu revisi yang Disetujui) dengan snapshot tarif. Sesi dihitung tanpa tarif tidak ditagih dan muncul di `warnings`.
+- `GET /admin/billing/:student_id/invoice.pdf?period=` → `200 application/pdf` (`Content-Disposition: attachment; filename="tagihan-YYYY-MM-<murid>.pdf"`, `Cache-Control: no-store`), dibuat backend dengan `pdfkit` (A4, nomor invoice `INV-YYYYMM-XXXXXX`, rincian sesi, total, catatan tarif). Murid tanpa sesi ditagih pada periode → `404`.
+- Omzet kotor di dashboard = Σ snapshot tarif sesi yang dihitung = total tagihan periode yang sama.

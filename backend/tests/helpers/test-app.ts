@@ -87,6 +87,14 @@ export class TestClient {
     return this.withHeaders(this.agent.patch(`${API}${path}`)).send(body ?? {});
   }
 
+  put(path: string, body?: object) {
+    return this.withHeaders(this.agent.put(`${API}${path}`)).send(body ?? {});
+  }
+
+  delete(path: string) {
+    return this.withHeaders(this.agent.delete(`${API}${path}`));
+  }
+
   private withHeaders(req: request.Test) {
     return req.set('Origin', ORIGIN).set('X-CSRF-Token', this.csrf);
   }

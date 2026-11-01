@@ -68,6 +68,10 @@ export type TutorCredentialIssued = z.infer<typeof tutorCredentialIssuedSchema>;
 
 // --- Student -------------------------------------------------------------
 
+/** Kelas yang didukung: mentok di SD kelas 6 (keputusan owner); tarif per jenjang SD 1-3 dan SD 4-6. */
+export const GRADE_OPTIONS = ['1 SD', '2 SD', '3 SD', '4 SD', '5 SD', '6 SD'] as const;
+export const gradeSchema = z.enum(GRADE_OPTIONS, { error: 'Pilih kelas 1–6 SD' });
+
 export const studentSchema = z.object({
   id: uuidSchema,
   full_name: z.string(),
@@ -80,14 +84,14 @@ export type Student = z.infer<typeof studentSchema>;
 
 export const createStudentRequestSchema = z.strictObject({
   full_name: requiredText(NAME_MAX),
-  grade: requiredText(30),
+  grade: gradeSchema,
   school_name: requiredText(NAME_MAX),
 });
 export type CreateStudentRequest = z.infer<typeof createStudentRequestSchema>;
 
 export const updateStudentRequestSchema = z.strictObject({
   full_name: requiredText(NAME_MAX).optional(),
-  grade: requiredText(30).optional(),
+  grade: gradeSchema.optional(),
   school_name: requiredText(NAME_MAX).optional(),
   is_active: z.boolean().optional(),
 });
@@ -188,3 +192,9 @@ export const attendanceOptionsSchema = z.object({
   subjects: z.array(z.object({ id: uuidSchema, name: z.string() })),
 });
 export type AttendanceOptions = z.infer<typeof attendanceOptionsSchema>;
+
+/** `GET /admin/attendance-options` — pilihan form sesi Admin (CRUD penuh): + tutor aktif. */
+export const adminAttendanceOptionsSchema = attendanceOptionsSchema.extend({
+  tutors: z.array(z.object({ id: uuidSchema, full_name: z.string() })),
+});
+export type AdminAttendanceOptions = z.infer<typeof adminAttendanceOptionsSchema>;

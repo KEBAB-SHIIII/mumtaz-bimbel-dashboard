@@ -6,7 +6,7 @@ Dokumen ini menjadi acuan skema Neon PostgreSQL + Drizzle untuk MVP. Nama implem
 
 - Setiap submit tutor membuat satu record `lesson_sessions` dengan status awal `pending`.
 - Admin memeriksa sesi sebelum sesi dihitung ke estimasi honor.
-- Honor memakai **tarif tunggal Rp50.000 per sesi** dari konfigurasi `HONOR_RATE_PER_SESSION` (D-24), dikunci ke `lesson_sessions.rate_amount_snapshot` saat sesi disetujui. Tidak ada tabel penugasan atau tarif; Tutor memilih murid & mapel sendiri.
+- Honor & tagihan memakai tarif les per jenjang (SD 1-3 Rp50.000/jam, SD 4-6 Rp70.000/jam; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×) dikurangi potongan Admin Rp10.000 per sesi, dikunci ke `rate_amount_snapshot`/`admin_fee_snapshot` saat sesi dihitung (D-25). Tidak ada tabel penugasan atau tarif; Tutor memilih murid & 1–3 mapel sendiri (`lesson_session_subjects`).
 - Materi pembelajaran disimpan di database dan dipakai di Riwayat Mengajar serta Progress Anak. Materi tidak masuk ekspor standar delapan kolom.
 - Modul anomali mengklasifikasikan kandidat anomali, termasuk dugaan duplikasi. Hasil AI tidak otomatis menolak sesi atau mengubah honor.
 - Ekspor Google Sheets hanya dilakukan atas permintaan Admin, per bulan, memakai delapan kolom mentah yang diminta UMKM.
@@ -132,7 +132,7 @@ erDiagram
 - `parent_students` membatasi siswa yang boleh dilihat akun orang tua.
 - `users.username` dan `users.password_hash` digunakan untuk login Admin/Tutor. Orang tua hanya menggunakan `parent_access_code` yang menjadi kode rahasia akses; database menyimpan digest-nya, bukan kode mentah.
 - Kode akses orang tua bukan `users.id`, ID siswa, NPM publik, nomor telepon, atau kode berurutan. Kode harus acak, sulit ditebak, hanya dibagikan privat, dapat dirotasi, dan dilindungi rate limit.
-- Tidak ada tabel tarif. Tarif honor tunggal per sesi (`HONOR_RATE_PER_SESSION`) berasal dari konfigurasi; tarif resmi UMKM masih O-01.
+- Tidak ada tabel tarif. Tarif per jenjang & potongan Admin ada di `services/billing/tariff.ts`; tarif resmi UMKM masih O-01.
 - `lesson_sessions.rate_amount_snapshot` ditetapkan saat sesi disetujui dari tarif konfigurasi; snapshot menjaga histori honor tidak berubah saat tarif konfigurasi diganti.
 - `anomaly_flags` menyimpan hasil klasifikasi/indikasi anomali, termasuk `suspected_duplicate`. Status proses agregat disimpan di `lesson_sessions.anomaly_analysis_status`; `anomaly_flags.review_status` memiliki nilai `pending_review`, `confirmed_anomaly`, `false_positive`, `resolved`, dan `superseded` (khusus ditetapkan sistem saat Tutor merevisi payload). Temuan tidak mengganti `lesson_sessions.status` dan harus ditinjau Admin.
 - `sheet_export_runs` mencatat tindakan ekspor Admin. Tidak ada status sinkronisasi per sesi karena Sheets bukan tujuan submit live.
@@ -223,7 +223,8 @@ PK gabungan (`parent_user_id`, `student_id`) mencegah relasi ganda. Satu akun pa
 | `next_focus` | TEXT NULL | Fokus belajar berikutnya. |
 | `status` | CHECK `pending`, `approved`, `revision_requested`, `rejected`; default `pending` | Siklus review admin. |
 | `anomaly_analysis_status` | CHECK `pending`, `completed`, `failed`, `not_evaluated`; default `pending` | Status agregat analisis untuk sesi. Ini sumber status proses yang otoritatif; tabel `anomaly_flags` hanya menyimpan finding yang dihasilkan. |
-| `rate_amount_snapshot` | NUMERIC NULL | Tarif tunggal per sesi (`HONOR_RATE_PER_SESSION`) yang dikunci saat sesi disetujui; NULL untuk sesi belum approved. |
+| `rate_amount_snapshot` | NUMERIC NULL | Tarif les (kotor) per jenjang yang dikunci saat sesi dihitung (approved); NULL selain itu. |
+| `admin_fee_snapshot` | NUMERIC NULL | Potongan Admin per sesi yang dikunci bersamaan; honor tutor = `rate_amount_snapshot − admin_fee_snapshot`. |
 | `reviewed_by_user_id` | UUID FK → `users.id` NULL | Admin yang meninjau payload sesi saat ini; direset ke NULL saat Tutor mengirim revisi payload baru. Full audit history tidak disimpan pada baseline. |
 | `submitted_at` | TIMESTAMPTZ NOT NULL | Waktu submit payload sesi yang saat ini tersimpan; diperbarui saat Tutor mengirim revisi. Baseline tidak menyimpan seluruh sejarah submit. |
 | `reviewed_at` | TIMESTAMPTZ NULL | Waktu review terakhir atas payload saat ini; direset ke NULL ketika payload direvisi oleh Tutor. |

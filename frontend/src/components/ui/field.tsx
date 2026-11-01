@@ -132,3 +132,67 @@ export function describedBy(id: string, error?: string, hint?: string): string |
   if (hint) return `${id}-hint`;
   return undefined;
 }
+
+interface CheckboxGroupFieldProps {
+  id: string;
+  legend: string;
+  required?: boolean;
+  hint?: string | undefined;
+  error?: string | undefined;
+  options: { value: string; label: string }[];
+  value: readonly string[];
+  onChange: (value: string[]) => void;
+  /** Batas jumlah pilihan; pilihan lain dinonaktifkan saat batas tercapai. */
+  max?: number;
+  className?: string;
+}
+
+/** Pilihan ganda (checkbox) dalam `fieldset` + `legend`, dengan penanda wajib, hint, dan error. */
+export function CheckboxGroupField({ id, legend, required = false, hint, error, options, value, onChange, max, className }: CheckboxGroupFieldProps) {
+  const full = max !== undefined && value.length >= max;
+  const toggle = (option: string, checked: boolean) =>
+    onChange(checked ? [...value, option] : value.filter((selected) => selected !== option));
+
+  return (
+    <fieldset className={cn('flex flex-col gap-1.5', className)} aria-describedby={describedBy(id, error, hint)} aria-invalid={Boolean(error) || undefined}>
+      <legend className="mb-1.5 text-sm font-medium text-text">
+        {legend} <span className="font-normal text-muted">{required ? '(wajib)' : '(opsional)'}</span>
+      </legend>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const checked = value.includes(option.value);
+          return (
+            <label
+              key={option.value}
+              className={cn(
+                'inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm transition-colors',
+                'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus-ring',
+                checked ? 'border-primary bg-surface-muted font-medium text-text' : 'border-border text-text hover:bg-surface-muted',
+                !checked && full && 'cursor-not-allowed opacity-50',
+              )}
+            >
+              <input
+                type="checkbox"
+                className="size-4 accent-[var(--color-primary)]"
+                checked={checked}
+                disabled={!checked && full}
+                onChange={(event) => toggle(option.value, event.target.checked)}
+              />
+              {option.label}
+            </label>
+          );
+        })}
+      </div>
+      {hint && !error && (
+        <p id={`${id}-hint`} className="text-xs text-muted">
+          {hint}
+        </p>
+      )}
+      {error && (
+        <p id={`${id}-error`} role="alert" className="text-xs text-danger">
+          {error}
+        </p>
+      )}
+    </fieldset>
+  );
+}

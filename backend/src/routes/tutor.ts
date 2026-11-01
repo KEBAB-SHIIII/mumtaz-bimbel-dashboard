@@ -22,7 +22,7 @@ import { changePassword } from '../services/auth-service.js';
 import type { AnomalyQueue } from '../services/anomaly/anomaly-worker.js';
 import type { ServiceContext } from '../services/context.js';
 import { getTutorDashboardSummary } from '../services/dashboard-service.js';
-import { getPayrollPreview } from '../services/payroll-service.js';
+import { getTutorPayroll } from '../services/payroll-service.js';
 
 /**
  * Semua route `/tutor/*` — role Tutor saja. Identitas tutor SELALU dari session,
@@ -71,7 +71,7 @@ export function tutorRouter(ctx: ServiceContext, limiters: AuthRateLimiters, ano
 
   router.get('/tutor/me/payroll', async (req, res) => {
     const { period } = parseInput(periodQuerySchema, req.query);
-    res.json(await getPayrollPreview(ctx, period, { tutorId: tutorIdOf(req) }));
+    res.json(await getTutorPayroll(ctx, tutorIdOf(req), period));
   });
 
   /** Tab Profil: ganti password → session diregenerasi, session lain dicabut. */

@@ -11,6 +11,7 @@ import {
   pgTable,
   primaryKey,
   text,
+  time,
   timestamp,
   uniqueIndex,
   uuid,
@@ -132,17 +133,22 @@ export const lessonSessions = pgTable(
     student_id: uuid('student_id')
       .notNull()
       .references(() => students.id, { onDelete: 'restrict' }),
-    subject_id: uuid('subject_id')
-      .notNull()
-      .references(() => subjects.id, { onDelete: 'restrict' }),
     lesson_date: date('lesson_date', { mode: 'string' }).notNull(),
+    /** Jam mulai/selesai les (WIB); `null` hanya untuk sesi lama sebelum jam dicatat. Durasi dihitung backend. */
+    start_time: time('start_time'),
+    end_time: time('end_time'),
     duration_minutes: integer('duration_minutes').notNull(),
     learning_material: varchar('learning_material', { length: 255 }).notNull(),
     learning_notes: text('learning_notes'),
     next_focus: text('next_focus'),
     status: varchar('status', { length: 24 }).notNull().default('pending'),
     anomaly_analysis_status: varchar('anomaly_analysis_status', { length: 16 }).notNull().default('pending'),
+    /** Label validitas data dari AI (atau koreksi Admin); `null` = belum divalidasi. */
+    validity: varchar('validity', { length: 16 }),
+    validity_reason: text('validity_reason'),
+    /** Snapshot saat sesi dihitung (approved): tarif les kotor dan potongan Admin per sesi. */
     rate_amount_snapshot: money('rate_amount_snapshot'),
+    admin_fee_snapshot: money('admin_fee_snapshot'),
     reviewed_by_user_id: uuid('reviewed_by_user_id').references(() => users.id, { onDelete: 'restrict' }),
     submitted_at: timestamp('submitted_at', { withTimezone: true }).notNull().defaultNow(),
     reviewed_at: timestamp('reviewed_at', { withTimezone: true }),
@@ -167,21 +173,40 @@ export const lessonSessions = pgTable(
       sql`${t.anomaly_analysis_status} IN ('pending', 'completed', 'failed', 'not_evaluated')`,
     ),
     check('lesson_sessions_duration_check', sql`${t.duration_minutes} > 0`),
+    check(
+      'lesson_sessions_validity_check',
+      sql`${t.validity} IS NULL OR ${t.validity} IN ('valid', 'needs_revision', 'rejected')`,
+    ),
+    check(
+      'lesson_sessions_time_range_check',
+      sql`(${t.start_time} IS NULL AND ${t.end_time} IS NULL) OR (${t.start_time} IS NOT NULL AND ${t.end_time} IS NOT NULL AND ${t.end_time} > ${t.start_time})`,
+    ),
     check('lesson_sessions_rate_snapshot_check', sql`${t.rate_amount_snapshot} IS NULL OR ${t.rate_amount_snapshot} > 0`),
-    // Snapshot tarif hanya untuk sesi approved (honor approved-only).
+    check('lesson_sessions_admin_fee_snapshot_check', sql`${t.admin_fee_snapshot} IS NULL OR ${t.admin_fee_snapshot} >= 0`),
+    // Snapshot nominal hanya untuk sesi approved (yang dihitung ke honor & tagihan).
     check(
       'lesson_sessions_snapshot_approved_check',
-      sql`${t.rate_amount_snapshot} IS NULL OR ${t.status} = 'approved'`,
+      sql`(${t.rate_amount_snapshot} IS NULL AND ${t.admin_fee_snapshot} IS NULL) OR ${t.status} = 'approved'`,
     ),
-    // Revisi/penolakan wajib alasan Admin.
-    check(
-      'lesson_sessions_decision_note_check',
-      sql`${t.status} NOT IN ('revision_requested', 'rejected') OR length(btrim(coalesce(${t.admin_note}, ''))) > 0`,
-    ),
-    check(
-      'lesson_sessions_review_metadata_check',
-      sql`${t.status} = 'pending' OR (${t.reviewed_by_user_id} IS NOT NULL AND ${t.reviewed_at} IS NOT NULL)`,
-    ),
+    // Keputusan (oleh AI atau Admin) selalu bertanggal; `reviewed_by_user_id` null = diputuskan AI.
+    check('lesson_sessions_review_metadata_check', sql`${t.status} = 'pending' OR ${t.reviewed_at} IS NOT NULL`),
+  ],
+);
+
+/** Mata pelajaran per sesi: satu sesi bisa mencakup beberapa mapel (revisi PM), tarif tetap per sesi. */
+export const lessonSessionSubjects = pgTable(
+  'lesson_session_subjects',
+  {
+    lesson_session_id: uuid('lesson_session_id')
+      .notNull()
+      .references(() => lessonSessions.id, { onDelete: 'cascade' }),
+    subject_id: uuid('subject_id')
+      .notNull()
+      .references(() => subjects.id, { onDelete: 'restrict' }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.lesson_session_id, t.subject_id] }),
+    index('lesson_session_subjects_subject_idx').on(t.subject_id),
   ],
 );
 
@@ -212,7 +237,7 @@ export const anomalyFlags = pgTable(
     index('anomaly_flags_review_status_idx').on(t.review_status),
     check(
       'anomaly_flags_finding_type_check',
-      sql`${t.finding_type} IN ('suspected_duplicate', 'duration_outlier', 'unusual_pattern')`,
+      sql`${t.finding_type} IN ('suspected_duplicate', 'duration_outlier', 'late_start', 'unusual_pattern')`,
     ),
     check('anomaly_flags_severity_check', sql`${t.severity} IN ('low', 'medium', 'high')`),
     check(

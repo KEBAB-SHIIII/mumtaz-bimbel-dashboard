@@ -29,7 +29,10 @@ function main() {
         {
           db: database.db,
           detector,
-          config: { durationOutlierMinutes: env.ANOMALY_DURATION_OUTLIER_MINUTES },
+          config: {
+            durationOutlierMinutes: env.ANOMALY_DURATION_OUTLIER_MINUTES,
+            lateStartAfter: env.ANOMALY_LATE_START_AFTER,
+          },
           timeoutMs: env.ANOMALY_PROVIDER_TIMEOUT_MS,
           logger,
         },

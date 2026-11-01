@@ -1,62 +1,82 @@
 import { z } from 'zod';
 import { isoDateSchema, moneyStringSchema, uuidSchema } from './common.js';
-import { sessionStatusSchema } from './enums.js';
+import { approvalStatusSchema, sessionStatusSchema, sessionValiditySchema } from './enums.js';
 import { periodSchema } from './period.js';
 
-const statusCountsFields = {
-  approved_sessions: z.number().int().min(0),
-  pending_sessions: z.number().int().min(0),
-  revision_requested_sessions: z.number().int().min(0),
-  rejected_sessions: z.number().int().min(0),
-};
-
-/** Rincian per nilai tarif snapshot (tarif tunggal per sesi, D-24), agar nominal dapat ditelusuri ke sesi. */
-export const payrollRateLineSchema = z.object({
-  rate_amount: moneyStringSchema,
-  sessions: z.number().int().min(1),
-  subtotal: moneyStringSchema,
-  session_ids: z.array(uuidSchema),
-});
-export type PayrollRateLine = z.infer<typeof payrollRateLineSchema>;
-
 /**
- * Satu sesi sumber kalkulasi (docs/15 §2.4, §3.4). Semua sesi tutor pada periode
- * ikut ditampilkan; hanya yang `counted=true` (approved + tarif snapshot) masuk total.
+ * Honor (revisi PM, D-25): tarif les per sesi (kotor) dikurangi potongan Admin per sesi = pendapatan
+ * bersih tutor. Hanya sesi yang dihitung (`status=approved`) dengan snapshot tarif yang bernominal.
  */
-export const payrollSessionLineSchema = z.object({
+const sessionLineBase = {
   session_id: uuidSchema,
   lesson_date: isoDateSchema,
   student_name: z.string(),
   subject_name: z.string(),
   duration_minutes: z.number().int(),
   status: sessionStatusSchema,
-  /** Tarif snapshot saat approve; `null` bila belum approved atau tarif tidak ada. */
-  rate_amount: moneyStringSchema.nullable(),
-  /** Nilai sesi yang dihitung; `null` bila tidak masuk total. */
-  amount: moneyStringSchema.nullable(),
+  validity: sessionValiditySchema.nullable(),
+  approval_status: approvalStatusSchema.nullable(),
   counted: z.boolean(),
+};
+
+/** Baris rincian sesi untuk Admin (crosscheck dengan tutor): tarif kotor, potongan, bersih. */
+export const payrollSessionLineSchema = z.object({
+  ...sessionLineBase,
+  /** Tarif les sesi (kotor); `null` bila tidak dihitung. */
+  gross_amount: moneyStringSchema.nullable(),
+  admin_fee: moneyStringSchema.nullable(),
+  net_amount: moneyStringSchema.nullable(),
 });
 export type PayrollSessionLine = z.infer<typeof payrollSessionLineSchema>;
 
 export const payrollTutorSummarySchema = z.object({
   tutor_id: uuidSchema,
   tutor_name: z.string(),
-  ...statusCountsFields,
-  /** Hanya dari sesi `approved` yang memiliki tarif snapshot. */
-  estimated_amount: moneyStringSchema,
-  rate_lines: z.array(payrollRateLineSchema),
-  /** Sesi approved tanpa tarif valid: tidak diberi nominal palsu, tampilkan warning. */
+  /** Sesi valid (dihitung) dan yang tidak dihitung (menunggu validasi, perlu revisi, ditolak). */
+  counted_sessions: z.number().int().min(0),
+  not_counted_sessions: z.number().int().min(0),
+  /** Subtotal tarif les (kotor). */
+  gross_amount: moneyStringSchema,
+  /** Total potongan Admin. */
+  admin_fee_amount: moneyStringSchema,
+  /** Total pendapatan bersih tutor = kotor − potongan. */
+  net_amount: moneyStringSchema,
+  /** Sesi dihitung tanpa tarif valid: tidak diberi nominal palsu, tampilkan warning. */
   approved_sessions_without_rate: z.number().int().min(0),
-  /** Rincian sesi (urut tanggal les); total = Σ `amount` dari sesi `counted`. */
   sessions: z.array(payrollSessionLineSchema),
 });
 export type PayrollTutorSummary = z.infer<typeof payrollTutorSummarySchema>;
 
-/** `GET /admin/payroll/preview` dan (difilter ke tutor login) `GET /tutor/me/payroll`. */
+/** `GET /admin/payroll/preview`. */
 export const payrollPreviewResponseSchema = z.object({
   period: periodSchema,
   tutors: z.array(payrollTutorSummarySchema),
-  total_estimated_amount: moneyStringSchema,
+  totals: z.object({
+    /** Total pendapatan kotor (omzet) bulan ini. */
+    gross_amount: moneyStringSchema,
+    /** Total pendapatan bersih bimbel = Σ potongan Admin. */
+    admin_fee_amount: moneyStringSchema,
+    /** Total gaji yang harus dibayarkan = Σ pendapatan bersih tutor. */
+    net_amount: moneyStringSchema,
+  }),
   warnings: z.array(z.string()),
 });
 export type PayrollPreviewResponse = z.infer<typeof payrollPreviewResponseSchema>;
+
+/** Baris sesi untuk Tutor: HANYA nominal bersih (tanpa tarif kotor & potongan; revisi PM). */
+export const tutorPayrollSessionLineSchema = z.strictObject({
+  ...sessionLineBase,
+  net_amount: moneyStringSchema.nullable(),
+});
+export type TutorPayrollSessionLine = z.infer<typeof tutorPayrollSessionLineSchema>;
+
+/** `GET /tutor/me/payroll` — Honor Saya: pendapatan bersih tutor login saja. */
+export const tutorPayrollResponseSchema = z.strictObject({
+  period: periodSchema,
+  counted_sessions: z.number().int().min(0),
+  not_counted_sessions: z.number().int().min(0),
+  net_amount: moneyStringSchema,
+  sessions: z.array(tutorPayrollSessionLineSchema),
+  warnings: z.array(z.string()),
+});
+export type TutorPayrollResponse = z.infer<typeof tutorPayrollResponseSchema>;

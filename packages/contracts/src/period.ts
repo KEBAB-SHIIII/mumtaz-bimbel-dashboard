@@ -32,6 +32,15 @@ export function periodOfDate(lessonDate: IsoDate): Period {
   return lessonDate.slice(0, 7);
 }
 
+/** Periode `count` bulan terakhir yang berakhir di `period` (urut lama → baru), mis. 6 bulan untuk grafik. */
+export function trailingPeriods(period: Period, count: number): Period[] {
+  const [year, month] = period.split('-').map(Number) as [number, number];
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(Date.UTC(year, month - 1 - (count - 1 - index), 1));
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+  });
+}
+
 export function isDateInPeriod(lessonDate: IsoDate, period: Period): boolean {
   const { start, endExclusive } = periodDateRange(period);
   return lessonDate >= start && lessonDate < endExclusive;

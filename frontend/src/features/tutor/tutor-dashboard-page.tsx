@@ -50,11 +50,11 @@ export function TutorDashboardPage() {
           )}
           <dl className="grid grid-cols-2 gap-3 md:grid-cols-5">
             <StatCard label="Total sesi" value={Object.values(summary.data.status_counts).reduce((a, b) => a + b, 0)} to={`/tutor/riwayat?period=${period}`} />
-            <StatCard label="Menunggu verifikasi" value={summary.data.status_counts.pending} to={`/tutor/riwayat?period=${period}&status=pending`} />
+            <StatCard label="Menunggu validasi" value={summary.data.status_counts.pending} to={`/tutor/riwayat?period=${period}&status=pending`} />
             <StatCard label="Disetujui" value={summary.data.status_counts.approved} to={`/tutor/riwayat?period=${period}&status=approved`} />
             <StatCard label="Perlu revisi" value={summary.data.status_counts.revision_requested} to={`/tutor/riwayat?period=${period}&status=revision_requested`} />
             <StatCard
-              label="Estimasi honor"
+              label="Pendapatan bersih"
               value={formatRupiah(summary.data.honor.estimated_amount)}
               to={`/tutor/honor?period=${period}`}
             />
@@ -77,7 +77,7 @@ export function TutorDashboardPage() {
         ) : recent.data.items.length === 0 ? (
           <EmptyState
             title="Belum ada sesi bulan ini"
-            description="Catat sesi les yang sudah berlangsung lewat Form Absensi; Admin akan memverifikasinya."
+            description="Catat sesi les yang sudah berlangsung lewat Form Absensi; data divalidasi otomatis."
           />
         ) : (
           <ul className="divide-y divide-border">

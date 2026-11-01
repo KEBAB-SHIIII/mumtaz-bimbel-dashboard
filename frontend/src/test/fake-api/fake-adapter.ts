@@ -36,7 +36,7 @@ export function createFakeAdapter(backend: FakeBackend = createFakeBackend(), { 
       data: result.data,
       status: result.status,
       statusText: String(result.status),
-      headers: {},
+      headers: result.headers ?? {},
       config,
     };
     if (result.status >= 400) {

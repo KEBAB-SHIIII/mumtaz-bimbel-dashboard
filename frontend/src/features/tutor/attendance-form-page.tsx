@@ -17,9 +17,10 @@ import {
   ATTENDANCE_SERVER_FIELDS,
   AttendanceFields,
   EMPTY_ATTENDANCE_VALUES,
+  TutorNameField,
   toEditablePayload,
   type AttendanceFormValues,
-} from './attendance-fields';
+} from '../shared/attendance-fields';
 
 /**
  * Form Absensi Tutor (docs/15 §3.2). `client_submission_id` dibuat sekali per
@@ -60,11 +61,11 @@ export function AttendanceFormPage() {
 
   return (
     <>
-      <PageHeader title="Form Absensi" description="Catat sesi les yang sudah berlangsung. Sesi akan diverifikasi Admin." />
+      <PageHeader title="Form Absensi" description="Catat sesi les yang sudah berlangsung. Data divalidasi otomatis oleh AI." />
 
       {savedDate && (
-        <InlineAlert tone="success" title="Absensi tersimpan dan menunggu verifikasi">
-          Sesi {formatLessonDate(savedDate)} tercatat dengan status menunggu verifikasi.{' '}
+        <InlineAlert tone="success" title="Absensi tersimpan">
+          Sesi {formatLessonDate(savedDate)} tercatat dan sedang divalidasi. Hasilnya muncul di Riwayat Mengajar.{' '}
           <Link to="/tutor/riwayat" className="font-medium text-primary hover:underline">Lihat riwayat</Link>
         </InlineAlert>
       )}
@@ -81,7 +82,12 @@ export function AttendanceFormPage() {
                 <InlineAlert tone="danger" title="Absensi belum tersimpan">{toApiError(mutation.error).message}</InlineAlert>
               </div>
             )}
-            <AttendanceFields form={form} options={options.data} tutorName={user.full_name} idPrefix="attendance" />
+            <AttendanceFields
+              form={form}
+              options={options.data}
+              tutorField={<TutorNameField idPrefix="attendance" tutorName={user.full_name} />}
+              idPrefix="attendance"
+            />
             <div className="flex justify-end md:col-span-2">
               <Button type="submit" loading={mutation.isPending} icon={<Send aria-hidden className="size-4" />}>
                 Kirim absensi

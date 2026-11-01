@@ -17,6 +17,7 @@ import { ensureBootstrapAdmin } from '../../src/db/bootstrap-admin.js';
 import type { Database, Transaction } from '../../src/db/client.js';
 import {
   anomalyFlags,
+  lessonSessionSubjects,
   lessonSessions,
   parentStudents,
   students,
@@ -83,7 +84,7 @@ async function insertSessions(tx: Transaction, sessions: FixtureLessonSession[],
   await tx
     .insert(lessonSessions)
     .values(
-      sessions.map((session) => ({
+      sessions.map(({ subject_ids: _subjects, ...session }) => ({
         ...session,
         reviewed_by_user_id: reviewer(session.reviewed_by_user_id),
         submitted_at: new Date(session.submitted_at),
@@ -91,6 +92,10 @@ async function insertSessions(tx: Transaction, sessions: FixtureLessonSession[],
         updated_at: new Date(session.updated_at),
       })),
     )
+    .onConflictDoNothing();
+  await tx
+    .insert(lessonSessionSubjects)
+    .values(sessions.flatMap((session) => session.subject_ids.map((subject_id) => ({ lesson_session_id: session.id, subject_id }))))
     .onConflictDoNothing();
 }
 

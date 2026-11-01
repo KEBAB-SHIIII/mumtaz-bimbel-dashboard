@@ -2,10 +2,10 @@ import type { AnomalyDetectionInput, AnomalySessionSnapshot } from './types.js';
 
 /**
  * Payload minimum untuk model: alias pengganti semua ID (S/T/P/M), tanggal,
- * dan durasi. Tidak ada nama, kontak, materi/catatan, ataupun UUID internal.
+ * jam mulai, dan durasi. Tidak ada nama, kontak, materi/catatan, ataupun UUID internal.
  */
 export interface PseudonymousPayload {
-  config: { duration_outlier_minutes: number };
+  config: { duration_outlier_minutes: number; late_start_after: string };
   target: PseudonymousSession;
   comparisons: PseudonymousSession[];
   candidates: { ref: string; finding_type: string; signal: string; related: string | null }[];
@@ -15,8 +15,9 @@ interface PseudonymousSession {
   ref: string;
   tutor: string;
   student: string;
-  subject: string;
+  subjects: string[];
   lesson_date: string;
+  start_time: string | null;
   duration_minutes: number;
 }
 
@@ -54,8 +55,9 @@ export function pseudonymize(input: AnomalyDetectionInput): AliasMap {
       ref,
       tutor: tutor(snapshot.tutor_id),
       student: student(snapshot.student_id),
-      subject: subject(snapshot.subject_id),
+      subjects: snapshot.subject_ids.map(subject),
       lesson_date: snapshot.lesson_date,
+      start_time: snapshot.start_time,
       duration_minutes: snapshot.duration_minutes,
     };
   };
@@ -75,7 +77,12 @@ export function pseudonymize(input: AnomalyDetectionInput): AliasMap {
   });
 
   return {
-    payload: { config: { duration_outlier_minutes: input.config.durationOutlierMinutes }, target, comparisons, candidates },
+    payload: {
+      config: { duration_outlier_minutes: input.config.durationOutlierMinutes, late_start_after: input.config.lateStartAfter },
+      target,
+      comparisons,
+      candidates,
+    },
     sessionIdOf,
     candidateIndexOf,
   };

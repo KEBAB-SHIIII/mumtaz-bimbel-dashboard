@@ -1,83 +1,149 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, CircleX, PencilLine } from 'lucide-react';
+import { PencilLine, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import type { AdminAttendanceDetail, SessionDecision, SessionDecisionRequest } from '@mumtaz/contracts';
-import { StatusBadge } from '../../../components/ui/badge';
+import {
+  approvalStatusSchema,
+  sessionValiditySchema,
+  type AdminAttendanceDetail,
+  type ApprovalStatus,
+  type SessionValidity,
+  type SetValidityRequest,
+} from '@mumtaz/contracts';
+import { APPROVAL_LABELS, ApprovalBadge, VALIDITY_LABELS, ValidityBadge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
-import { ConfirmDialog, Modal } from '../../../components/ui/dialog';
+import { Modal } from '../../../components/ui/dialog';
 import { ErrorState, InlineAlert, LoadingState } from '../../../components/ui/feedback';
-import { FormField, Textarea, describedBy } from '../../../components/ui/field';
+import { FormField, Select, Textarea } from '../../../components/ui/field';
 import { DescriptionList } from '../../../components/ui/layout-primitives';
 import { toApiError } from '../../../lib/api-error';
-import { formatDuration, formatLessonDate, formatTimestamp } from '../../../lib/format';
+import { formatDuration, formatLessonDate, formatLessonTime, formatTimestamp } from '../../../lib/format';
 import { queryKeys } from '../../../lib/query-keys';
-import { decideAttendance, fetchAdminAttendanceDetail } from '../api';
+import { fetchAdminAttendanceDetail, setAttendanceValidity } from '../api';
 import { ANALYSIS_POLL_MS } from './analysis-polling';
 import { FindingList } from './finding-list';
 
-const DECISIONS: Record<SessionDecision, { title: string; label: string; description: string; tone: 'primary' | 'danger'; noteRequired: boolean }> = {
-  approved: {
-    title: 'Setujui sesi?',
-    label: 'Setujui',
-    description: 'Sesi yang disetujui masuk estimasi honor dan Progress Anak. Keputusan ini final pada baseline (O-15).',
-    tone: 'primary',
-    noteRequired: false,
-  },
-  revision_requested: {
-    title: 'Minta revisi?',
-    label: 'Minta revisi',
-    description: 'Tutor akan melihat alasan ini dan dapat memperbaiki sesi. Sesi kembali ke antrean setelah direvisi.',
-    tone: 'primary',
-    noteRequired: true,
-  },
-  rejected: {
-    title: 'Tolak sesi?',
-    label: 'Tolak',
-    description: 'Sesi yang ditolak tidak masuk honor dan tidak dapat dibuka ulang pada baseline (O-15).',
-    tone: 'danger',
-    noteRequired: true,
-  },
-};
+export function toValidityRequest(validity: SessionValidity, approval: ApprovalStatus, note: string): SetValidityRequest {
+  const adminNote = note.trim() ? { admin_note: note.trim() } : {};
+  return validity === 'needs_revision' ? { validity, approval, ...adminNote } : { validity, ...adminNote };
+}
 
-function toDecisionRequest(decision: SessionDecision, note: string): SessionDecisionRequest {
-  const adminNote = note.trim();
-  if (decision === 'approved') return adminNote ? { decision, admin_note: adminNote } : { decision };
-  return { decision, admin_note: adminNote };
+/** Koreksi label validitas AI (mis. salah label) + status approval Perlu revisi + pesan untuk tutor. */
+function ValidityEditor({ detail }: { detail: AdminAttendanceDetail }) {
+  const queryClient = useQueryClient();
+  const [validity, setValidity] = useState<SessionValidity>(detail.validity ?? 'valid');
+  const [approval, setApproval] = useState<ApprovalStatus>(detail.approval_status ?? 'pending');
+  const [note, setNote] = useState(detail.last_review.admin_note ?? '');
+  const [saved, setSaved] = useState(false);
+
+  const mutation = useMutation({
+    mutationFn: () => setAttendanceValidity(detail.id, toValidityRequest(validity, approval, note)),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.admin.attendanceDetail(updated.id), updated);
+      // Status berubah → daftar, dashboard, penagihan, dan honor ikut diperbarui.
+      void queryClient.invalidateQueries({ queryKey: ['admin'] });
+      setSaved(true);
+    },
+  });
+
+  return (
+    <section aria-labelledby="validity-heading" className="rounded-md border border-border p-3">
+      <h3 id="validity-heading" className="text-sm font-semibold text-text">Koreksi validitas</h3>
+      <p className="mt-0.5 text-xs text-muted">Ubah bila label AI keliru atau setelah banding tutor via WA. Hanya Valid dan Perlu revisi yang Disetujui masuk rekap gaji.</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <FormField id="validity-select" label="Validitas data" required>
+          <Select
+            id="validity-select"
+            value={validity}
+            onChange={(event) => {
+              setSaved(false);
+              setValidity(sessionValiditySchema.parse(event.target.value));
+            }}
+          >
+            {sessionValiditySchema.options.map((option) => (
+              <option key={option} value={option}>{VALIDITY_LABELS[option]}</option>
+            ))}
+          </Select>
+        </FormField>
+        {validity === 'needs_revision' && (
+          <FormField id="approval-select" label="Status approval" required>
+            <Select
+              id="approval-select"
+              value={approval}
+              onChange={(event) => {
+                setSaved(false);
+                setApproval(approvalStatusSchema.parse(event.target.value));
+              }}
+            >
+              {approvalStatusSchema.options.map((option) => (
+                <option key={option} value={option}>{APPROVAL_LABELS[option]}</option>
+              ))}
+            </Select>
+          </FormField>
+        )}
+        <FormField id="validity-note" label="Pesan untuk tutor" hint="Ditampilkan di Riwayat Mengajar tutor." className="sm:col-span-2">
+          <Textarea id="validity-note" value={note} onChange={(event) => setNote(event.target.value)} aria-describedby="validity-note-hint" className="min-h-16" />
+        </FormField>
+      </div>
+      {mutation.isError && <div className="mt-3"><InlineAlert tone="danger" title={toApiError(mutation.error).message} /></div>}
+      {saved && !mutation.isPending && <p role="status" className="mt-3 text-sm text-success">Validitas tersimpan.</p>}
+      <div className="mt-3 flex justify-end">
+        <Button size="sm" loading={mutation.isPending} onClick={() => mutation.mutate()}>Simpan validitas</Button>
+      </div>
+    </section>
+  );
 }
 
 function DetailBody({ detail }: { detail: AdminAttendanceDetail }) {
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <StatusBadge status={detail.status} />
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ValidityBadge validity={detail.validity} />
+          {detail.approval_status && (
+            <span className="inline-flex items-center gap-1 text-xs text-muted">
+              Approval: <ApprovalBadge approval={detail.approval_status} />
+            </span>
+          )}
+        </div>
+        {detail.validity_reason && <p className="text-sm text-text">{detail.validity_reason}</p>}
+        {detail.validity === null && detail.anomaly_analysis_status === 'failed' && (
+          <InlineAlert tone="warning" title="Validasi AI gagal">Tetapkan validitas secara manual di bawah.</InlineAlert>
+        )}
       </div>
       <DescriptionList
         items={[
           { label: 'Nama tutor', value: detail.tutor_name },
           { label: 'Nama murid', value: detail.student_name },
-          { label: 'Kelas', value: detail.grade },
-          { label: 'Asal sekolah', value: detail.school_name },
+          { label: 'Kelas · Sekolah', value: `${detail.grade} · ${detail.school_name}` },
           { label: 'Mata pelajaran', value: detail.subject_name },
           { label: 'Tanggal les', value: formatLessonDate(detail.lesson_date) },
+          { label: 'Jam les', value: formatLessonTime(detail.start_time, detail.end_time) },
           { label: 'Durasi les', value: formatDuration(detail.duration_minutes) },
           { label: 'Disubmit', value: formatTimestamp(detail.submitted_at) },
           { label: 'Materi pembelajaran', value: detail.learning_material },
           { label: 'Catatan pembelajaran', value: detail.learning_notes ?? '—' },
           { label: 'Fokus berikutnya', value: detail.next_focus ?? '—' },
-          { label: 'Ditinjau', value: detail.last_review.reviewed_at ? formatTimestamp(detail.last_review.reviewed_at) : '—' },
-          { label: 'Catatan Admin (internal)', value: detail.last_review.admin_note ?? '—' },
+          { label: 'Divalidasi', value: detail.last_review.reviewed_at ? formatTimestamp(detail.last_review.reviewed_at) : '—' },
         ]}
       />
       <FindingList findings={detail.findings} />
+      <ValidityEditor key={detail.id} detail={detail} />
     </div>
   );
 }
 
-export function AttendanceDetailDialog({ sessionId, onClose }: { sessionId: string | null; onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const [decision, setDecision] = useState<SessionDecision | null>(null);
-  const [note, setNote] = useState('');
-
+/** Detail sesi: validitas + penjelasan anomali; aksi Ubah/Hapus diteruskan ke halaman. */
+export function AttendanceDetailDialog({
+  sessionId,
+  onClose,
+  onEdit,
+  onDelete,
+}: {
+  sessionId: string | null;
+  onClose: () => void;
+  onEdit: (detail: AdminAttendanceDetail) => void;
+  onDelete: (detail: AdminAttendanceDetail) => void;
+}) {
   const detail = useQuery({
     queryKey: queryKeys.admin.attendanceDetail(sessionId ?? ''),
     queryFn: () => fetchAdminAttendanceDetail(sessionId ?? ''),
@@ -85,102 +151,32 @@ export function AttendanceDetailDialog({ sessionId, onClose }: { sessionId: stri
     refetchInterval: (query) => (query.state.data?.anomaly_analysis_status === 'pending' ? ANALYSIS_POLL_MS : false),
   });
 
-  const mutation = useMutation({
-    mutationFn: (input: { decision: SessionDecision; note: string }) =>
-      decideAttendance(sessionId ?? '', toDecisionRequest(input.decision, input.note)),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(queryKeys.admin.attendanceDetail(updated.id), updated);
-      // Status berubah → daftar, dashboard, rekap, dan honor ikut diperbarui.
-      void queryClient.invalidateQueries({ queryKey: ['admin'] });
-      setDecision(null);
-      setNote('');
-    },
-  });
-
-  const closeConfirm = () => {
-    setDecision(null);
-    setNote('');
-    mutation.reset();
-  };
-
-  const config = decision ? DECISIONS[decision] : null;
-  const noteMissing = Boolean(config?.noteRequired && note.trim() === '');
-  const noteHint = config?.noteRequired ? 'Wajib diisi; ditampilkan ke tutor.' : undefined;
-  const noteError = mutation.isError ? toApiError(mutation.error).details.find((d) => d.field === 'admin_note')?.message : undefined;
-
   return (
-    <>
-      <Modal
-        open={sessionId !== null}
-        onClose={onClose}
-        size="lg"
-        title="Detail sesi"
-        footer={
-          detail.data?.status === 'pending' ? (
-            <>
-              <Button variant="secondary" icon={<PencilLine aria-hidden className="size-4" />} onClick={() => setDecision('revision_requested')}>
-                Minta revisi
-              </Button>
-              <Button variant="danger" icon={<CircleX aria-hidden className="size-4" />} onClick={() => setDecision('rejected')}>
-                Tolak
-              </Button>
-              <Button icon={<CircleCheck aria-hidden className="size-4" />} onClick={() => setDecision('approved')}>
-                Setujui
-              </Button>
-            </>
-          ) : undefined
-        }
-      >
-        {detail.isPending ? (
-          <LoadingState />
-        ) : detail.isError ? (
-          <ErrorState error={detail.error} onRetry={() => void detail.refetch()} />
-        ) : (
+    <Modal
+      open={sessionId !== null}
+      onClose={onClose}
+      size="lg"
+      title="Detail sesi"
+      footer={
+        detail.data ? (
           <>
-            {detail.data.status !== 'pending' && (
-              <div className="mb-4">
-                <InlineAlert tone="info" title="Sesi sudah diputuskan">
-                  Keputusan hanya dapat diberikan untuk sesi berstatus menunggu verifikasi.
-                </InlineAlert>
-              </div>
-            )}
-            <DetailBody detail={detail.data} />
+            <Button variant="danger" icon={<Trash2 aria-hidden className="size-4" />} onClick={() => onDelete(detail.data)}>
+              Hapus
+            </Button>
+            <Button variant="secondary" icon={<PencilLine aria-hidden className="size-4" />} onClick={() => onEdit(detail.data)}>
+              Ubah data
+            </Button>
           </>
-        )}
-      </Modal>
-
-      {config && decision && (
-        <ConfirmDialog
-          open
-          onClose={closeConfirm}
-          onConfirm={() => mutation.mutate({ decision, note })}
-          title={config.title}
-          description={config.description}
-          confirmLabel={config.label}
-          tone={config.tone}
-          loading={mutation.isPending}
-          confirmDisabled={noteMissing}
-        >
-          <div className="flex flex-col gap-3">
-            {mutation.isError && !noteError && <InlineAlert tone="danger" title={toApiError(mutation.error).message} />}
-            <FormField
-              id="admin-note"
-              label={config.noteRequired ? 'Alasan' : 'Catatan'}
-              required={config.noteRequired}
-              {...(noteHint ? { hint: noteHint } : {})}
-              error={noteError}
-            >
-              <Textarea
-                id="admin-note"
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                aria-invalid={Boolean(noteError)}
-                aria-describedby={describedBy('admin-note', noteError, noteHint)}
-              />
-            </FormField>
-          </div>
-        </ConfirmDialog>
+        ) : undefined
+      }
+    >
+      {detail.isPending ? (
+        <LoadingState />
+      ) : detail.isError ? (
+        <ErrorState error={detail.error} onRetry={() => void detail.refetch()} />
+      ) : (
+        <DetailBody detail={detail.data} />
       )}
-    </>
+    </Modal>
   );
 }

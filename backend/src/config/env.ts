@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DURATION_MINUTES_TECHNICAL_MAX } from '@mumtaz/contracts';
+import { DURATION_MINUTES_TECHNICAL_MAX, lessonTimeSchema } from '@mumtaz/contracts';
 
 // Nilai kosong di .env ("KEY=") diperlakukan sebagai tidak diset.
 const optionalString = z.preprocess(
@@ -63,11 +63,9 @@ export const envSchema = z
     /**
      * Batas atas durasi sesi (menit) yang diterima saat submit/revisi. Default = batas teknis
      * kontrak (24 jam); batas bisnis UMKM belum ditetapkan (O-12). Durasi di atas ambang
-     * anomali tetap diterima dan hanya menjadi finding (lihat ANOMALY_DURATION_OUTLIER_MINUTES).
+     * validitas tetap diterima dan dilabeli Perlu revisi (lihat ANOMALY_DURATION_OUTLIER_MINUTES).
+     * Tarif les & potongan Admin ada di `services/billing/tariff.ts` (revisi PM), bukan env.
      */
-    /** Tarif honor tunggal per sesi (rupiah, D-24); dikunci ke sesi saat disetujui. */
-    HONOR_RATE_PER_SESSION: positiveInt(50_000),
-
     ATTENDANCE_MAX_DURATION_MINUTES: z.coerce.number().int().min(1).max(DURATION_MINUTES_TECHNICAL_MAX).default(DURATION_MINUTES_TECHNICAL_MAX),
 
     GOOGLE_SHEETS_EXPORT_ENABLED: booleanFlag,
@@ -78,8 +76,10 @@ export const envSchema = z
 
     GEMINI_API_KEY: optionalString,
     GEMINI_MODEL: optionalString,
-    // Heuristik demo duration_outlier (O-03/O-12 masih terbuka).
+    /** Durasi di atas ini dilabeli Perlu revisi (revisi PM: > 180 menit). */
     ANOMALY_DURATION_OUTLIER_MINUTES: positiveInt(180),
+    /** Les yang dimulai setelah jam ini (WIB, "HH:MM") dilabeli Perlu revisi (revisi PM: di atas 21.00). */
+    ANOMALY_LATE_START_AFTER: lessonTimeSchema.default('21:00'),
     /** Batas waktu satu panggilan provider anomali; lewat batas → `failed`. */
     ANOMALY_PROVIDER_TIMEOUT_MS: positiveInt(20_000),
   })

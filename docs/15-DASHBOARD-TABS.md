@@ -37,7 +37,7 @@ Konten:
 - sesi `pending`, `approved`, `revision_requested`, dan `rejected`;
 - working default O-15: `approved` dan `rejected` terminal tanpa reopen/edit bebas pada MVP, tetapi kebijakan ini belum dikonfirmasi owner.
 - jumlah temuan anomali yang belum direview;
-- estimasi honor dari sesi approved (tarif tunggal per sesi, D-24);
+- pendapatan bersih (honor setelah potongan Admin) dari sesi yang dihitung (D-25);
 - daftar sesi terbaru dan tindakan admin yang perlu dilakukan.
 
 Jangan menampilkan angka pendapatan/laba bimbel karena sumber data pemasukan tidak termasuk scope.
@@ -92,7 +92,7 @@ Konten:
 - daftar sesi pending/revisi/ditolak yang belum masuk nominal;
 - detail sesi sumber kalkulasi;
 
-**Aturan honor (D-24):** satu tarif tunggal per sesi dari konfigurasi `HONOR_RATE_PER_SESSION` (default Rp50.000), dikunci ke sesi saat disetujui — bukan angka yang tersebar atau hard-coded di kalkulator. Hanya sesi `approved` yang masuk estimasi. Jangan tampilkan status sudah dibayar karena payment tracking tidak termasuk MVP.
+**Aturan honor (D-25):** tarif les per jenjang (SD 1-3 Rp50.000/jam, SD 4-6 Rp70.000/jam; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×) dikurangi potongan Admin Rp10.000 per sesi, dikunci ke `rate_amount_snapshot`/`admin_fee_snapshot` saat sesi dihitung (D-25). Honor Tutor (Admin) menampilkan per tutor: sesi valid, subtotal kotor, potongan admin, dan total bersih, plus metrik total kotor, total bersih bimbel (Σ potongan), dan total gaji dibayarkan. Honor Saya (Tutor) hanya menampilkan nominal bersih.
 
 ### 2.5 Master Data
 

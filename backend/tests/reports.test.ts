@@ -3,10 +3,12 @@ import {
   adminDashboardSummarySchema,
   parentDashboardSummarySchema,
   payrollPreviewResponseSchema,
-  recapResponseSchema,
+  tutorPayrollResponseSchema,
+  billingResponseSchema,
   tutorDashboardSummarySchema,
 } from '@mumtaz/contracts';
 import { EXPECTED_PAYROLL_2026_10, STUDENT_IDS, SUBJECT_IDS, TUTOR_IDS, SESSION_IDS } from '@mumtaz/contracts/fixtures';
+import { invoiceFileName, invoiceNumber } from '../src/services/billing/invoice-pdf.js';
 import { as, createTestApp, type TestApp, type TestClient } from './helpers/test-app.js';
 
 let t: TestApp;
@@ -19,45 +21,50 @@ beforeAll(async () => {
 afterAll(() => t.close());
 
 describe('Payroll preview (estimasi honor)', () => {
-  it('Oktober 2026 sesuai expected outcome fixture: hanya approved × tarif tunggal Rp50.000', async () => {
+  it('Oktober 2026 sesuai expected outcome fixture: kotor, potongan Admin Rp10.000/sesi, bersih tutor', async () => {
     const res = await admin.get('/admin/payroll/preview?period=2026-10').expect(200);
     const body = payrollPreviewResponseSchema.parse(res.body);
 
-    expect(body.total_estimated_amount).toBe(EXPECTED_PAYROLL_2026_10.total_estimated_amount);
+    expect(body.totals).toEqual(EXPECTED_PAYROLL_2026_10.totals);
     expect(body.warnings).toEqual([]);
 
     for (const expected of EXPECTED_PAYROLL_2026_10.tutors) {
       const actual = body.tutors.find((tutor) => tutor.tutor_id === expected.tutor_id);
       expect(actual).toMatchObject({
-        approved_sessions: expected.approved_sessions,
-        pending_sessions: expected.pending_sessions,
-        revision_requested_sessions: expected.revision_requested_sessions,
-        rejected_sessions: expected.rejected_sessions,
-        estimated_amount: expected.estimated_amount,
+        counted_sessions: expected.counted_sessions,
+        not_counted_sessions: expected.not_counted_sessions,
+        gross_amount: expected.gross_amount,
+        admin_fee_amount: expected.admin_fee_amount,
+        net_amount: expected.net_amount,
       });
-      // Traceable ke sesi.
-      expect(actual?.rate_lines.flatMap((line) => line.session_ids).sort()).toEqual(
-        [...expected.approved_session_ids].sort(),
-      );
+      // Traceable ke sesi: tarif per sesi = kotor; bersih = kotor − potongan.
+      const counted = actual?.sessions.filter((line) => line.counted) ?? [];
+      expect(counted.map((line) => line.session_id).sort()).toEqual([...expected.approved_session_ids].sort());
+      expect(counted.every((line) => line.gross_amount === '50000' && line.admin_fee === '10000' && line.net_amount === '40000')).toBe(true);
     }
   });
 
   it('periode memakai lesson_date: s05 (31 Okt, disubmit Nov) masuk Oktober, s06 masuk November', async () => {
     const nov = payrollPreviewResponseSchema.parse((await admin.get('/admin/payroll/preview?period=2026-11').expect(200)).body);
-    expect(nov.total_estimated_amount).toBe('50000');
-    expect(nov.tutors[0]?.rate_lines[0]?.session_ids).toEqual([SESSION_IDS.s06]);
+    expect(nov.totals.gross_amount).toBe('50000');
+    expect(nov.tutors[0]?.sessions.filter((line) => line.counted).map((line) => line.session_id)).toEqual([SESSION_IDS.s06]);
   });
 
   it('periode tanpa sesi → nol', async () => {
     const body = payrollPreviewResponseSchema.parse((await admin.get('/admin/payroll/preview?period=2027-01').expect(200)).body);
-    expect(body).toMatchObject({ tutors: [], total_estimated_amount: '0' });
+    expect(body).toMatchObject({ tutors: [], totals: { gross_amount: '0', admin_fee_amount: '0', net_amount: '0' } });
   });
 
-  it('tutor hanya melihat honor miliknya', async () => {
+  it('Honor Saya: tutor hanya melihat miliknya dan HANYA pendapatan bersih (tanpa tarif kotor/potongan)', async () => {
     const tutorB = await as.tutorB(t.app);
-    const body = payrollPreviewResponseSchema.parse((await tutorB.get('/tutor/me/payroll?period=2026-10').expect(200)).body);
-    expect(body.tutors.map((tutor) => tutor.tutor_id)).toEqual([TUTOR_IDS.tutorB]);
-    expect(body.total_estimated_amount).toBe('50000');
+    const res = await tutorB.get('/tutor/me/payroll?period=2026-10').expect(200);
+    const body = tutorPayrollResponseSchema.parse(res.body);
+    expect(body).toMatchObject({ counted_sessions: 1, not_counted_sessions: 3, net_amount: '40000' });
+    expect(body.sessions.find((line) => line.counted)?.net_amount).toBe('40000');
+    expect(JSON.stringify(res.body)).not.toMatch(/gross|admin_fee|50000|tutor_name/);
+    const summary = tutorDashboardSummarySchema.parse((await tutorB.get('/tutor/dashboard/summary?period=2026-10').expect(200)).body);
+    expect(summary.honor.estimated_amount).toBe('40000');
+    expect((await tutorB.get('/admin/payroll/preview?period=2026-10')).status).toBe(403);
   });
 
   it('periode tidak valid → 422', async () => {
@@ -65,124 +72,146 @@ describe('Payroll preview (estimasi honor)', () => {
     expect((await admin.get('/admin/payroll/preview')).status).toBe(422);
   });
 
-  it('approve mengunci tarif tunggal konfigurasi; mengganti HONOR_RATE_PER_SESSION tidak mengubah sesi lama', async () => {
+  it('sesi Valid mengunci tarif per jenjang; mengubah kelas murid kemudian tidak mengubah sesi lama', async () => {
     const tutorB = await as.tutorB(t.app);
-    const submit = await tutorB
-      .post('/tutor/attendance', {
-        client_submission_id: '00000000-0000-4000-9000-000000000300',
-        student_id: STUDENT_IDS.murid1,
-        subject_id: SUBJECT_IDS.ipa,
-        lesson_date: '2026-11-10',
-        duration_minutes: 60,
-        learning_material: 'Sesi tanpa penugasan (tutor memilih sendiri)',
-      })
-      .expect(201);
-    await admin.patch(`/admin/attendance/${submit.body.session.id as string}/decision`, { decision: 'approved' }).expect(200);
+    const submitAt = async (n: number, lessonDate: string) => {
+      const res = await tutorB
+        .post('/tutor/attendance', {
+          client_submission_id: `00000000-0000-4000-9000-00000000030${n}`,
+          student_id: STUDENT_IDS.murid1,
+          subject_ids: [SUBJECT_IDS.ipa],
+          lesson_date: lessonDate,
+          start_time: '16:00',
+          end_time: '17:00',
+          learning_material: 'Sesi tanpa penugasan (tutor memilih sendiri)',
+        })
+        .expect(201);
+      await admin.patch(`/admin/attendance/${res.body.session.id as string}/validity`, { validity: 'valid' }).expect(200);
+    };
 
+    // Aisyah 3 SD, 60 menit → Rp50.000.
+    await submitAt(0, '2026-11-10');
     const body = payrollPreviewResponseSchema.parse((await admin.get('/admin/payroll/preview?period=2026-11').expect(200)).body);
     expect(body.tutors.find((tutor) => tutor.tutor_id === TUTOR_IDS.tutorB)).toMatchObject({
-      approved_sessions: 1,
+      counted_sessions: 1,
       approved_sessions_without_rate: 0,
-      estimated_amount: '50000',
+      net_amount: '40000',
     });
-    expect(body.total_estimated_amount).toBe('100000');
     expect(body.warnings).toEqual([]);
 
-    // Konfigurasi tarif diganti (app kedua, database sama): sesi lama tetap Rp50.000, sesi baru Rp65.000.
-    const raised = await createTestApp({ seed: false, env: { HONOR_RATE_PER_SESSION: '65000' }, database: t.database });
-    const adminRaised = await as.admin(raised.app);
-    const tutorBRaised = await as.tutorB(raised.app);
-    const second = await tutorBRaised
-      .post('/tutor/attendance', {
-        client_submission_id: '00000000-0000-4000-9000-000000000301',
-        student_id: STUDENT_IDS.murid1,
-        subject_id: SUBJECT_IDS.ipa,
-        lesson_date: '2026-11-11',
-        duration_minutes: 60,
-        learning_material: 'Sesi setelah tarif konfigurasi naik',
-      })
-      .expect(201);
-    await adminRaised.patch(`/admin/attendance/${second.body.session.id as string}/decision`, { decision: 'approved' }).expect(200);
-    const after = payrollPreviewResponseSchema.parse((await adminRaised.get('/admin/payroll/preview?period=2026-11').expect(200)).body);
-    const lines = after.tutors.find((tutor) => tutor.tutor_id === TUTOR_IDS.tutorB)?.sessions.map((line) => line.rate_amount);
-    expect(lines).toEqual(['50000', '65000']);
-    expect(after.total_estimated_amount).toBe('165000');
+    // Naik kelas ke 4 SD: sesi lama tetap Rp50.000, sesi baru Rp70.000.
+    await admin.patch(`/admin/students/${STUDENT_IDS.murid1}`, { grade: '4 SD' }).expect(200);
+    try {
+      await submitAt(1, '2026-11-11');
+      const after = payrollPreviewResponseSchema.parse((await admin.get('/admin/payroll/preview?period=2026-11').expect(200)).body);
+      const lines = after.tutors.find((tutor) => tutor.tutor_id === TUTOR_IDS.tutorB)?.sessions.map((line) => line.gross_amount);
+      expect(lines).toEqual(['50000', '70000']);
+    } finally {
+      await admin.patch(`/admin/students/${STUDENT_IDS.murid1}`, { grade: '3 SD' }).expect(200);
+    }
   });
 
-  it('total dapat ditelusuri: Σ nilai sesi yang dihitung = estimasi; sesi lain tampil tanpa nominal', async () => {
+  it('total dapat ditelusuri: Σ per sesi = total tutor; sesi tidak dihitung tanpa nominal', async () => {
     const body = payrollPreviewResponseSchema.parse((await admin.get('/admin/payroll/preview?period=2026-10').expect(200)).body);
     for (const tutor of body.tutors) {
       const counted = tutor.sessions.filter((line) => line.counted);
-      expect(counted.every((line) => line.status === 'approved' && line.amount !== null)).toBe(true);
-      expect(tutor.sessions.filter((line) => !line.counted).every((line) => line.amount === null)).toBe(true);
-      expect(counted.reduce((sum, line) => sum + Number(line.amount), 0)).toBe(Number(tutor.estimated_amount));
-      expect(tutor.sessions.length).toBe(
-        tutor.approved_sessions + tutor.pending_sessions + tutor.revision_requested_sessions + tutor.rejected_sessions,
-      );
+      expect(counted.every((line) => line.status === 'approved' && line.gross_amount !== null)).toBe(true);
+      expect(tutor.sessions.filter((line) => !line.counted).every((line) => line.gross_amount === null && line.net_amount === null)).toBe(true);
+      const sum = (key: 'gross_amount' | 'admin_fee' | 'net_amount') => counted.reduce((total, line) => total + Number(line[key]), 0);
+      expect([sum('gross_amount'), sum('admin_fee'), sum('net_amount')]).toEqual([
+        Number(tutor.gross_amount),
+        Number(tutor.admin_fee_amount),
+        Number(tutor.net_amount),
+      ]);
+      expect(tutor.sessions.length).toBe(tutor.counted_sessions + tutor.not_counted_sessions);
       const dates = tutor.sessions.map((line) => line.lesson_date);
       expect(dates).toEqual([...dates].sort());
     }
     const farhan = body.tutors.find((tutor) => tutor.tutor_id === TUTOR_IDS.tutorA);
     expect(farhan?.sessions.find((line) => line.session_id === SESSION_IDS.s02)).toMatchObject({
       status: 'pending',
+      validity: null,
       counted: false,
-      rate_amount: null,
-      amount: null,
+      gross_amount: null,
+      net_amount: null,
     });
   });
 });
 
-describe('Rekap bulanan', () => {
-  it('group_by=tutor: jumlah per status & durasi approved', async () => {
-    const body = recapResponseSchema.parse((await admin.get('/admin/recap?period=2026-10&group_by=tutor').expect(200)).body);
-    const tutorB = body.groups.find((group) => group.key_id === TUTOR_IDS.tutorB);
-    expect(tutorB).toMatchObject({
-      key_label: 'Noreen',
-      total_sessions: 4,
-      approved_sessions: 1,
-      pending_sessions: 1,
-      revision_requested_sessions: 1,
-      rejected_sessions: 1,
-      approved_duration_minutes: 60,
-    });
-    expect(body.groups.reduce((sum, group) => sum + group.total_sessions, 0)).toBe(9);
-    // Total periode dari backend = jumlah semua grup.
-    expect(body.totals).toEqual({
-      total_sessions: 9,
-      approved_sessions: 4,
-      pending_sessions: 3,
-      revision_requested_sessions: 1,
-      rejected_sessions: 1,
-      approved_duration_minutes: 300,
-    });
+describe('Penagihan Orang Tua', () => {
+  it('per murid: hanya sesi yang dihitung, tarif per sesi (snapshot), subtotal & total tagihan', async () => {
+    const body = billingResponseSchema.parse((await admin.get('/admin/billing?period=2026-10').expect(200)).body);
+    expect(body.students.map((student) => [student.student_name, student.sessions, student.total_amount])).toEqual([
+      ['Aisyah', 2, '100000'],
+      ['Bima', 1, '50000'],
+      ['Citra', 1, '50000'],
+    ]);
+    expect(body).toMatchObject({ total_sessions: 4, total_amount: '200000', warnings: [] });
+    const aisyah = body.students[0];
+    expect(aisyah).toMatchObject({ grade: '3 SD', school_name: 'SD Harapan Bangsa', parent_names: ['Sari'] });
+    expect(aisyah?.lines.map((line) => [line.lesson_date, line.amount])).toEqual([
+      ['2026-10-01', '50000'],
+      ['2026-10-31', '50000'],
+    ]);
+    // Total tagihan = omzet kotor di dashboard.
+    const dashboard = adminDashboardSummarySchema.parse((await admin.get('/admin/dashboard/summary?period=2026-10').expect(200)).body);
+    expect(dashboard.gross_revenue).toBe(body.total_amount);
   });
 
-  it('group_by=subject dan default group_by=tutor', async () => {
-    const subject = recapResponseSchema.parse((await admin.get('/admin/recap?period=2026-10&group_by=subject').expect(200)).body);
-    expect(subject.groups.map((group) => group.key_label)).toEqual(['Bahasa Inggris', 'IPA', 'Matematika']);
-    const fallback = recapResponseSchema.parse((await admin.get('/admin/recap?period=2026-10').expect(200)).body);
-    expect(fallback.group_by).toBe('tutor');
+  it('filter satu murid; murid tanpa sesi dihitung → daftar kosong', async () => {
+    const one = billingResponseSchema.parse((await admin.get(`/admin/billing?period=2026-10&student_id=${STUDENT_IDS.murid2}`).expect(200)).body);
+    expect(one.students.map((student) => student.student_name)).toEqual(['Bima']);
+    const none = billingResponseSchema.parse((await admin.get(`/admin/billing?period=2026-10&student_id=${STUDENT_IDS.lutfi}`).expect(200)).body);
+    expect(none).toMatchObject({ students: [], total_sessions: 0, total_amount: '0' });
+  });
+
+  it('invoice PDF satu murid: application/pdf, nama file, tanpa cache; murid tanpa tagihan → 404', async () => {
+    const res = await admin.get(`/admin/billing/${STUDENT_IDS.murid1}/invoice.pdf?period=2026-10`).buffer(true).parse((response, callback) => {
+      const chunks: Buffer[] = [];
+      response.on('data', (chunk: Buffer) => chunks.push(chunk));
+      response.on('end', () => callback(null, Buffer.concat(chunks)));
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toBe('application/pdf');
+    expect(res.headers['content-disposition']).toBe('attachment; filename="tagihan-2026-10-aisyah.pdf"');
+    expect(res.headers['cache-control']).toBe('no-store');
+    const pdf = res.body as Buffer;
+    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(pdf.length).toBeGreaterThan(1500);
+
+    expect((await admin.get(`/admin/billing/${STUDENT_IDS.lutfi}/invoice.pdf?period=2026-10`)).status).toBe(404);
+    expect((await admin.get(`/admin/billing/${STUDENT_IDS.murid1}/invoice.pdf`)).status).toBe(422);
+  });
+
+  it('nomor invoice & nama file deterministik', () => {
+    expect(invoiceNumber('2026-10', '00000000-0000-4000-8003-00000000ab12')).toBe('INV-202610-00AB12');
+    expect(invoiceFileName('2026-10', 'Siti Nur Aisyah')).toBe('tagihan-2026-10-siti-nur-aisyah.pdf');
   });
 });
 
 describe('Ringkasan dashboard', () => {
-  it('Admin: status, finding pending review, honor tarif tunggal', async () => {
+  it('Admin: empat metrik — tutor aktif, siswa bersesi, total sesi, omzet kotor per jenjang', async () => {
     const body = adminDashboardSummarySchema.parse((await admin.get('/admin/dashboard/summary?period=2026-10').expect(200)).body);
+    // Omzet = Σ tarif terkunci (snapshot) sesi approved: 4 sesi historis × Rp50.000.
     expect(body).toMatchObject({
+      period: '2026-10',
       active_tutors: 6,
-      active_students: 12,
+      students_with_sessions: 3,
       total_sessions: 9,
-      status_counts: { pending: 3, approved: 4, revision_requested: 1, rejected: 1 },
-      anomaly_findings_pending_review: 2,
-      honor: { estimated_amount: '200000' },
+      gross_revenue: '200000',
     });
+    // Grafik pendapatan: 6 bulan s.d. Oktober dari snapshot sesi yang dihitung.
+    expect(body.revenue_by_month.map((month) => month.period)).toEqual(['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10']);
+    expect(body.revenue_by_month.at(-1)).toEqual({ period: '2026-10', gross_revenue: '200000', tutor_salary: '160000', net_revenue: '40000' });
+    expect(body.revenue_by_month[0]).toEqual({ period: '2026-05', gross_revenue: '0', tutor_salary: '0', net_revenue: '0' });
   });
 
   it('Tutor: hanya data miliknya', async () => {
     const tutorA = await as.tutorA(t.app);
     const body = tutorDashboardSummarySchema.parse((await tutorA.get('/tutor/dashboard/summary?period=2026-10').expect(200)).body);
     expect(body.status_counts).toEqual({ pending: 2, approved: 3, revision_requested: 0, rejected: 0 });
-    expect(body.honor.estimated_amount).toBe('150000');
+    // Bersih: 3 sesi × (Rp50.000 − Rp10.000).
+    expect(body.honor.estimated_amount).toBe('120000');
   });
 
   it('Orang Tua: hanya approved anak terhubung, tanpa honor', async () => {

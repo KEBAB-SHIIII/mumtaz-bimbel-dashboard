@@ -5,7 +5,7 @@ import { PeriodSelector } from '../../../components/ui/period-selector';
 import { formatPeriod } from '../../../lib/format';
 import { usePeriodParam } from '../../../lib/period';
 import { queryKeys } from '../../../lib/query-keys';
-import { PayrollView } from '../../shared/payroll-view';
+import { AdminPayrollView } from '../../shared/payroll-view';
 import { fetchPayrollPreview } from '../api';
 
 export function AdminPayrollPage() {
@@ -16,7 +16,7 @@ export function AdminPayrollPage() {
     <>
       <PageHeader
         title="Honor Tutor"
-        description={`Estimasi honor ${formatPeriod(period)} dari sesi yang disetujui.`}
+        description={`Honor ${formatPeriod(period)} untuk crosscheck absensi dengan tutor. Pendapatan bersih tutor = tarif les − potongan admin per sesi.`}
         actions={<PeriodSelector value={period} onChange={setPeriod} />}
       />
       {payroll.isPending ? (
@@ -24,7 +24,7 @@ export function AdminPayrollPage() {
       ) : payroll.isError ? (
         <ErrorState error={payroll.error} onRetry={() => void payroll.refetch()} />
       ) : (
-        <PayrollView payroll={payroll.data} showTutorName />
+        <AdminPayrollView payroll={payroll.data} />
       )}
     </>
   );

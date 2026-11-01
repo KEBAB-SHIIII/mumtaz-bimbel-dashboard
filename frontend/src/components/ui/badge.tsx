@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { SessionStatus } from '@mumtaz/contracts';
+import type { ApprovalStatus, SessionStatus, SessionValidity } from '@mumtaz/contracts';
 import { cn } from '../../lib/cn';
 
 type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info';
@@ -31,7 +31,7 @@ export function Badge({ tone = 'neutral', icon: Icon, children }: { tone?: Tone;
 
 /** Status sesi selalu berupa teks + ikon, tidak mengandalkan warna saja (docs/07 §6). */
 const SESSION_STATUS: Record<SessionStatus, { label: string; tone: Tone; icon: LucideIcon }> = {
-  pending: { label: 'Menunggu verifikasi', tone: 'warning', icon: Clock },
+  pending: { label: 'Menunggu validasi', tone: 'warning', icon: Clock },
   approved: { label: 'Disetujui', tone: 'success', icon: CircleCheck },
   revision_requested: { label: 'Perlu revisi', tone: 'info', icon: PencilLine },
   rejected: { label: 'Ditolak', tone: 'danger', icon: CircleX },
@@ -55,6 +55,51 @@ export function FindingIndicator({ count }: { count: number }) {
   return (
     <Badge tone="warning" icon={TriangleAlert}>
       {count} temuan
+    </Badge>
+  );
+}
+
+/**
+ * Validitas data (revisi PM): Valid hijau, Perlu revisi biru, Ditolak merah; belum divalidasi
+ * abu-abu. Selalu teks + ikon, tidak mengandalkan warna saja.
+ */
+const VALIDITY: Record<SessionValidity | 'unvalidated', { label: string; tone: Tone; icon: LucideIcon }> = {
+  valid: { label: 'Valid', tone: 'success', icon: CircleCheck },
+  needs_revision: { label: 'Perlu revisi', tone: 'info', icon: PencilLine },
+  rejected: { label: 'Ditolak', tone: 'danger', icon: CircleX },
+  unvalidated: { label: 'Menunggu validasi', tone: 'neutral', icon: Clock },
+};
+
+export const VALIDITY_LABELS = Object.fromEntries(
+  Object.entries(VALIDITY).map(([key, value]) => [key, value.label]),
+) as Record<SessionValidity | 'unvalidated', string>;
+
+export function ValidityBadge({ validity }: { validity: SessionValidity | null }) {
+  const config = VALIDITY[validity ?? 'unvalidated'];
+  return (
+    <Badge tone={config.tone} icon={config.icon}>
+      {config.label}
+    </Badge>
+  );
+}
+
+/** Status approval sesi Perlu revisi (dipilih Admin setelah banding via WA). */
+const APPROVAL: Record<ApprovalStatus, { label: string; tone: Tone; icon: LucideIcon }> = {
+  pending: { label: 'Menunggu', tone: 'warning', icon: Clock },
+  approved: { label: 'Disetujui', tone: 'success', icon: CircleCheck },
+  rejected: { label: 'Ditolak', tone: 'danger', icon: CircleX },
+};
+
+export const APPROVAL_LABELS = Object.fromEntries(
+  Object.entries(APPROVAL).map(([key, value]) => [key, value.label]),
+) as Record<ApprovalStatus, string>;
+
+export function ApprovalBadge({ approval }: { approval: ApprovalStatus | null }) {
+  if (!approval) return <span className="text-xs text-muted">—</span>;
+  const config = APPROVAL[approval];
+  return (
+    <Badge tone={config.tone} icon={config.icon}>
+      {config.label}
     </Badge>
   );
 }

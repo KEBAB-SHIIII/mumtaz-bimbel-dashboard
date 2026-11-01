@@ -14,15 +14,29 @@ const honorEstimateSchema = z.object({
   estimated_amount: moneyStringSchema,
 });
 
-/** `GET /admin/dashboard/summary`. */
+/**
+ * `GET /admin/dashboard/summary` — empat metrik inti (revisi PM, Stand Up #6).
+ * `students_with_sessions`: siswa yang punya sesi pada periode. `gross_revenue`: omzet kotor
+ * (jumlah tarif les sesi yang dihitung, sebelum potongan Admin dan honor tutor).
+ */
 export const adminDashboardSummarySchema = z.object({
   period: periodSchema,
   active_tutors: z.number().int().min(0),
-  active_students: z.number().int().min(0),
+  students_with_sessions: z.number().int().min(0),
   total_sessions: z.number().int().min(0),
-  status_counts: sessionStatusCountsSchema,
-  anomaly_findings_pending_review: z.number().int().min(0),
-  honor: honorEstimateSchema,
+  gross_revenue: moneyStringSchema,
+  /**
+   * Grafik pendapatan: 6 bulan terakhir s.d. periode (urut lama → baru), dari snapshot sesi yang dihitung.
+   * `tutor_salary` = Σ (kotor − potongan); `net_revenue` = Σ potongan Admin (pendapatan bersih bimbel).
+   */
+  revenue_by_month: z.array(
+    z.object({
+      period: periodSchema,
+      gross_revenue: moneyStringSchema,
+      tutor_salary: moneyStringSchema,
+      net_revenue: moneyStringSchema,
+    }),
+  ),
 });
 export type AdminDashboardSummary = z.infer<typeof adminDashboardSummarySchema>;
 

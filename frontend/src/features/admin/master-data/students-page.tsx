@@ -3,12 +3,12 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { createStudentRequestSchema, updateStudentRequestSchema, type Student } from '@mumtaz/contracts';
+import { GRADE_OPTIONS, createStudentRequestSchema, updateStudentRequestSchema, type Student } from '@mumtaz/contracts';
 import { Button } from '../../../components/ui/button';
 import { DataTable } from '../../../components/ui/data-table';
 import { Modal } from '../../../components/ui/dialog';
 import { EmptyState, ErrorState, InlineAlert, LoadingState } from '../../../components/ui/feedback';
-import { FormField, Input, describedBy } from '../../../components/ui/field';
+import { FormField, Input, Select, describedBy } from '../../../components/ui/field';
 import { Card } from '../../../components/ui/layout-primitives';
 import { toApiError } from '../../../lib/api-error';
 import { queryKeys } from '../../../lib/query-keys';
@@ -77,8 +77,15 @@ function StudentFormDialog({ student, open, onClose }: { student: Student | null
         <FormField id="student-full_name" label="Nama lengkap" required error={errors.full_name?.message}>
           <Input {...field('full_name')} {...form.register('full_name')} />
         </FormField>
-        <FormField id="student-grade" label="Kelas" required hint="Contoh: 3 SD, 2 SMP." error={errors.grade?.message}>
-          <Input {...field('grade')} {...form.register('grade')} />
+        <FormField id="student-grade" label="Kelas" required hint="Tarif les: kelas 1–3 SD dan 4–6 SD berbeda." error={errors.grade?.message}>
+          <Select {...field('grade')} {...form.register('grade')}>
+            <option value="">Pilih kelas</option>
+            {GRADE_OPTIONS.map((grade) => (
+              <option key={grade} value={grade}>
+                Kelas {grade}
+              </option>
+            ))}
+          </Select>
         </FormField>
         <FormField id="student-school_name" label="Asal sekolah" required error={errors.school_name?.message}>
           <Input {...field('school_name')} {...form.register('school_name')} />
@@ -87,7 +94,7 @@ function StudentFormDialog({ student, open, onClose }: { student: Student | null
           <CheckboxField
             id="student-is_active"
             label="Siswa aktif"
-            description="Jika nonaktif, siswa tidak bisa diberi penugasan atau sesi baru. Histori dan akses wali ke sesi lama tetap ada."
+            description="Jika nonaktif, siswa tidak bisa dipilih untuk sesi baru. Histori dan akses wali ke sesi lama tetap ada."
             {...form.register('is_active')}
           />
         )}

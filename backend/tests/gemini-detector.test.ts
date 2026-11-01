@@ -10,8 +10,9 @@ const target = {
   id: '00000000-0000-4000-8000-000000000009',
   tutor_id: '00000000-0000-4000-8002-000000000001',
   student_id: '00000000-0000-4000-8003-000000000002',
-  subject_id: '00000000-0000-4000-8004-000000000002',
+  subject_ids: ['00000000-0000-4000-8004-000000000002'],
   lesson_date: '2026-10-10',
+  start_time: '16:00',
   duration_minutes: 240,
   submitted_at: '2026-10-10T10:05:00.000Z',
 };
@@ -24,7 +25,7 @@ const input: AnomalyDetectionInput = {
     { finding_type: 'suspected_duplicate', signal: 'same_tutor_student_subject_date_duration', related_lesson_session_id: related.id, default_severity: 'medium' },
     { finding_type: 'duration_outlier', signal: 'duration_above_threshold', related_lesson_session_id: null, default_severity: 'low' },
   ],
-  config: { durationOutlierMinutes: 180 },
+  config: { durationOutlierMinutes: 180, lateStartAfter: '21:00' },
 };
 
 /** Klien Gemini palsu: merekam request dan mengembalikan teks JSON yang ditentukan test. */
@@ -40,6 +41,8 @@ function fakeClient(text: string | undefined | ((params: GenerateContentParamete
 }
 
 const validOutput = {
+  validity: 'rejected',
+  validity_reason: 'S0 sama persis dengan S1 (tutor T1, siswa P1).',
   classifications: [
     { candidate_ref: 'C1', is_anomaly: true, severity: 'medium', reason: 'S0 identik dengan S1 pada tanggal yang sama.', evidence_summary: 'Tutor T1, murid P1, durasi sama.' },
     { candidate_ref: 'C2', is_anomaly: false, severity: 'low', reason: 'Durasi panjang masih wajar untuk persiapan ujian.', evidence_summary: '' },
@@ -50,11 +53,20 @@ const validOutput = {
 const signal = new AbortController().signal;
 
 describe('pseudonymize', () => {
-  it('mengganti semua UUID dengan alias; hanya tanggal & durasi yang dikirim', () => {
+  it('mengganti semua UUID dengan alias; hanya tanggal, jam mulai & durasi yang dikirim', () => {
     const { payload, sessionIdOf } = pseudonymize(input);
     const raw = JSON.stringify(payload);
     expect(raw).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/);
-    expect(payload.target).toEqual({ ref: 'S0', tutor: 'T1', student: 'P1', subject: 'M1', lesson_date: '2026-10-10', duration_minutes: 240 });
+    expect(payload.target).toEqual({
+      ref: 'S0',
+      tutor: 'T1',
+      student: 'P1',
+      subjects: ['M1'],
+      lesson_date: '2026-10-10',
+      start_time: '16:00',
+      duration_minutes: 240,
+    });
+    expect(payload.config).toEqual({ duration_outlier_minutes: 180, late_start_after: '21:00' });
     expect(payload.candidates[0]).toMatchObject({ ref: 'C1', related: 'S1' });
     expect(sessionIdOf.get('S1')).toBe(related.id);
   });
@@ -70,7 +82,9 @@ describe('GeminiAnomalyDetector (klien di-mock, tanpa credential)', () => {
   it('meminta JSON terstruktur (schema + temperature 0) dan memetakan alias ke ID', async () => {
     const { client, requests } = fakeClient(JSON.stringify(validOutput));
     const detector = new GeminiAnomalyDetector({ model: 'gemini-test-model', client });
-    const findings = await detector.detect(input, { signal });
+    const { findings, validity, validity_reason } = await detector.detect(input, { signal });
+    expect(validity).toBe('rejected');
+    expect(validity_reason).toBe('sesi ini sama persis dengan sesi pembanding (tutor tutor, siswa siswa).');
 
     const config = requests[0]?.config;
     expect(requests[0]?.model).toBe('gemini-test-model');
@@ -101,11 +115,11 @@ describe('GeminiAnomalyDetector (klien di-mock, tanpa credential)', () => {
     };
     // S1 sudah tercakup kandidat duplikasi → temuan tambahan yang sama dibuang (tidak berulang).
     const redundant = await new GeminiAnomalyDetector({ model: 'm', client: fakeClient(JSON.stringify(withExtra)).client }).detect(input, { signal });
-    expect(redundant.map((f) => f.finding_type)).toEqual(['suspected_duplicate', 'duration_outlier']);
+    expect(redundant.findings.map((f) => f.finding_type)).toEqual(['suspected_duplicate', 'duration_outlier']);
 
     const self = { ...withExtra, additional_findings: [{ ...withExtra.additional_findings[0], related_ref: 'S0' }] };
     const selfResult = await new GeminiAnomalyDetector({ model: 'm', client: fakeClient(JSON.stringify(self)).client }).detect(input, { signal });
-    expect(selfResult.at(-1)).toMatchObject({ finding_type: 'unusual_pattern', related_lesson_session_id: null });
+    expect(selfResult.findings.at(-1)).toMatchObject({ finding_type: 'unusual_pattern', related_lesson_session_id: null });
 
     const bad = { ...withExtra, additional_findings: [{ ...withExtra.additional_findings[0], related_ref: 'S9' }] };
     await expect(new GeminiAnomalyDetector({ model: 'm', client: fakeClient(JSON.stringify(bad)).client }).detect(input, { signal })).rejects.toMatchObject({ reason: 'invalid_output' });
@@ -117,6 +131,8 @@ describe('GeminiAnomalyDetector (klien di-mock, tanpa credential)', () => {
     ['kandidat tidak lengkap', JSON.stringify({ ...validOutput, classifications: validOutput.classifications.slice(0, 1) })],
     ['kandidat tak dikenal', JSON.stringify({ ...validOutput, classifications: [...validOutput.classifications, { ...validOutput.classifications[0], candidate_ref: 'C9' }] })],
     ['kandidat ganda', JSON.stringify({ ...validOutput, classifications: [validOutput.classifications[0], validOutput.classifications[0]] })],
+    ['label validitas tidak dikenal', JSON.stringify({ ...validOutput, validity: 'approved' })],
+    ['tanpa label validitas', JSON.stringify({ ...validOutput, validity: undefined })],
     ['output kosong', undefined],
   ])('%s → AnomalyProviderError invalid_output (bukan hasil parsial)', async (_name, text) => {
     const detector = new GeminiAnomalyDetector({ model: 'm', client: fakeClient(text).client });
@@ -163,7 +179,7 @@ describe('retry error transien', () => {
         return { text: JSON.stringify(validOutput) };
       },
     };
-    const findings = await new GeminiAnomalyDetector({ model: 'm', client }).detect(input, { signal });
+    const { findings } = await new GeminiAnomalyDetector({ model: 'm', client }).detect(input, { signal });
     expect(calls).toBe(2);
     expect(findings).toHaveLength(2);
   });
