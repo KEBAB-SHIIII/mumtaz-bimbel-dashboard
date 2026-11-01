@@ -7,6 +7,7 @@ import { loginRequestSchema, parentAccessRequestSchema, type LoginRequest, type 
 import { Button } from '../../components/ui/button';
 import { InlineAlert, LoadingState } from '../../components/ui/feedback';
 import { FormField, Input, describedBy } from '../../components/ui/field';
+import { SpotlightCard } from '../../components/ui/spotlight-card';
 import { toApiError } from '../../lib/api-error';
 import { ROLE_HOME, useLoginMutation, useParentAccessMutation, useSession } from './session';
 
@@ -15,15 +16,23 @@ function AuthLayout({ title, description, children, footer }: { title: string; d
     document.title = `${title} · Mumtaz Bimbel`;
   }, [title]);
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-background px-4 py-10">
+    <main className="relative isolate flex min-h-dvh items-center justify-center overflow-hidden bg-background px-4 py-10 pt-[max(2.5rem,env(safe-area-inset-top))]">
+      {/* Aksen gradien hijau lembut di satu sisi (bukan pelangi), dekoratif. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 -end-40 -z-10 size-[32rem] rounded-full bg-radial from-nav-active-from/35 via-nav-active-to/15 to-transparent blur-2xl"
+      />
       <div className="w-full max-w-sm">
-        <p className="mb-6 text-center text-sm font-semibold tracking-wide text-muted uppercase">Mumtaz Bimbel</p>
-        <div className="rounded-lg border border-border bg-surface p-6 shadow-sm">
-          <h1 className="text-lg font-semibold text-text">{title}</h1>
-          <p className="mt-1 text-sm text-muted">{description}</p>
-          <div className="mt-6">{children}</div>
+        <div className="mb-6 flex items-center justify-center gap-2.5">
+          <span aria-hidden className="grid size-9 place-items-center rounded-md bg-primary text-base font-bold text-primary-foreground shadow-sm">M</span>
+          <p className="text-base font-semibold text-text">Mumtaz Bimbel</p>
         </div>
-        <div className="mt-4 text-center text-sm text-muted">{footer}</div>
+        <SpotlightCard className="rounded-xl border border-border bg-surface p-6 shadow-md sm:p-7">
+          <h1 className="text-page-title-mobile text-balance text-text">{title}</h1>
+          <p className="mt-1 text-sm text-pretty text-muted">{description}</p>
+          <div className="mt-6">{children}</div>
+        </SpotlightCard>
+        <div className="mt-5 text-center text-sm text-pretty text-muted">{footer}</div>
       </div>
     </main>
   );
@@ -71,7 +80,7 @@ export function StaffLoginPage() {
         </>
       }
     >
-      <form noValidate onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-4">
+      <form noValidate onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-5">
         {mutation.isError && <InlineAlert tone="danger" title={toApiError(mutation.error).message} />}
         <FormField id="username" label="Username" required error={errors.username?.message}>
           <Input
@@ -90,14 +99,14 @@ export function StaffLoginPage() {
               id="password"
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
-              className="pr-10"
+              className="pe-11"
               aria-invalid={Boolean(errors.password)}
               aria-describedby={describedBy('password', errors.password?.message)}
               {...form.register('password')}
             />
             <button
               type="button"
-              className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted hover:text-text"
+              className="absolute inset-y-0 end-0 flex w-11 items-center justify-center rounded-e-md text-muted hover:text-text focus-visible:-outline-offset-2"
               aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
               aria-pressed={showPassword}
               onClick={() => setShowPassword((value) => !value)}
@@ -106,7 +115,7 @@ export function StaffLoginPage() {
             </button>
           </div>
         </FormField>
-        <Button type="submit" loading={mutation.isPending} icon={<LogIn aria-hidden className="size-4" />}>
+        <Button type="submit" loading={mutation.isPending} icon={<LogIn aria-hidden className="size-4" />} className="mt-1 w-full">
           Masuk
         </Button>
       </form>
@@ -144,7 +153,7 @@ export function ParentLoginPage() {
         </>
       }
     >
-      <form noValidate onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-4">
+      <form noValidate onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-5">
         {mutation.isError && <InlineAlert tone="danger" title={toApiError(mutation.error).message} />}
         <FormField id="access_code" label="ID Akses Orang Tua" required hint={hint} error={error}>
           <Input
@@ -158,7 +167,7 @@ export function ParentLoginPage() {
             {...form.register('access_code')}
           />
         </FormField>
-        <Button type="submit" loading={mutation.isPending} icon={<KeyRound aria-hidden className="size-4" />}>
+        <Button type="submit" loading={mutation.isPending} icon={<KeyRound aria-hidden className="size-4" />} className="mt-1 w-full">
           Masuk
         </Button>
       </form>

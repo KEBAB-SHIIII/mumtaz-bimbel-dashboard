@@ -58,10 +58,18 @@ export function CountUp({ value, format = (n) => integerFormat.format(n), classN
   }, [value, reduce]);
 
   const finalText = format(value);
+  const animating = !reduce && display !== null;
   return (
     <span ref={ref} className={cn('tabular-nums', className)}>
-      <span className="sr-only">{finalText}</span>
-      <span aria-hidden>{reduce || display === null ? finalText : format(Math.round(display))}</span>
+      {animating ? (
+        <>
+          {/* Selama berjalan: pembaca layar membaca nilai akhir, angka yang bergerak disembunyikan. */}
+          <span className="sr-only">{finalText}</span>
+          <span aria-hidden>{format(Math.round(display))}</span>
+        </>
+      ) : (
+        finalText
+      )}
     </span>
   );
 }

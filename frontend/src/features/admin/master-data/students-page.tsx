@@ -7,8 +7,9 @@ import { GRADE_OPTIONS, createStudentRequestSchema, updateStudentRequestSchema, 
 import { Button } from '../../../components/ui/button';
 import { DataTable } from '../../../components/ui/data-table';
 import { Modal } from '../../../components/ui/dialog';
-import { EmptyState, ErrorState, InlineAlert, LoadingState } from '../../../components/ui/feedback';
+import { EmptyState, ErrorState, NoResultsState, InlineAlert } from '../../../components/ui/feedback';
 import { FormField, Input, Select, describedBy } from '../../../components/ui/field';
+import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/skeleton';
 import { Card } from '../../../components/ui/layout-primitives';
 import { toApiError } from '../../../lib/api-error';
 import { queryKeys } from '../../../lib/query-keys';
@@ -129,11 +130,12 @@ export function StudentsPage() {
     <>
       <MasterToolbar search={search} onSearch={(value) => update({ search: value })} placeholder="Nama atau sekolah" createLabel="Tambah siswa" onCreate={() => { setEditing(null); setFormOpen(true); }} />
       <Card>
-        {query.isPending ? (
-          <LoadingState />
-        ) : query.isError ? (
+        {query.isError && !query.data ? (
           <ErrorState error={query.error} onRetry={() => void query.refetch()} />
         ) : (
+          <LoadingSwitch loading={!query.data} skeleton={<SkeletonDataTable headers={['Nama', 'Kelas', 'Asal sekolah', 'Status', '']} />}>
+            {() =>
+              query.data && (
           <DataTable
             caption="Daftar siswa"
             columns={columns}
@@ -141,8 +143,11 @@ export function StudentsPage() {
             getRowId={(row) => row.id}
             isFetching={query.isFetching}
             pagination={{ page, pageSize: MASTER_PAGE_SIZE, total: query.data.total, onPageChange: (next) => update({ page: String(next) }, { resetPage: false }) }}
-            empty={<EmptyState title="Belum ada siswa" description={search ? 'Tidak ada siswa yang cocok dengan pencarian.' : 'Tambahkan siswa pertama.'} />}
+            empty={search ? <NoResultsState query={search} onReset={() => update({ search: '' })} /> : <EmptyState title="Belum ada siswa" description="Tambahkan siswa pertama." />}
           />
+              )
+            }
+          </LoadingSwitch>
         )}
       </Card>
       <StudentFormDialog key={editing?.id ?? 'new'} student={editing} open={formOpen} onClose={() => setFormOpen(false)} />

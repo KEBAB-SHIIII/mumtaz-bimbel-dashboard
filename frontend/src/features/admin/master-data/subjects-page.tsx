@@ -7,8 +7,9 @@ import { createSubjectRequestSchema, updateSubjectRequestSchema, type Subject } 
 import { Button } from '../../../components/ui/button';
 import { DataTable } from '../../../components/ui/data-table';
 import { Modal } from '../../../components/ui/dialog';
-import { EmptyState, ErrorState, InlineAlert, LoadingState } from '../../../components/ui/feedback';
+import { EmptyState, ErrorState, InlineAlert, NoResultsState } from '../../../components/ui/feedback';
 import { FormField, Input, describedBy } from '../../../components/ui/field';
+import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/skeleton';
 import { Card } from '../../../components/ui/layout-primitives';
 import { toApiError } from '../../../lib/api-error';
 import { queryKeys } from '../../../lib/query-keys';
@@ -91,11 +92,12 @@ export function SubjectsPage() {
     <>
       <MasterToolbar search={search} onSearch={(value) => update({ search: value })} placeholder="Nama mapel" createLabel="Tambah mapel" onCreate={() => { setEditing(null); setFormOpen(true); }} />
       <Card>
-        {query.isPending ? (
-          <LoadingState />
-        ) : query.isError ? (
+        {query.isError && !query.data ? (
           <ErrorState error={query.error} onRetry={() => void query.refetch()} />
         ) : (
+          <LoadingSwitch loading={!query.data} skeleton={<SkeletonDataTable headers={['Mata pelajaran', 'Status', '']} />}>
+            {() =>
+              query.data && (
           <DataTable
             caption="Daftar mata pelajaran"
             columns={columns}
@@ -103,8 +105,11 @@ export function SubjectsPage() {
             getRowId={(row) => row.id}
             isFetching={query.isFetching}
             pagination={{ page, pageSize: MASTER_PAGE_SIZE, total: query.data.total, onPageChange: (next) => update({ page: String(next) }, { resetPage: false }) }}
-            empty={<EmptyState title="Belum ada mata pelajaran" />}
+            empty={search ? <NoResultsState query={search} onReset={() => update({ search: '' })} /> : <EmptyState title="Belum ada mata pelajaran" description="Tambahkan mata pelajaran yang diajarkan; tutor memilihnya saat mengisi absensi." />}
           />
+              )
+            }
+          </LoadingSwitch>
         )}
       </Card>
       <SubjectFormDialog key={editing?.id ?? 'new'} subject={editing} open={formOpen} onClose={() => setFormOpen(false)} />

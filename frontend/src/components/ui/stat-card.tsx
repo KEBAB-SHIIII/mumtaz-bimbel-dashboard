@@ -30,13 +30,15 @@ interface StatCardProps {
   accent?: Accent;
   /** Urutan di grid: kartu masuk fade + naik 8px dengan stagger 40ms. */
   index?: number;
+  /** Mis. `max-sm:col-span-2` untuk nominal Rupiah panjang di grid 2 kolom HP. */
+  className?: string;
 }
 
 /**
  * Kartu angka ringkasan (Ref 3 + kotak ikon Ref 1). Dipakai di dalam `<dl>`: elemen akar adalah
  * `div` pembungkus pasangan `dt`/`dd`. Dengan `to`, nama tautan = label kartu.
  */
-export function StatCard({ label, value, count, hint, to, icon: Icon, accent = 'green', index = 0 }: StatCardProps) {
+export function StatCard({ label, value, count, hint, to, icon: Icon, accent = 'green', index = 0, className }: StatCardProps) {
   return (
     <m.div
       onPointerMove={trackSpotlight}
@@ -45,8 +47,9 @@ export function StatCard({ label, value, count, hint, to, icon: Icon, accent = '
       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1], delay: index * 0.04 }}
       className={cn(
         SPOTLIGHT_CLASS,
-        'flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-sm sm:p-5',
+        'flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-sm sm:p-5',
         to && 'transition-[border-color,box-shadow] duration-150 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus-ring hover:border-text/20 hover:shadow-md motion-reduce:transition-none',
+        className,
       )}
     >
       <dt className="flex items-center gap-2.5 text-sm font-medium text-muted">
@@ -66,7 +69,7 @@ export function StatCard({ label, value, count, hint, to, icon: Icon, accent = '
         </span>
         {to && <ChevronRight aria-hidden className="size-4 shrink-0" />}
       </dt>
-      <dd className="text-stat-mobile text-text tabular-nums sm:text-stat">
+      <dd className="text-stat-mobile [overflow-wrap:anywhere] text-text tabular-nums sm:text-stat">
         {count ? <CountUp value={count.value} {...(count.format ? { format: count.format } : {})} /> : value}
       </dd>
       {hint && <dd className="relative -mt-1.5 text-meta text-muted">{hint}</dd>}

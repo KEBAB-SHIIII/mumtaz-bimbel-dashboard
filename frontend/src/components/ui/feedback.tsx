@@ -1,4 +1,4 @@
-import { CircleAlert, CircleCheck, Inbox, Info, LoaderCircle, RotateCcw, TriangleAlert, type LucideIcon } from 'lucide-react';
+import { CircleAlert, CircleCheck, Inbox, Info, LoaderCircle, RotateCcw, SearchX, TriangleAlert, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { toApiError } from '../../lib/api-error';
 import { cn } from '../../lib/cn';
@@ -39,6 +39,22 @@ export function EmptyState({ title, description, action, icon = Inbox }: EmptySt
       </div>
       {action}
     </div>
+  );
+}
+
+/** Hasil pencarian/filter kosong: sebut kata kuncinya dan beri jalan keluar (reset filter). */
+export function NoResultsState({ query, onReset }: { query?: string | undefined; onReset: () => void }) {
+  return (
+    <EmptyState
+      icon={SearchX}
+      title="Tidak ada hasil"
+      description={query ? `Tidak ada hasil untuk “${query}” dengan filter ini.` : 'Tidak ada data yang cocok dengan filter yang dipilih.'}
+      action={
+        <Button variant="secondary" size="sm" icon={<RotateCcw aria-hidden className="size-4" />} onClick={onReset}>
+          Reset filter
+        </Button>
+      }
+    />
   );
 }
 

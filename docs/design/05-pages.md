@@ -36,3 +36,14 @@ Kartu terpusat di atas latar `background` dengan aksen gradien hijau lembut di s
 ## State wajib di setiap halaman
 
 Loading (skeleton sesuai bentuk konten, aturan di `04-components.md` § Skeleton), kosong (empty state + aksi), error (pesan + tombol coba lagi), dan hasil pencarian kosong ("Tidak ada hasil untuk '…'" + tombol reset filter).
+
+## Implementasi Tahap 4 (2026-11-02)
+
+Semua halaman memakai `QueryView`/`LoadingSwitch` (skeleton berbentuk konten → konten, error + "Coba lagi"), `NoResultsState` untuk filter/pencarian kosong (dengan "Reset filter"), dan `SearchInput` (debounce) menggantikan form "Cari". Penyimpangan yang disengaja:
+
+- **Filter validitas/status tetap `<select>`**, bukan chip: test yang ada memilih lewat label "Validitas"/"Status", dan dropdown lebih ringkas di HP. Bisa diganti `SegmentedControl` bila test ikut diperbarui.
+- **Master Data**: tab internal tetap ada sebagai pintasan pil di < 1024px (sidebar = drawer); disembunyikan di desktop karena submenu sidebar sudah menggantikannya.
+- **Dashboard Admin**: ringkasan validitas (progress bar) dan daftar aktivitas terbaru **belum** ditampilkan karena API ringkasan belum menyediakan datanya (kontrak API tidak diubah di tahap ini). Grafik pendapatan kini 2 seri bertumpuk (bersih bimbel `primary` + gaji tutor `accent-coral`; puncaknya = omzet kotor, tampil di tooltip). Warna grafik dibaca dari token saat runtime (`lib/theme-colors.ts`).
+- **Progress Anak**: grafik kecil per bulan belum ada karena API hanya memberi data per periode; diganti StatCard + timeline sesi.
+- **Tutor Dashboard**: kartu status (Menunggu/Disetujui/Perlu revisi) tetap ada sebagai tautan ke riwayat terfilter, ditambah CTA "Isi Form Absensi" yang menonjol.
+- **Form Absensi**: satu kolom di HP dengan tombol kirim menempel di bawah layar (safe area); urutan field tetap dari `attendance-fields.tsx` (dipakai bersama dialog Admin).

@@ -107,7 +107,7 @@ export function AppShell() {
           </header>
 
           <main id="main" tabIndex={-1} className="flex flex-1 flex-col px-4 pb-8 focus:outline-none sm:px-6 lg:px-8">
-            <div className="mx-auto flex w-full max-w-[90rem] flex-1 flex-col gap-6 lg:rounded-xl lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-sm">
+            <div className="mx-auto flex w-full max-w-[90rem] flex-1 flex-col gap-4 lg:rounded-xl lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-sm">
               <Suspense fallback={<PageSkeleton />}>
                 <Outlet />
               </Suspense>

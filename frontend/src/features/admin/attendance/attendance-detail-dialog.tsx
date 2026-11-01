@@ -48,7 +48,7 @@ function ValidityEditor({ detail }: { detail: AdminAttendanceDetail }) {
   return (
     <section aria-labelledby="validity-heading" className="rounded-md border border-border p-3">
       <h3 id="validity-heading" className="text-sm font-semibold text-text">Koreksi validitas</h3>
-      <p className="mt-0.5 text-xs text-muted">Ubah bila label AI keliru atau setelah banding tutor via WA. Hanya Valid dan Perlu revisi yang Disetujui masuk rekap gaji.</p>
+      <p className="mt-0.5 text-meta text-muted">Ubah bila label AI keliru atau setelah banding tutor via WA. Hanya Valid dan Perlu revisi yang Disetujui masuk rekap gaji.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <FormField id="validity-select" label="Validitas data" required>
           <Select
@@ -100,7 +100,7 @@ function DetailBody({ detail }: { detail: AdminAttendanceDetail }) {
         <div className="flex flex-wrap items-center gap-2">
           <ValidityBadge validity={detail.validity} />
           {detail.approval_status && (
-            <span className="inline-flex items-center gap-1 text-xs text-muted">
+            <span className="inline-flex items-center gap-1 text-meta text-muted">
               Approval: <ApprovalBadge approval={detail.approval_status} />
             </span>
           )}

@@ -1,14 +1,18 @@
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Download } from 'lucide-react';
+import { CalendarCheck, Download, GraduationCap, ReceiptText } from 'lucide-react';
 import type { BillingLine, BillingStudent } from '@mumtaz/contracts';
+import { Avatar } from '../../../components/ui/avatar';
 import { Button } from '../../../components/ui/button';
 import { DataTable } from '../../../components/ui/data-table';
-import { EmptyState, ErrorState, InlineAlert, LoadingState } from '../../../components/ui/feedback';
+import { EmptyState, InlineAlert, NoResultsState } from '../../../components/ui/feedback';
 import { Select } from '../../../components/ui/field';
 import { Card, FilterBar, PageHeader, StatCard } from '../../../components/ui/layout-primitives';
 import { PeriodSelector } from '../../../components/ui/period-selector';
+import { QueryView } from '../../../components/ui/query-view';
+import { SkeletonDataTable, SkeletonStatCards } from '../../../components/ui/skeleton';
 import { toApiError } from '../../../lib/api-error';
+import { cn } from '../../../lib/cn';
 import { formatDuration, formatLessonDate, formatLessonTime, formatPeriod, formatRupiah } from '../../../lib/format';
 import { usePeriodParam } from '../../../lib/period';
 import { queryKeys } from '../../../lib/query-keys';
@@ -29,7 +33,7 @@ function saveBlob(blob: Blob, fileName: string) {
 
 const columns: ColumnDef<BillingLine, unknown>[] = [
   { id: 'no', header: 'No', cell: ({ row }) => row.index + 1 },
-  { id: 'date', header: 'Tanggal les', cell: ({ row }) => <span className="whitespace-nowrap">{formatLessonDate(row.original.lesson_date)}</span> },
+  { id: 'date', header: 'Tanggal les', meta: { cardTitle: true }, cell: ({ row }) => <span className="whitespace-nowrap">{formatLessonDate(row.original.lesson_date)}</span> },
   { id: 'time', header: 'Jam', cell: ({ row }) => <span className="whitespace-nowrap">{formatLessonTime(row.original.start_time, row.original.end_time)}</span> },
   { accessorKey: 'subject_name', header: 'Mata pelajaran' },
   { accessorKey: 'tutor_name', header: 'Tutor' },
@@ -45,19 +49,22 @@ function StudentInvoice({ student, period }: { student: BillingStudent; period: 
   const headingId = `invoice-${student.student_id}`;
 
   return (
-    <section aria-labelledby={headingId} className="rounded-lg border border-border bg-surface shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">
-        <div>
-          <h2 id={headingId} className="text-base font-semibold text-text">{student.student_name}</h2>
-          <p className="text-sm text-muted">
+    <section aria-labelledby={headingId} className="overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <Avatar seed={student.student_id} name={student.student_name} size={40} decorative />
+          <div className="min-w-0">
+          <h2 id={headingId} className="text-card-title text-text">{student.student_name}</h2>
+          <p className="text-meta text-pretty text-muted">
             {student.grade} · {student.school_name}
             {student.parent_names.length > 0 && ` · Orang tua/wali: ${student.parent_names.join(', ')}`}
           </p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="text-right">
-            <p className="text-xs text-muted">Total tagihan · {student.sessions} sesi</p>
-            <p className="text-lg font-semibold tabular-nums text-text">{formatRupiah(student.total_amount)}</p>
+          <div className="text-end">
+            <p className="text-meta text-muted">Total tagihan · {student.sessions} sesi</p>
+            <p className="text-card-title text-base tabular-nums text-text">{formatRupiah(student.total_amount)}</p>
           </div>
           <Button
             variant="secondary"
@@ -112,7 +119,7 @@ export function BillingPage() {
         <PeriodSelector value={period} onChange={setPeriod} />
         <div className="flex flex-col gap-1.5">
           <label htmlFor="billing-student" className="text-sm font-medium text-text">Murid</label>
-          <Select id="billing-student" value={values.student_id} onChange={(event) => update({ student_id: event.target.value })} className="w-52">
+          <Select id="billing-student" value={values.student_id} onChange={(event) => update({ student_id: event.target.value })} className="sm:w-52">
             <option value="">Semua murid</option>
             {options.data?.students.map((student) => (
               <option key={student.id} value={student.id}>{student.full_name}</option>
@@ -121,40 +128,49 @@ export function BillingPage() {
         </div>
       </FilterBar>
 
-      {billing.isPending ? (
-        <LoadingState />
-      ) : billing.isError ? (
-        <ErrorState error={billing.error} onRetry={() => void billing.refetch()} />
-      ) : (
-        <>
-          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <StatCard label="Total tagihan" value={formatRupiah(billing.data.total_amount)} />
-            <StatCard label="Jumlah sesi ditagih" value={billing.data.total_sessions} />
-            <StatCard label="Murid ditagih" value={billing.data.students.length} />
-          </dl>
-          {billing.data.warnings.length > 0 && (
-            <InlineAlert tone="warning" title="Ada sesi yang belum memiliki tarif">
-              <ul className="list-disc pl-5">
-                {billing.data.warnings.map((warning) => <li key={warning}>{warning}</li>)}
-              </ul>
-            </InlineAlert>
-          )}
-          {billing.data.students.length === 0 ? (
-            <Card>
-              <EmptyState
-                title="Belum ada tagihan"
-                description={values.student_id ? 'Murid ini belum memiliki sesi yang ditagihkan pada periode ini.' : `Belum ada sesi yang ditagihkan pada ${formatPeriod(period)}.`}
-              />
-            </Card>
-          ) : (
-            <div className={billing.isFetching ? 'flex flex-col gap-4 opacity-60 transition-opacity' : 'flex flex-col gap-4 transition-opacity'}>
-              {billing.data.students.map((student) => (
-                <StudentInvoice key={student.student_id} student={student} period={billing.data.period} />
-              ))}
+      <QueryView
+        query={billing}
+        skeleton={
+          <>
+            <SkeletonStatCards count={3} />
+            <div className="rounded-lg border border-border bg-surface shadow-sm">
+              <SkeletonDataTable headers={['No', 'Tanggal les', 'Jam', 'Mata pelajaran', 'Tutor', 'Durasi', 'Tarif per sesi']} rows={4} />
             </div>
-          )}
-        </>
-      )}
+          </>
+        }
+      >
+        {(data) => (
+          <>
+            <dl className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+              <StatCard index={0} className="col-span-2 lg:col-span-1" icon={ReceiptText} accent="green" label="Total tagihan" count={{ value: Number(data.total_amount), format: (value) => formatRupiah(String(value)) }} />
+              <StatCard index={1} icon={CalendarCheck} accent="blue" label="Jumlah sesi ditagih" count={{ value: data.total_sessions }} />
+              <StatCard index={2} icon={GraduationCap} accent="violet" label="Murid ditagih" count={{ value: data.students.length }} />
+            </dl>
+            {data.warnings.length > 0 && (
+              <InlineAlert tone="warning" title="Ada sesi yang belum memiliki tarif">
+                <ul className="list-disc ps-5">
+                  {data.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+                </ul>
+              </InlineAlert>
+            )}
+            {data.students.length === 0 ? (
+              <Card>
+                {values.student_id ? (
+                  <NoResultsState onReset={() => update({ student_id: '' })} />
+                ) : (
+                  <EmptyState title="Belum ada tagihan" description={`Belum ada sesi yang ditagihkan pada ${formatPeriod(period)}.`} />
+                )}
+              </Card>
+            ) : (
+              <div className={cn('flex flex-col gap-3 transition-opacity duration-200 sm:gap-4 motion-reduce:transition-none', billing.isFetching && 'opacity-60')} aria-busy={billing.isFetching || undefined}>
+                {data.students.map((student) => (
+                  <StudentInvoice key={student.student_id} student={student} period={data.period} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </QueryView>
     </>
   );
 }

@@ -1,7 +1,8 @@
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
-import { ChevronDown } from 'lucide-react';
+import { CalendarCheck, CalendarClock, ChevronDown, HandCoins, Landmark, Wallet } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { PayrollPreviewResponse, PayrollTutorSummary, TutorPayrollResponse } from '@mumtaz/contracts';
+import { Avatar } from '../../components/ui/avatar';
 import { ValidityBadge } from '../../components/ui/badge';
 import { EmptyState, InlineAlert } from '../../components/ui/feedback';
 import { Card, StatCard } from '../../components/ui/layout-primitives';
@@ -11,7 +12,7 @@ import { formatDuration, formatLessonDate, formatPeriod, formatRupiah } from '..
 /** Kolom nominal sesi: angka bila dihitung, selain itu alasan eksplisit (tidak ada angka palsu). */
 function AmountCell({ amount, counted }: { amount: string | null; counted: boolean }) {
   if (amount) return <span className="tabular-nums">{formatRupiah(amount)}</span>;
-  return <span className="text-xs text-muted">{counted ? 'Tarif belum terkunci' : 'Tidak dihitung'}</span>;
+  return <span className="text-meta text-muted">{counted ? 'Tarif belum terkunci' : 'Tidak dihitung'}</span>;
 }
 
 interface SessionRow {
@@ -32,24 +33,24 @@ function SessionLines({ caption, rows, amountLabel }: { caption: string; rows: S
       <table className="w-full text-sm">
         <caption className="sr-only">{caption}</caption>
         <thead>
-          <tr className="border-b border-border bg-surface-muted text-left text-xs text-muted">
-            <th scope="col" className="px-4 py-2 font-semibold">Tanggal les</th>
-            <th scope="col" className="px-4 py-2 font-semibold">Siswa</th>
-            <th scope="col" className="px-4 py-2 font-semibold">Mata pelajaran</th>
-            <th scope="col" className="px-4 py-2 font-semibold">Durasi</th>
-            <th scope="col" className="px-4 py-2 font-semibold">Validitas</th>
-            <th scope="col" className="px-4 py-2 text-right font-semibold">{amountLabel}</th>
+          <tr className="border-b border-border bg-surface-muted text-start text-meta text-muted [&>th]:h-10 [&>th]:px-4 [&>th]:font-medium [&>th]:whitespace-nowrap">
+            <th scope="col" className="text-start">Tanggal les</th>
+            <th scope="col" className="text-start">Siswa</th>
+            <th scope="col" className="text-start">Mata pelajaran</th>
+            <th scope="col" className="text-start">Durasi</th>
+            <th scope="col" className="text-start">Validitas</th>
+            <th scope="col" className="text-end">{amountLabel}</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((line) => (
-            <tr key={line.session_id} className={cn('border-b border-border last:border-0', !line.counted && 'text-muted')}>
-              <td className="px-4 py-2 whitespace-nowrap">{formatLessonDate(line.lesson_date)}</td>
-              <td className="px-4 py-2">{line.student_name}</td>
-              <td className="px-4 py-2">{line.subject_name}</td>
-              <td className="px-4 py-2 whitespace-nowrap">{formatDuration(line.duration_minutes)}</td>
-              <td className="px-4 py-2"><ValidityBadge validity={line.validity} /></td>
-              <td className="px-4 py-2 text-right whitespace-nowrap"><AmountCell amount={line.amount} counted={line.counted} /></td>
+            <tr key={line.session_id} className={cn('border-b border-border last:border-0 [&>td]:h-11 [&>td]:px-4 [&>td]:py-2.5', line.counted ? 'text-text' : 'text-muted')}>
+              <td className="whitespace-nowrap">{formatLessonDate(line.lesson_date)}</td>
+              <td>{line.student_name}</td>
+              <td>{line.subject_name}</td>
+              <td className="whitespace-nowrap">{formatDuration(line.duration_minutes)}</td>
+              <td><ValidityBadge validity={line.validity} size="sm" /></td>
+              <td className="text-end whitespace-nowrap"><AmountCell amount={line.amount} counted={line.counted} /></td>
             </tr>
           ))}
         </tbody>
@@ -58,12 +59,17 @@ function SessionLines({ caption, rows, amountLabel }: { caption: string; rows: S
   );
 }
 
+/** Nominal Rupiah (string desimal dari backend) untuk CountUp; tampilan tetap `formatRupiah`. */
+function rupiahCount(amount: string) {
+  return { value: Number(amount), format: (value: number) => formatRupiah(String(value)) };
+}
+
 function SessionDisclosure({ count, defaultOpen, children }: { count: number; defaultOpen: boolean; children: ReactNode }) {
   return (
     <Disclosure defaultOpen={defaultOpen}>
-      <DisclosureButton className="group flex w-full items-center justify-between border-t border-border px-4 py-2 text-left text-sm font-medium text-primary hover:bg-surface-muted">
+      <DisclosureButton className="group flex h-11 w-full items-center justify-between border-t border-border px-4 text-start text-sm font-medium text-primary transition-colors duration-150 hover:bg-surface-muted focus-visible:-outline-offset-2 sm:px-5 motion-reduce:transition-none">
         Rincian sesi ({count})
-        <ChevronDown aria-hidden className="size-4 transition-transform group-data-[open]:rotate-180" />
+        <ChevronDown aria-hidden className="size-4 transition-transform duration-200 group-data-[open]:rotate-180 motion-reduce:transition-none" />
       </DisclosureButton>
       <DisclosurePanel className="border-t border-border">{children}</DisclosurePanel>
     </Disclosure>
@@ -72,10 +78,10 @@ function SessionDisclosure({ count, defaultOpen, children }: { count: number; de
 
 function Breakdown({ items }: { items: { label: string; value: ReactNode; strong?: boolean }[] }) {
   return (
-    <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-4 py-3 sm:grid-cols-4">
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-4 py-3 sm:grid-cols-4 sm:px-5">
       {items.map((item) => (
-        <div key={item.label}>
-          <dt className="text-xs text-muted">{item.label}</dt>
+        <div key={item.label} className="min-w-0">
+          <dt className="text-meta text-muted">{item.label}</dt>
           <dd className={cn('mt-0.5 tabular-nums', item.strong ? 'font-semibold text-text' : 'text-text')}>{item.value}</dd>
         </div>
       ))}
@@ -87,11 +93,15 @@ function TutorPayrollCard({ tutor }: { tutor: PayrollTutorSummary }) {
   return (
     <Card
       title={tutor.tutor_name}
+      description={`${tutor.counted_sessions} sesi dihitung`}
       actions={
-        <span className="text-right">
-          <span className="block text-xs text-muted">Total pendapatan bersih tutor</span>
-          <span className="block text-base font-semibold tabular-nums text-text">{formatRupiah(tutor.net_amount)}</span>
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-end">
+            <span className="block text-meta text-muted">Total pendapatan bersih tutor</span>
+            <span className="block text-base font-semibold tabular-nums text-text">{formatRupiah(tutor.net_amount)}</span>
+          </span>
+          <Avatar seed={tutor.tutor_id} name={tutor.tutor_name} size={40} decorative className="max-sm:hidden" />
+        </div>
       }
     >
       <Breakdown
@@ -103,7 +113,7 @@ function TutorPayrollCard({ tutor }: { tutor: PayrollTutorSummary }) {
         ]}
       />
       {tutor.not_counted_sessions > 0 && (
-        <p className="border-t border-border px-4 py-2 text-xs text-muted">
+        <p className="border-t border-border px-4 py-2.5 text-meta text-muted sm:px-5">
           {tutor.not_counted_sessions} sesi tidak dihitung (menunggu validasi, perlu revisi, atau ditolak).
         </p>
       )}
@@ -134,10 +144,10 @@ export function AdminPayrollView({ payroll }: { payroll: PayrollPreviewResponse 
   return (
     <>
       <Warnings warnings={payroll.warnings} />
-      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatCard label="Total pendapatan kotor" value={formatRupiah(payroll.totals.gross_amount)} hint={<span className="text-xs text-muted">Total tarif les sesi valid</span>} />
-        <StatCard label="Total pendapatan bersih" value={formatRupiah(payroll.totals.admin_fee_amount)} hint={<span className="text-xs text-muted">Potongan admin untuk bimbel</span>} />
-        <StatCard label="Total gaji yang harus dibayarkan" value={formatRupiah(payroll.totals.net_amount)} hint={<span className="text-xs text-muted">Pendapatan bersih seluruh tutor</span>} />
+      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+        <StatCard index={0} icon={Wallet} accent="blue" label="Total pendapatan kotor" count={rupiahCount(payroll.totals.gross_amount)} hint="Total tarif les sesi valid" />
+        <StatCard index={1} icon={Landmark} accent="green" label="Total pendapatan bersih" count={rupiahCount(payroll.totals.admin_fee_amount)} hint="Potongan admin untuk bimbel" />
+        <StatCard index={2} icon={HandCoins} accent="orange" label="Total gaji yang harus dibayarkan" count={rupiahCount(payroll.totals.net_amount)} hint="Pendapatan bersih seluruh tutor" />
       </dl>
       {payroll.tutors.length === 0 ? (
         <Card>
@@ -155,10 +165,10 @@ export function TutorPayrollView({ payroll }: { payroll: TutorPayrollResponse })
   return (
     <>
       <Warnings warnings={payroll.warnings} />
-      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatCard label="Pendapatan bersih bulan ini" value={formatRupiah(payroll.net_amount)} hint={<span className="text-xs text-muted">Setelah potongan admin</span>} />
-        <StatCard label="Sesi valid (dihitung)" value={payroll.counted_sessions} />
-        <StatCard label="Sesi belum dihitung" value={payroll.not_counted_sessions} />
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+        <StatCard index={0} className="col-span-2 sm:col-span-1" icon={Wallet} accent="green" label="Pendapatan bersih bulan ini" count={rupiahCount(payroll.net_amount)} hint="Setelah potongan admin" />
+        <StatCard index={1} icon={CalendarCheck} accent="blue" label="Sesi valid (dihitung)" count={{ value: payroll.counted_sessions }} />
+        <StatCard index={2} icon={CalendarClock} accent="orange" label="Sesi belum dihitung" count={{ value: payroll.not_counted_sessions }} />
       </dl>
       {payroll.sessions.length === 0 ? (
         <Card>

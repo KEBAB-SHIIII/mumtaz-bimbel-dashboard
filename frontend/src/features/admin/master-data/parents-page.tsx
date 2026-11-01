@@ -7,8 +7,9 @@ import { createParentRequestSchema, updateParentRequestSchema, type Parent, type
 import { Button } from '../../../components/ui/button';
 import { DataTable } from '../../../components/ui/data-table';
 import { ConfirmDialog, Modal } from '../../../components/ui/dialog';
-import { EmptyState, ErrorState, InlineAlert, LoadingState } from '../../../components/ui/feedback';
+import { EmptyState, ErrorState, InlineAlert, LoadingState, NoResultsState } from '../../../components/ui/feedback';
 import { FormField, Input, describedBy } from '../../../components/ui/field';
+import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/skeleton';
 import { Card } from '../../../components/ui/layout-primitives';
 import { toApiError } from '../../../lib/api-error';
 import { queryKeys } from '../../../lib/query-keys';
@@ -180,7 +181,7 @@ function ParentFormDialog({
               </div>
             )}
             {errors.student_ids && (
-              <p id="parent-links-error" role="alert" className="mt-1 text-xs text-danger">
+              <p id="parent-links-error" role="alert" className="mt-1 text-meta text-danger">
                 {errors.student_ids.message ?? 'Pilih minimal satu siswa'}
               </p>
             )}
@@ -252,11 +253,12 @@ export function ParentsPage() {
     <>
       <MasterToolbar search={search} onSearch={(value) => update({ search: value })} placeholder="Nama wali" createLabel="Tambah wali" onCreate={() => { setEditing(null); setFormOpen(true); }} />
       <Card>
-        {query.isPending ? (
-          <LoadingState />
-        ) : query.isError ? (
+        {query.isError && !query.data ? (
           <ErrorState error={query.error} onRetry={() => void query.refetch()} />
         ) : (
+          <LoadingSwitch loading={!query.data} skeleton={<SkeletonDataTable headers={['Nama', 'Email', 'Anak terhubung', 'Akses login', '']} />}>
+            {() =>
+              query.data && (
           <DataTable
             caption="Daftar orang tua/wali"
             columns={columns}
@@ -264,8 +266,11 @@ export function ParentsPage() {
             getRowId={(row) => row.id}
             isFetching={query.isFetching}
             pagination={{ page, pageSize: MASTER_PAGE_SIZE, total: query.data.total, onPageChange: (next) => update({ page: String(next) }, { resetPage: false }) }}
-            empty={<EmptyState title="Belum ada orang tua/wali" />}
+            empty={search ? <NoResultsState query={search} onReset={() => update({ search: '' })} /> : <EmptyState title="Belum ada orang tua/wali" description="Tambahkan wali lalu hubungkan dengan anaknya untuk membuat ID Akses Orang Tua." />}
           />
+              )
+            }
+          </LoadingSwitch>
         )}
       </Card>
 

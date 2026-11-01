@@ -119,12 +119,25 @@ describe('CountUp', () => {
   it('reduced motion: langsung menampilkan nilai akhir', () => {
     mockMatchMedia((query) => query.includes('prefers-reduced-motion'));
     renderUi(<CountUp value={4250000} />);
-    expect(screen.getByText('4.250.000', { selector: '[aria-hidden]' })).toBeInTheDocument();
+    expect(screen.getByText('4.250.000')).toBeInTheDocument();
   });
 
-  it('pembaca layar selalu menerima nilai akhir terformat', () => {
+  it('selama animasi pembaca layar menerima nilai akhir, angka bergerak disembunyikan', () => {
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
     renderUi(<CountUp value={1250} format={(n) => `Rp${n}`} />);
     expect(screen.getByText('Rp1250', { selector: '.sr-only' })).toBeInTheDocument();
+    expect(screen.getByText('Rp0', { selector: '[aria-hidden]' })).toBeInTheDocument();
+  });
+
+  it('tanpa animasi hanya ada satu node teks nilai', () => {
+    renderUi(<CountUp value={1250} />);
+    expect(screen.getAllByText('1.250')).toHaveLength(1);
   });
 
   it('StatCard dengan count tetap memberi nilai akhir di dalam dd', () => {

@@ -52,7 +52,7 @@ interface CardProps {
 /** Kartu konten: judul + subjudul di kiri, aksi di kanan (Ref 2). Radius `lg` (14px). */
 export function Card({ title, description, actions, children, className }: CardProps) {
   return (
-    <section className={cn('overflow-hidden rounded-lg border border-border bg-surface shadow-sm', className)}>
+    <section className={cn('overflow-clip rounded-lg border border-border bg-surface shadow-sm', className)}>
       {(title || actions) && (
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 border-b border-border px-4 py-3 sm:px-5">
           {title && (
@@ -71,9 +71,9 @@ export function Card({ title, description, actions, children, className }: CardP
 
 export { StatCard } from './stat-card';
 
-/** Baris filter yang membungkus ke bawah di layar kecil. */
+/** Baris filter: satu kolom selebar layar di HP, berjajar & membungkus di layar lebih besar. */
 export function FilterBar({ children }: { children: ReactNode }) {
-  return <div className="flex flex-wrap items-end gap-3">{children}</div>;
+  return <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">{children}</div>;
 }
 
 export function DescriptionList({ items }: { items: { label: string; value: ReactNode }[] }) {

@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
+import { CalendarCheck, GraduationCap, UsersRound, Wallet } from 'lucide-react';
 import { Suspense, lazy } from 'react';
-import { ErrorState, LoadingState } from '../../../components/ui/feedback';
 import { PageHeader, StatCard } from '../../../components/ui/layout-primitives';
 import { PeriodSelector } from '../../../components/ui/period-selector';
+import { QueryView } from '../../../components/ui/query-view';
+import { SkeletonChart, SkeletonStatCards } from '../../../components/ui/skeleton';
 import { formatPeriod, formatRupiah } from '../../../lib/format';
 import { usePeriodParam } from '../../../lib/period';
 import { queryKeys } from '../../../lib/query-keys';
@@ -10,6 +12,17 @@ import { fetchAdminDashboard } from '../api';
 
 // Library grafik dimuat terpisah: judul & kartu metrik tampil tanpa menunggu chunk grafik.
 const DashboardCharts = lazy(() => import('./dashboard-charts').then((m) => ({ default: m.DashboardCharts })));
+
+function ChartsSkeleton() {
+  return (
+    <div className="grid gap-3 sm:gap-4 lg:grid-cols-3">
+      <div className="lg:col-span-2">
+        <SkeletonChart height={256} />
+      </div>
+      <SkeletonChart height={256} />
+    </div>
+  );
+}
 
 export function AdminDashboardPage() {
   const [period, setPeriod] = usePeriodParam();
@@ -28,29 +41,46 @@ export function AdminDashboardPage() {
         actions={<PeriodSelector value={period} onChange={setPeriod} />}
       />
 
-      {summary.isPending ? (
-        <LoadingState />
-      ) : summary.isError ? (
-        <ErrorState error={summary.error} onRetry={() => void summary.refetch()} />
-      ) : (
-        <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatCard label="Total tutor aktif" value={summary.data.active_tutors} to="/admin/master-data/tutor" />
-          <StatCard label="Total siswa" value={summary.data.students_with_sessions} hint={<span className="text-xs text-muted">Yang punya sesi bulan ini</span>} to={`/admin/absensi?period=${period}`} />
-          <StatCard label="Total sesi bulan ini" value={summary.data.total_sessions} to={`/admin/absensi?period=${period}`} />
-          <StatCard
-            label="Total omzet kotor"
-            value={formatRupiah(summary.data.gross_revenue)}
-            hint={<span className="text-xs text-muted">Sebelum gaji tutor &amp; potongan</span>}
-            to={`/admin/penagihan?period=${period}`}
-          />
-        </dl>
-      )}
-
-      {summary.data && (
-        <Suspense fallback={<LoadingState label="Memuat grafik…" />}>
-          <DashboardCharts revenue={summary.data.revenue_by_month} />
-        </Suspense>
-      )}
+      <QueryView
+        query={summary}
+        skeleton={
+          <>
+            <SkeletonStatCards />
+            <ChartsSkeleton />
+          </>
+        }
+      >
+        {(data) => (
+          <>
+            <dl className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+              <StatCard index={0} icon={UsersRound} accent="blue" label="Total tutor aktif" count={{ value: data.active_tutors }} to="/admin/master-data/tutor" />
+              <StatCard
+                index={1}
+                icon={GraduationCap}
+                accent="violet"
+                label="Total siswa"
+                count={{ value: data.students_with_sessions }}
+                hint="Yang punya sesi bulan ini"
+                to={`/admin/absensi?period=${period}`}
+              />
+              <StatCard index={2} icon={CalendarCheck} accent="green" label="Total sesi bulan ini" count={{ value: data.total_sessions }} to={`/admin/absensi?period=${period}`} />
+              <StatCard
+                index={3}
+                className="max-sm:col-span-2"
+                icon={Wallet}
+                accent="orange"
+                label="Total omzet kotor"
+                count={{ value: Number(data.gross_revenue), format: (value) => formatRupiah(String(value)) }}
+                hint="Sebelum gaji tutor & potongan"
+                to={`/admin/penagihan?period=${period}`}
+              />
+            </dl>
+            <Suspense fallback={<ChartsSkeleton />}>
+              <DashboardCharts revenue={data.revenue_by_month} />
+            </Suspense>
+          </>
+        )}
+      </QueryView>
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { AnimatePresence, m } from 'motion/react';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { cn } from '../../lib/cn';
+import { MOBILE_QUERY, useMediaQuery } from '../../lib/use-media-query';
 import { FadeContent } from './fade-content';
 
 /** Skeleton baru muncul bila loading > 150ms, lalu bertahan minimal 300ms (docs/design/04-components.md). */
@@ -69,20 +70,22 @@ interface LoadingSwitchProps {
   skeleton: ReactNode;
   /** Dipanggil hanya setelah loading selesai, jadi aman membaca data. */
   children: () => ReactNode;
+  /** Kelas wadah konten & skeleton (mis. `flex flex-col gap-4`). */
+  className?: string;
 }
 
 /**
  * Skeleton → konten tanpa kedip: < 150ms tidak menampilkan apa pun, lalu skeleton (minimal 300ms),
  * lalu konten memudar masuk 200ms di posisi yang sama.
  */
-export function LoadingSwitch({ loading, skeleton, children }: LoadingSwitchProps) {
+export function LoadingSwitch({ loading, skeleton, children, className }: LoadingSwitchProps) {
   const showSkeleton = useDelayedSkeleton(loading);
   const state = showSkeleton ? 'skeleton' : loading ? 'waiting' : 'content';
   return (
     // popLayout: skeleton yang keluar ditumpuk di posisinya sementara konten masuk, tanpa lompatan layout.
     <AnimatePresence mode="popLayout" initial={false}>
       {state === 'skeleton' && (
-        <m.div key="skeleton" exit={{ opacity: 0, transition: { duration: 0.2, ease: 'easeOut' } }}>
+        <m.div key="skeleton" className={className} exit={{ opacity: 0, transition: { duration: 0.2, ease: 'easeOut' } }}>
           {skeleton}
         </m.div>
       )}
@@ -92,7 +95,9 @@ export function LoadingSwitch({ loading, skeleton, children }: LoadingSwitchProp
         </SkeletonRegion>
       )}
       {state === 'content' && (
-        <FadeContent key="content">{children()}</FadeContent>
+        <FadeContent key="content" {...(className ? { className } : {})}>
+          {children()}
+        </FadeContent>
       )}
     </AnimatePresence>
   );
@@ -233,4 +238,10 @@ export function PageSkeleton() {
       <Skeleton className="h-64 w-full rounded-lg" />
     </SkeletonRegion>
   );
+}
+
+/** Skeleton yang mengikuti DataTable: tabel di ≥ 640px, daftar kartu di HP. */
+export function SkeletonDataTable({ headers, rows = 6 }: { headers: readonly string[]; rows?: number }) {
+  const isMobile = useMediaQuery(MOBILE_QUERY);
+  return isMobile ? <SkeletonCardList /> : <SkeletonTable headers={headers} rows={rows} />;
 }

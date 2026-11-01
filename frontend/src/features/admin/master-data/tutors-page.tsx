@@ -7,8 +7,9 @@ import { createTutorRequestSchema, updateTutorRequestSchema, type Tutor, type Tu
 import { Button } from '../../../components/ui/button';
 import { DataTable } from '../../../components/ui/data-table';
 import { ConfirmDialog, Modal } from '../../../components/ui/dialog';
-import { EmptyState, ErrorState, InlineAlert, LoadingState } from '../../../components/ui/feedback';
+import { EmptyState, ErrorState, NoResultsState, InlineAlert } from '../../../components/ui/feedback';
 import { FormField, Input, describedBy } from '../../../components/ui/field';
+import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/skeleton';
 import { Card } from '../../../components/ui/layout-primitives';
 import { toApiError } from '../../../lib/api-error';
 import { queryKeys } from '../../../lib/query-keys';
@@ -200,11 +201,12 @@ export function TutorsPage() {
     <>
       <MasterToolbar search={search} onSearch={(value) => update({ search: value })} placeholder="Nama atau username" createLabel="Tambah tutor" onCreate={() => { setEditing(null); setFormOpen(true); }} />
       <Card>
-        {query.isPending ? (
-          <LoadingState />
-        ) : query.isError ? (
+        {query.isError && !query.data ? (
           <ErrorState error={query.error} onRetry={() => void query.refetch()} />
         ) : (
+          <LoadingSwitch loading={!query.data} skeleton={<SkeletonDataTable headers={['Nama', 'Username', 'Kontak', 'Status operasional', 'Akses login', '']} />}>
+            {() =>
+              query.data && (
           <DataTable
             caption="Daftar tutor"
             columns={columns}
@@ -212,8 +214,11 @@ export function TutorsPage() {
             getRowId={(row) => row.id}
             isFetching={query.isFetching}
             pagination={{ page, pageSize: MASTER_PAGE_SIZE, total: query.data.total, onPageChange: (next) => update({ page: String(next) }, { resetPage: false }) }}
-            empty={<EmptyState title="Belum ada tutor" description={search ? 'Tidak ada tutor yang cocok dengan pencarian.' : 'Tambahkan tutor pertama.'} />}
+            empty={search ? <NoResultsState query={search} onReset={() => update({ search: '' })} /> : <EmptyState title="Belum ada tutor" description="Tambahkan tutor pertama." />}
           />
+              )
+            }
+          </LoadingSwitch>
         )}
       </Card>
       <TutorFormDialog key={editing?.id ?? 'new'} tutor={editing} open={formOpen} onClose={() => setFormOpen(false)} onIssued={setIssued} />

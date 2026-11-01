@@ -25,7 +25,7 @@ export function FindingList({ findings }: { findings: AnomalyFinding[] }) {
   return (
     <section aria-labelledby="findings-heading">
       <h3 id="findings-heading" className="text-sm font-semibold text-text">Temuan anomali</h3>
-      <p className="mt-0.5 text-xs text-muted">Dasar label validitas dari AI; Admin dapat mengoreksi label bila keliru.</p>
+      <p className="mt-0.5 text-meta text-muted">Dasar label validitas dari AI; Admin dapat mengoreksi label bila keliru.</p>
       {active.length === 0 ? (
         <p className="mt-2 text-sm text-muted">Tidak ada temuan.</p>
       ) : (
@@ -34,11 +34,11 @@ export function FindingList({ findings }: { findings: AnomalyFinding[] }) {
             <li key={finding.id} className="rounded-md border border-border p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone="warning">{FINDING_LABEL[finding.finding_type]}</Badge>
-                <span className="text-xs text-muted">Prioritas {SEVERITY_LABEL[finding.severity]}</span>
+                <span className="text-meta text-muted">Prioritas {SEVERITY_LABEL[finding.severity]}</span>
               </div>
               <p className="mt-2 text-text">{finding.reason}</p>
               {finding.evidence_summary && <p className="mt-1 text-muted">{finding.evidence_summary}</p>}
-              <p className="mt-2 text-xs text-muted">{providerLabel(finding)}</p>
+              <p className="mt-2 text-meta text-muted">{providerLabel(finding)}</p>
             </li>
           ))}
         </ul>
