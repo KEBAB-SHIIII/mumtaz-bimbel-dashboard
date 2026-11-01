@@ -1,6 +1,7 @@
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
 import { CalendarCheck, CalendarClock, ChevronDown, HandCoins, Landmark, Wallet } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import type { PayrollPreviewResponse, PayrollTutorSummary, TutorPayrollResponse } from '@mumtaz/contracts';
 import { Avatar } from '../../components/ui/avatar';
 import { ValidityBadge } from '../../components/ui/badge';
@@ -66,13 +67,31 @@ function rupiahCount(amount: string) {
 }
 
 function SessionDisclosure({ count, defaultOpen, children }: { count: number; defaultOpen: boolean; children: ReactNode }) {
+  const reduceMotion = useReducedMotion();
+
   return (
     <Disclosure defaultOpen={defaultOpen}>
-      <DisclosureButton className="group flex h-11 w-full items-center justify-between border-t border-border px-4 text-start text-sm font-medium text-primary transition-colors duration-150 hover:bg-surface-muted focus-visible:-outline-offset-2 sm:px-5 motion-reduce:transition-none">
-        Rincian sesi ({count})
-        <ChevronDown aria-hidden className="size-4 transition-transform duration-200 group-data-[open]:rotate-180 motion-reduce:transition-none" />
-      </DisclosureButton>
-      <DisclosurePanel className="border-t border-border">{children}</DisclosurePanel>
+      {({ open }) => (
+        <>
+          <DisclosureButton className="group flex h-11 w-full items-center justify-between border-t border-border px-4 text-start text-sm font-medium text-primary transition-colors duration-150 hover:bg-surface-muted focus-visible:-outline-offset-2 sm:px-5 motion-reduce:transition-none">
+            Rincian sesi ({count})
+            <ChevronDown aria-hidden className="size-4 transition-transform duration-300 group-data-[open]:rotate-180 motion-reduce:transition-none" />
+          </DisclosureButton>
+          <AnimatePresence initial={false}>
+            {open && (
+              <m.div
+                initial={{ height: 0 }}
+                animate={{ height: 'auto' }}
+                exit={{ height: 0 }}
+                transition={{ duration: reduceMotion ? 0 : 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="overflow-hidden"
+              >
+                <DisclosurePanel static className="border-t border-border">{children}</DisclosurePanel>
+              </m.div>
+            )}
+          </AnimatePresence>
+        </>
+      )}
     </Disclosure>
   );
 }
@@ -93,6 +112,7 @@ function Breakdown({ items }: { items: { label: string; value: ReactNode; strong
 function TutorPayrollCard({ tutor }: { tutor: PayrollTutorSummary }) {
   return (
     <Card
+      className="[&>div:first-child]:bg-[#e9eeec]"
       title={tutor.tutor_name}
       description={`${tutor.counted_sessions} sesi dihitung`}
       actions={
@@ -113,11 +133,6 @@ function TutorPayrollCard({ tutor }: { tutor: PayrollTutorSummary }) {
           { label: 'Total (pendapatan bersih)', value: formatRupiah(tutor.net_amount), strong: true },
         ]}
       />
-      {tutor.not_counted_sessions > 0 && (
-        <p className="border-t border-border px-4 py-2.5 text-meta text-muted sm:px-5">
-          {tutor.not_counted_sessions} sesi tidak dihitung (menunggu validasi, perlu revisi, atau ditolak).
-        </p>
-      )}
       <SessionDisclosure count={tutor.sessions.length} defaultOpen={false}>
         <SessionLines
           caption={`Rincian sesi ${tutor.tutor_name}`}
@@ -141,7 +156,8 @@ function Warnings({ warnings }: { warnings: string[] }) {
  * Honor Tutor (Admin; revisi PM): crosscheck absensi dengan tutor. Semua nominal dari backend;
  * frontend tidak menghitung ulang. Tidak ada status "sudah dibayar".
  */
-export function AdminPayrollView({ payroll }: { payroll: PayrollPreviewResponse }) {
+export function AdminPayrollView({ payroll, tutorId = '' }: { payroll: PayrollPreviewResponse; tutorId?: string }) {
+  const tutors = tutorId ? payroll.tutors.filter((tutor) => tutor.tutor_id === tutorId) : payroll.tutors;
   return (
     <>
       <Warnings warnings={payroll.warnings} />
@@ -150,12 +166,12 @@ export function AdminPayrollView({ payroll }: { payroll: PayrollPreviewResponse 
         <StatCard index={1} icon={Landmark} accent="green" label="Total pendapatan bersih" count={rupiahCount(payroll.totals.admin_fee_amount)} hint="Potongan admin untuk bimbel" />
         <StatCard index={2} icon={HandCoins} accent="orange" label="Total gaji yang harus dibayarkan" count={rupiahCount(payroll.totals.net_amount)} hint="Pendapatan bersih seluruh tutor" />
       </dl>
-      {payroll.tutors.length === 0 ? (
+      {tutors.length === 0 ? (
         <Card>
           <EmptyState title="Belum ada sesi" description={`Tidak ada sesi pada ${formatPeriod(payroll.period)}.`} />
         </Card>
       ) : (
-        payroll.tutors.map((tutor) => <TutorPayrollCard key={tutor.tutor_id} tutor={tutor} />)
+        tutors.map((tutor) => <TutorPayrollCard key={tutor.tutor_id} tutor={tutor} />)
       )}
     </>
   );
