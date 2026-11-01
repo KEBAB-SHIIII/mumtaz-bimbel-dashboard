@@ -9,12 +9,25 @@ export const SKELETON_DELAY_MS = 150;
 export const SKELETON_MIN_VISIBLE_MS = 300;
 
 /**
+ * Saat aplikasi pertama dibuka (refresh), skeleton tampil tanpa jeda agar berlanjut mulus dari skeleton
+ * shell → skeleton halaman → konten. Setelah konten pertama tampil, navigasi berikutnya memakai jeda 150ms.
+ */
+let booting = true;
+
+/** Untuk test: atur ulang mode buka-pertama. */
+export function setSkeletonBooting(value: boolean) {
+  booting = value;
+}
+
+/**
  * Menunda & menahan skeleton: `false` selama 150ms pertama loading (request cepat tidak berkedip), lalu `true`
- * minimal 300ms walau data sudah datang (transisi tidak terasa patah).
+ * minimal 300ms walau data sudah datang (transisi tidak terasa patah). Saat buka-pertama: langsung `true`.
  */
 export function useDelayedSkeleton(loading: boolean): boolean {
-  const [visible, setVisible] = useState(false);
-  const shownAt = useRef<number | null>(null);
+  // Penginisialisasi lazy: dibaca sekali saat mount (waktu mulai tampil untuk aturan minimal 300ms).
+  const [immediateAt] = useState(() => (booting && loading ? Date.now() : null));
+  const [visible, setVisible] = useState(immediateAt !== null);
+  const shownAt = useRef<number | null>(immediateAt);
 
   useEffect(() => {
     if (loading) {
@@ -81,6 +94,9 @@ interface LoadingSwitchProps {
 export function LoadingSwitch({ loading, skeleton, children, className }: LoadingSwitchProps) {
   const showSkeleton = useDelayedSkeleton(loading);
   const state = showSkeleton ? 'skeleton' : loading ? 'waiting' : 'content';
+  useEffect(() => {
+    if (state === 'content') booting = false;
+  }, [state]);
   return (
     // popLayout: skeleton yang keluar ditumpuk di posisinya sementara konten masuk, tanpa lompatan layout.
     <AnimatePresence mode="popLayout" initial={false}>
@@ -220,22 +236,16 @@ export function SkeletonProfile({ size = 72 }: { size?: number }) {
   );
 }
 
-/** Fallback rute lazy (`Suspense`): kerangka halaman generik, muncul setelah 150ms agar navigasi cepat tidak berkedip. */
-export function PageSkeleton() {
+/**
+ * Fallback rute lazy (`Suspense`): kerangka sesuai halaman tujuan (`children`), muncul setelah 150ms agar
+ * navigasi cepat tidak berkedip — kecuali saat buka-pertama, langsung tampil.
+ */
+export function PageSkeleton({ children }: { children: ReactNode }) {
   const visible = useDelayedSkeleton(true);
   if (!visible) return <SkeletonRegion label="Memuat halaman…"><span /></SkeletonRegion>;
   return (
     <SkeletonRegion label="Memuat halaman…" className="flex flex-col gap-4">
-      <Skeleton className="h-4 w-full max-w-md" />
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((index) => (
-          <div key={index} className={cn('flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:p-5', index >= 2 && 'max-sm:hidden')}>
-            <Skeleton className="h-3.5 w-24" />
-            <Skeleton className="h-6 w-32" />
-          </div>
-        ))}
-      </div>
-      <Skeleton className="h-64 w-full rounded-lg" />
+      {children}
     </SkeletonRegion>
   );
 }

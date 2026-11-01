@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { loginRequestSchema, parentAccessRequestSchema, type LoginRequest, type ParentAccessRequest, type Role } from '@mumtaz/contracts';
 import { Button } from '../../components/ui/button';
-import { InlineAlert, LoadingState } from '../../components/ui/feedback';
+import { InlineAlert } from '../../components/ui/feedback';
+import { Skeleton, SkeletonRegion } from '../../components/ui/skeleton';
 import { FormField, Input, describedBy } from '../../components/ui/field';
 import { SpotlightCard } from '../../components/ui/spotlight-card';
 import { toApiError } from '../../lib/api-error';
@@ -49,9 +50,37 @@ function useAfterLogin() {
   };
 }
 
-function AlreadySignedIn() {
+/** Kerangka halaman login (refresh): geometri sama dengan `AuthLayout`, jadi form muncul tanpa lompatan. */
+function AuthSkeleton({ fields }: { fields: number }) {
+  return (
+    <SkeletonRegion label="Memuat…" className="flex min-h-dvh items-center justify-center bg-background px-4 py-10 pt-[max(2.5rem,env(safe-area-inset-top))]">
+      <div aria-hidden className="w-full max-w-sm animate-fade-up motion-reduce:animate-none">
+        <div className="mb-6 flex items-center justify-center gap-2.5">
+          <Skeleton className="size-9 rounded-md" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <div className="rounded-xl border border-border bg-surface p-6 shadow-md sm:p-7">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="mt-2 h-3.5 w-full" />
+          <div className="mt-6 flex flex-col gap-5">
+            {Array.from({ length: fields }, (_, index) => (
+              <div key={index} className="flex flex-col gap-1.5">
+                <Skeleton className="h-3.5 w-24" />
+                <Skeleton className="h-9 w-full pointer-coarse:h-11" />
+              </div>
+            ))}
+            <Skeleton className="mt-1 h-9 w-full pointer-coarse:h-11" />
+          </div>
+        </div>
+        <Skeleton className="mx-auto mt-5 h-3.5 w-52" />
+      </div>
+    </SkeletonRegion>
+  );
+}
+
+function AlreadySignedIn({ fields }: { fields: number }) {
   const session = useSession();
-  if (session.isPending) return <LoadingState label="Memeriksa sesi…" className="min-h-dvh" />;
+  if (session.isPending) return <AuthSkeleton fields={fields} />;
   if (session.data) return <Navigate to={ROLE_HOME[session.data.role]} replace />;
   return null;
 }
@@ -64,7 +93,7 @@ export function StaffLoginPage() {
   const form = useForm<LoginRequest>({ resolver: zodResolver(loginRequestSchema), defaultValues: { username: '', password: '' } });
   const { errors } = form.formState;
 
-  if (session.isPending || session.data) return <AlreadySignedIn />;
+  if (session.isPending || session.data) return <AlreadySignedIn fields={2} />;
 
   const onSubmit = form.handleSubmit((values) =>
     mutation.mutate(values, { onSuccess: (user) => afterLogin(user.role) }),
@@ -131,7 +160,7 @@ export function ParentLoginPage() {
   const error = form.formState.errors.access_code?.message;
   const hint = 'Kode diberikan Admin secara pribadi. Jangan bagikan kode ini kepada orang lain.';
 
-  if (session.isPending || session.data) return <AlreadySignedIn />;
+  if (session.isPending || session.data) return <AlreadySignedIn fields={1} />;
 
   const onSubmit = form.handleSubmit((values) =>
     mutation.mutate(values, {

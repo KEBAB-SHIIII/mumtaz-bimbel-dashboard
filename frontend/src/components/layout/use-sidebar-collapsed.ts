@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 const STORAGE_KEY = 'mumtaz:sidebar-collapsed';
 
 // Preferensi tampilan saja (bukan credential/sesi), jadi aman di localStorage.
-function readCollapsed() {
+export function readSidebarCollapsed() {
   try {
     return localStorage.getItem(STORAGE_KEY) === '1';
   } catch {
@@ -13,7 +13,7 @@ function readCollapsed() {
 
 /** Status collapse sidebar desktop (240px ↔ 64px), diingat antar kunjungan. */
 export function useSidebarCollapsed() {
-  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const [collapsed, setCollapsed] = useState(readSidebarCollapsed);
 
   useEffect(() => {
     try {

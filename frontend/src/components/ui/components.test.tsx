@@ -12,7 +12,7 @@ import { CountUp } from './count-up';
 import { DataTable } from './data-table';
 import { SearchInput } from './search-input';
 import { SegmentedControl, SegmentedTabs } from './segmented-tabs';
-import { LoadingSwitch, SKELETON_DELAY_MS, SKELETON_MIN_VISIBLE_MS, useDelayedSkeleton } from './skeleton';
+import { LoadingSwitch, SKELETON_DELAY_MS, SKELETON_MIN_VISIBLE_MS, setSkeletonBooting, useDelayedSkeleton } from './skeleton';
 import { StatCard } from './stat-card';
 
 function Providers({ children }: { children: ReactNode }) {
@@ -76,7 +76,16 @@ describe('Avatar (DiceBear critters)', () => {
 });
 
 describe('Skeleton: delay 150ms & tampil minimal 300ms', () => {
-  beforeEach(() => vi.useFakeTimers());
+  beforeEach(() => {
+    vi.useFakeTimers();
+    setSkeletonBooting(false);
+  });
+
+  it('buka-pertama (refresh): skeleton langsung tampil tanpa jeda', () => {
+    setSkeletonBooting(true);
+    const { result } = renderHook(() => useDelayedSkeleton(true));
+    expect(result.current).toBe(true);
+  });
 
   it('tidak muncul untuk loading singkat (< 150ms)', () => {
     const { result, rerender } = renderHook(({ loading }) => useDelayedSkeleton(loading), { initialProps: { loading: true } });

@@ -5,6 +5,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router';
 import { ROLE_LABEL, useLogoutMutation, useSession } from '../../features/auth/session';
 import { cn } from '../../lib/cn';
 import { PageSkeleton } from '../ui/skeleton';
+import { RouteSkeletonContent } from './route-skeleton';
 import { AccountMenu } from './account-menu';
 import { HeaderSlotContext } from './header-slot';
 import { NavSearch } from './nav-search';
@@ -101,7 +102,11 @@ export function AppShell() {
               <Menu aria-hidden className="size-5" />
             </button>
             {/* Judul halaman (h1) dirender di sini oleh PageHeader lewat portal. */}
-            <div ref={setTitleSlot} className="min-w-0 flex-1" />
+            {/* Kosong selama halaman dimuat: tampilkan bar skeleton judul agar header tidak terlihat bolong. */}
+            <div
+              ref={setTitleSlot}
+              className="min-w-0 flex-1 empty:before:block empty:before:h-6 empty:before:w-40 empty:before:animate-pulse-soft empty:before:rounded-md empty:before:bg-surface-muted motion-reduce:empty:before:animate-none"
+            />
             <div ref={setActionsSlot} className="hidden items-center gap-2 lg:flex lg:empty:hidden" />
             <NavSearch role={user.role} />
             <AccountMenu userId={user.id} fullName={user.full_name} role={user.role} roleLabel={ROLE_LABEL[user.role]} onLogout={handleLogout} />
@@ -111,7 +116,13 @@ export function AppShell() {
             <div className="mx-auto flex w-full max-w-[90rem] flex-1 flex-col gap-4 lg:rounded-xl lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-sm">
               {/* Pindah halaman: isi frame memudar + naik 6px (keyframe), sidebar & header diam. */}
               <div key={location.pathname} className="flex flex-1 flex-col gap-4 animate-fade-up motion-reduce:animate-none">
-                <Suspense fallback={<PageSkeleton />}>
+                <Suspense
+                  fallback={
+                    <PageSkeleton>
+                      <RouteSkeletonContent pathname={location.pathname} />
+                    </PageSkeleton>
+                  }
+                >
                   <Outlet />
                 </Suspense>
               </div>
