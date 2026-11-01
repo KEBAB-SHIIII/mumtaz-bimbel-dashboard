@@ -59,11 +59,12 @@ Kerjakan Tahap 3 di docs/design/06-execution.md sesuai docs/design/04-components
 1. Restyle komponen di frontend/src/components/ui (button, badge, data-table, dialog, field, feedback, period-selector, layout-primitives) ke gaya compact.
 2. Badge status: pill + titik status sesuai spesifikasi "Badge status"; label tetap dari konstanta yang ada di badge.tsx; titik "Menganalisis" berdenyut.
 3. Buat komponen baru: StatCard, SegmentedTabs, SearchInput, Skeleton (+ varian SkeletonStatCards, SkeletonChart, SkeletonTable, SkeletonCardList, SkeletonForm, SkeletonProfile), Avatar.
+   Adaptasi ReactBits sesuai "Komponen adaptasi ReactBits": CountUp, AnimatedList, FadeContent, SpotlightCard (hanya motion/CSS, sumber dicatat di komentar file).
 4. Animasi persis mengikuti tabel "Per komponen": CSS untuk micro-interaction, transisi Headless UI untuk overlay, Motion untuk tab/filter/daftar/badge/stat. Hanya transform & opacity. Hormati reduced motion.
 5. Skeleton: delay 150ms, tampil minimal 300ms, refetch memakai data lama + bar progres (bukan skeleton), aria-busy + teks sr-only.
 6. Avatar: install @dicebear/core dan @dicebear/styles, lazy import critters.json, seed = ID internal (BUKAN ID Akses Orang Tua), generate lokal tanpa request ke api.dicebear.com.
 7. DataTable < 640px menjadi daftar kartu; Dialog < 640px menjadi bottom sheet.
-Tambahkan test untuk komponen baru (termasuk seed avatar dan delay skeleton dengan fake timers).
+Tambahkan test untuk komponen baru (termasuk seed avatar, delay skeleton dengan fake timers, dan CountUp menampilkan nilai akhir saat reduced motion).
 Jalankan typecheck, test, lint, build; laporkan ukuran bundle sebelum/sesudah, lalu berhenti untuk review.
 ```
 

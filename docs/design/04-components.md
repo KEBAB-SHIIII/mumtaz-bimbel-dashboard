@@ -13,6 +13,19 @@
 
 **ReactBits** bukan library yang di-install; isinya komponen salin-tempel. Boleh diadaptasi **hanya** jika dependensinya cuma `motion` atau CSS murni (misalnya Count Up, Animated List, Fade/Blur Content). Komponen yang butuh GSAP, three.js, ogl, atau efek latar berat tidak dipakai. Komponen yang diadaptasi ditulis ulang memakai token kita dan dicatat sumbernya di komentar file.
 
+### Komponen adaptasi ReactBits (dipilih owner, 2026-11-02)
+
+Dikerjakan di Tahap 3 dan ditaruh di `frontend/src/components/ui/`. Semua ditulis ulang memakai token kita, tanpa dependensi selain `motion`, dan sumber ReactBits dicatat di komentar file.
+
+| Komponen | File | Dipakai di | Aturan |
+|---|---|---|---|
+| **CountUp** | `count-up.tsx` | Angka `StatCard` (Rp, jumlah sesi, jam) | 600ms, sekali saja saat pertama terlihat (`useInView once`). Format lewat `Intl.NumberFormat('id-ID')`, `tabular-nums` agar lebar tetap. Pembaca layar menerima nilai akhir (bukan angka yang sedang berjalan). Reduced motion: langsung tampil nilai akhir |
+| **AnimatedList** | `animated-list.tsx` | Riwayat sesi tutor, daftar "Perlu revisi", daftar kartu DataTable di HP | Item fade + naik 6px, stagger 20ms, maksimal 10 item pertama; sisanya tampil tanpa animasi. Bukan untuk tabel > 50 baris. Reduced motion: fade saja |
+| **FadeContent** | `fade-content.tsx` | Transisi skeleton → konten, blok konten saat masuk layar | Fade + blur 4px→0, 200ms, `once`. Pengecualian aturan "hanya transform & opacity": `filter: blur` dibolehkan karena kecil dan sekali jalan. Reduced motion: opasitas saja, tanpa blur |
+| **SpotlightCard** | `spotlight-card.tsx` | Kartu login, `StatCard` | CSS murni: posisi kursor disimpan di variabel CSS lewat `pointermove`, latar `radial-gradient` warna `primary-subtle` dengan opasitas rendah. Hanya aktif di `@media (hover: hover) and (pointer: fine)`; di HP tampil sebagai kartu biasa. Dekoratif: kontras teks tetap diukur terhadap `surface` dan tidak boleh turun di bawah 4.5:1 |
+
+Yang tetap **tidak** dipakai dari ReactBits: komponen berbasis GSAP (Split Text, Animated Content, dsb.), three.js/ogl (latar 3D, partikel, shader), dan efek yang berjalan terus-menerus (marquee, partikel latar).
+
 ## Pembagian tugas animasi
 
 Prinsip: **CSS/Tailwind** untuk micro-interaction (hover, press, warna), **transisi Headless UI** untuk overlay yang buka/tutup, **Motion** hanya untuk perubahan struktur (elemen muncul/hilang dari daftar, posisi berpindah, isi berganti).
@@ -32,7 +45,7 @@ Prinsip: **CSS/Tailwind** untuk micro-interaction (hover, press, warna), **trans
 | **Sidebar collapse** | CSS `grid-template-columns` | Lebar 240↔64px 200ms; label fade, ikon diam di tempat |
 | **Tabel & daftar (filter/cari)** | Motion `AnimatePresence mode="popLayout"` + `layout` per baris | Baris keluar fade + `scale 0.98`, sisa baris merapat; baris baru fade masuk dengan stagger 20ms (maksimal 10 baris pertama). Lebih dari 50 baris: cukup crossfade isi tabel |
 | **SearchInput** | CSS + Motion | Tombol hapus (×) fade/scale masuk saat ada teks. Hasil mengikuti animasi tabel |
-| **Kartu statistik** | Motion + count up (adaptasi ReactBits) | Kartu fade + naik 8px dengan stagger 40ms saat halaman pertama dimuat; angka count up 600ms sekali saja |
+| **Kartu statistik** | Motion + `CountUp` + `SpotlightCard` (adaptasi ReactBits) | Kartu fade + naik 8px dengan stagger 40ms saat halaman pertama dimuat; angka count up 600ms sekali saja |
 | **Badge status** | Motion `AnimatePresence mode="popLayout"` | Saat status berubah (mis. hasil AI masuk), badge lama crossfade ke badge baru 180ms. Titik "Menganalisis" berdenyut pelan |
 | **Grafik (Recharts)** | Animasi bawaan Recharts | Masuk 600ms `ease-out`; tooltip mengikuti kursor tanpa delay |
 | **Skeleton → konten** | Motion `AnimatePresence` | Skeleton fade out, konten fade in 200ms di posisi yang sama, tanpa layout shift |
