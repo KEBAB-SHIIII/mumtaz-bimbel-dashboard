@@ -4,17 +4,15 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { cn } from '../../lib/cn';
 import { CountUp } from './count-up';
-import { SPOTLIGHT_CLASS, trackSpotlight } from './spotlight-card';
 
 export type Accent = 'green' | 'blue' | 'violet' | 'orange' | 'coral';
 
-/** Kotak ikon pastel (Ref 1): latar `accent-*-subtle` + ikon `accent-*` (≥ 3:1). */
-const ACCENTS: Record<Accent, string> = {
-  green: 'bg-accent-green-subtle text-accent-green',
-  blue: 'bg-accent-blue-subtle text-accent-blue',
-  violet: 'bg-accent-violet-subtle text-accent-violet',
-  orange: 'bg-accent-orange-subtle text-accent-orange',
-  coral: 'bg-accent-coral-subtle text-accent-coral',
+const BACKGROUNDS: Record<Accent, string> = {
+  green: 'to-accent-green-subtle/60',
+  blue: 'to-accent-blue-subtle/60',
+  violet: 'to-accent-violet-subtle/60',
+  orange: 'to-accent-orange-subtle/60',
+  coral: 'to-accent-coral-subtle/60',
 };
 
 interface StatCardProps {
@@ -35,28 +33,25 @@ interface StatCardProps {
 }
 
 /**
- * Kartu angka ringkasan (Ref 3 + kotak ikon Ref 1). Dipakai di dalam `<dl>`: elemen akar adalah
+ * Kartu angka ringkasan dengan ikon monokrom. Dipakai di dalam `<dl>`: elemen akar adalah
  * `div` pembungkus pasangan `dt`/`dd`. Dengan `to`, nama tautan = label kartu.
  */
 export function StatCard({ label, value, count, hint, to, icon: Icon, accent = 'green', index = 0, className }: StatCardProps) {
   return (
     <m.div
-      onPointerMove={trackSpotlight}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1], delay: index * 0.04 }}
       className={cn(
-        SPOTLIGHT_CLASS,
-        'flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-sm sm:p-5',
+        'relative flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-surface bg-linear-to-br from-surface p-4 shadow-sm sm:p-5',
+        BACKGROUNDS[accent],
         to && 'transition-[border-color,box-shadow] duration-150 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus-ring hover:border-text/20 hover:shadow-md motion-reduce:transition-none',
         className,
       )}
     >
-      <dt className="flex items-center gap-2.5 text-sm font-medium text-muted">
+      <dt className="flex items-center gap-2 text-[13px] font-medium text-muted">
         {Icon && (
-          <span aria-hidden className={cn('grid size-8 shrink-0 place-items-center rounded-full', ACCENTS[accent])}>
-            <Icon className="size-4" />
-          </span>
+          <Icon aria-hidden className="size-4 shrink-0 text-muted" />
         )}
         <span className="min-w-0 flex-1">
           {to ? (

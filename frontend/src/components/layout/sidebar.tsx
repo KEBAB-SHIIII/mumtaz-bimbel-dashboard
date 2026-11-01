@@ -1,4 +1,4 @@
-import { ChevronRight, LoaderCircle, LogOut, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { ChevronRight, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { AnimatePresence, m } from 'motion/react';
 import { useId, useState, type ButtonHTMLAttributes } from 'react';
 import { NavLink, useMatch } from 'react-router';
@@ -13,7 +13,7 @@ const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 const ITEM_BASE =
   'group/item relative flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-sm font-medium transition-colors duration-150 pointer-coarse:h-11 motion-reduce:transition-none';
 /** Forced colors membuang gradien/latar: outline menjaga item aktif tetap terlihat di mode kontras tinggi. */
-const ITEM_ACTIVE = 'bg-linear-to-r from-nav-active-from to-nav-active-to text-text shadow-sm forced-colors:outline-2 forced-colors:-outline-offset-2 forced-colors:outline-solid';
+const ITEM_ACTIVE = 'bg-linear-to-r from-[#B9DDB5]/65 via-[#C7E7AC]/50 to-[#D9ED98]/45 text-[#193923] shadow-sm ring-1 ring-inset ring-[#A9D39F]/60 forced-colors:outline-2 forced-colors:-outline-offset-2 forced-colors:outline-solid';
 const ITEM_IDLE = 'text-muted hover:bg-surface hover:text-text';
 
 /** Tooltip sidebar ciut: nama aksesibel tetap dari label sr-only, jadi tooltip disembunyikan dari AT. */
@@ -130,7 +130,7 @@ function ParentItem({ item, collapsed, onNavigate }: ItemProps) {
                         'relative flex h-8 items-center rounded-md px-2.5 text-sm transition-colors duration-150 pointer-coarse:h-11 motion-reduce:transition-none',
                         'before:absolute before:-start-[calc(0.625rem+1.5px)] before:inset-y-1.5 before:w-0.5 before:rounded-full',
                         isActive
-                          ? 'bg-surface font-medium text-text shadow-sm before:bg-primary forced-colors:outline-2 forced-colors:-outline-offset-2 forced-colors:outline-solid'
+                          ? cn(ITEM_ACTIVE, 'font-medium before:bg-primary')
                           : 'text-muted hover:bg-surface hover:text-text',
                       )
                     }
@@ -196,14 +196,6 @@ function IconButton({ className, ...props }: ButtonHTMLAttributes<HTMLButtonElem
   );
 }
 
-function BrandMark() {
-  return (
-    <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-      M
-    </span>
-  );
-}
-
 interface SidebarProps {
   role: Role;
   /** ID internal akun: seed avatar. */
@@ -220,7 +212,7 @@ interface SidebarProps {
 }
 
 /** Isi sidebar: brand, navigasi berkelompok, identitas pengguna + Keluar (docs/design/03-layout.md). */
-export function Sidebar({ role, userId, fullName, roleLabel, onLogout, logoutPending, variant, collapsed = false, onToggleCollapse, onClose }: SidebarProps) {
+export function Sidebar({ role, userId, fullName, variant, collapsed = false, onToggleCollapse, onClose }: SidebarProps) {
   const isCollapsed = variant === 'desktop' && collapsed;
   const onNavigate = variant === 'drawer' ? onClose : undefined;
 
@@ -229,8 +221,7 @@ export function Sidebar({ role, userId, fullName, roleLabel, onLogout, logoutPen
       <div className={cn('flex h-16 shrink-0 items-center gap-2.5 px-5', isCollapsed && 'justify-center px-0')}>
         {!isCollapsed && (
           <>
-            <BrandMark />
-            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-text">Mumtaz Bimbel</p>
+            <p className="min-w-0 flex-1 truncate text-lg font-semibold text-text">Mumtaz Bimbel</p>
           </>
         )}
         {variant === 'desktop' ? (
@@ -248,20 +239,21 @@ export function Sidebar({ role, userId, fullName, roleLabel, onLogout, logoutPen
         <SidebarNav role={role} collapsed={isCollapsed} onNavigate={onNavigate} />
       </div>
 
-      <div className={cn('flex shrink-0 items-center gap-2.5 border-t border-border p-3', isCollapsed && 'flex-col')}>
-        <Avatar seed={userId} name={fullName} size={isCollapsed ? 32 : 40} decorative />
-        {!isCollapsed && (
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-text" title={fullName}>{fullName}</p>
-            <p className="truncate text-meta text-muted">{roleLabel}</p>
+      <div className={cn('shrink-0 p-3', isCollapsed ? 'flex flex-col items-center gap-2' : 'pt-8')}>
+        {isCollapsed ? (
+          <Avatar seed={userId} name={fullName} size={32} />
+        ) : (
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-[#A9D39F]/60 bg-linear-to-r from-[#B9DDB5]/65 via-[#C7E7AC]/50 to-[#D9ED98]/45 px-4 pb-4 text-center shadow-sm">
+            <div className="-mt-6 flex shrink-0 rounded-full bg-surface p-1 shadow-sm">
+              <Avatar seed={userId} name={fullName} size={72} decorative className="size-14" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-base font-semibold break-words text-[#193923]">{fullName}</p>
+              {role === 'tutor' && <p className="mt-1 text-xs text-muted">as tutor</p>}
+            </div>
           </div>
         )}
-        <div className="group/item relative">
-          <IconButton aria-label="Keluar" disabled={logoutPending} aria-busy={logoutPending || undefined} onClick={onLogout}>
-            {logoutPending ? <LoaderCircle aria-hidden className="size-4.5 animate-spin motion-reduce:animate-none" /> : <LogOut aria-hidden className="size-4.5" />}
-          </IconButton>
-          {isCollapsed && <CollapsedTooltip label="Keluar" />}
-        </div>
+
       </div>
     </div>
   );
