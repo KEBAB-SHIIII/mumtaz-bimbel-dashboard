@@ -35,11 +35,14 @@ export function AdminDashboardPage() {
 
   return (
     <>
-      <PageHeader
-        title="Dashboard"
-        description={`Ringkasan ${formatPeriod(period)} (berdasarkan tanggal les).`}
-        actions={<PeriodSelector value={period} onChange={setPeriod} />}
-      />
+      <PageHeader title="Dashboard" />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-page-title-mobile text-balance text-text lg:text-page-title">Halo, Admin!</h2>
+          <p className="mt-1 text-sm text-pretty text-muted">Ringkasan {formatPeriod(period)} (berdasarkan tanggal les).</p>
+        </div>
+        <PeriodSelector value={period} onChange={setPeriod} />
+      </div>
 
       <QueryView
         query={summary}

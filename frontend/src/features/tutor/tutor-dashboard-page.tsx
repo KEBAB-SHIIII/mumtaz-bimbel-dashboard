@@ -21,22 +21,20 @@ function FillAttendanceCta() {
   return (
     <section
       aria-labelledby="cta-attendance"
-      className="flex flex-col gap-3 rounded-lg border border-primary/20 bg-linear-to-br from-primary-subtle to-surface p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+      className="flex flex-col gap-3 rounded-lg border border-[#A9D39F]/60 bg-linear-to-r from-[#B9DDB5]/50 via-[#C7E7AC]/35 to-[#D9ED98]/30 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
     >
       <div className="flex items-center gap-3">
-        <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
-          <NotebookPen className="size-5" />
-        </span>
+        <NotebookPen aria-hidden className="size-5 shrink-0 text-muted" />
         <div className="min-w-0">
-          <h2 id="cta-attendance" className="text-card-title text-text">Sudah selesai mengajar?</h2>
-          <p className="text-meta text-pretty text-muted">Catat sesinya sekarang; data divalidasi otomatis.</p>
+          <h2 id="cta-attendance" className="text-sm font-semibold text-text">Sudah selesai mengajar?</h2>
+          <p className="text-meta text-pretty text-muted">Catat sesi les Anda untuk memperbarui riwayat dan honor.</p>
         </div>
       </div>
       <Link
         to="/tutor/absensi"
-        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-[background-color,scale] duration-150 hover:bg-primary/90 active:scale-[0.96] sm:h-10 motion-reduce:transition-none"
+        className="group inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-linear-to-r from-[#B9DDB5]/65 via-[#C7E7AC]/50 to-[#D9ED98]/45 px-4 text-sm font-medium text-[#193923] ring-1 ring-inset ring-[#A9D39F]/60 transition-[filter] duration-150 hover:brightness-95 sm:h-9 motion-reduce:transition-none"
       >
-        <NotebookPen aria-hidden className="size-4" /> Isi Form Absensi
+        Isi absensi <ArrowRight aria-hidden className="size-4" />
       </Link>
     </section>
   );
@@ -51,9 +49,12 @@ export function TutorDashboardPage() {
 
   return (
     <>
-      <PageHeader title={`Halo, ${user.full_name}`} />
+      <PageHeader title="Dashboard" />
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <p className="text-sm text-pretty text-muted">Ringkasan sesi Anda pada {formatPeriod(period)}.</p>
+        <div className="min-w-0">
+          <h2 className="text-page-title-mobile text-balance text-text lg:text-page-title">Halo, {user.full_name}!</h2>
+          <p className="mt-1 text-sm text-pretty text-muted">Ringkasan sesi Anda pada {formatPeriod(period)}.</p>
+        </div>
         <PeriodSelector value={period} onChange={setPeriod} />
       </div>
 

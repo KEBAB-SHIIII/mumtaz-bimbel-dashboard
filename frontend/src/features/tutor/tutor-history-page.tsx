@@ -56,6 +56,7 @@ export function TutorHistoryPage() {
           <Button
             variant={needsRevision ? 'primary' : 'secondary'}
             size="sm"
+            title={needsRevision ? 'Revisi sesi' : 'Detail sesi'}
             icon={needsRevision ? <PencilLine aria-hidden className="size-4" /> : <Eye aria-hidden className="size-4" />}
             aria-label={`${needsRevision ? 'Revisi' : 'Detail'} sesi ${row.original.student_name} ${formatLessonDate(row.original.lesson_date)}`}
             onClick={() => setSelected(row.original)}
@@ -72,7 +73,7 @@ export function TutorHistoryPage() {
   return (
     <>
       <PageHeader title="Riwayat Mengajar" description={`Sesi Anda pada ${formatPeriod(period)} (berdasarkan tanggal les).`} />
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <PeriodSelector value={period} onChange={setPeriod} hideLabel />
         <div role="group" aria-label="Filter sesi" className="flex flex-wrap items-center gap-2">
           <FilterSelect
@@ -122,7 +123,7 @@ export function TutorHistoryPage() {
                       <EmptyState
                         title="Belum ada sesi"
                         description={`Belum ada sesi pada ${formatPeriod(period)}.`}
-                        action={<Link to="/tutor/absensi" className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 pointer-coarse:h-11">Isi Form Absensi</Link>}
+                        action={<Link to="/tutor/absensi" className="inline-flex h-9 items-center gap-2 rounded-md bg-linear-to-r from-[#B9DDB5]/65 via-[#C7E7AC]/50 to-[#D9ED98]/45 px-3.5 text-sm font-medium text-[#193923] shadow-sm ring-1 ring-inset ring-[#A9D39F]/60 hover:brightness-95 pointer-coarse:h-11">Isi Form Absensi</Link>}
                       />
                     )
                   }
