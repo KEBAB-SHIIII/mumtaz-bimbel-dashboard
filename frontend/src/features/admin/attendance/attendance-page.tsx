@@ -153,12 +153,13 @@ export function AttendancePage() {
         <div className="flex items-center gap-1.5">
           <Button
             variant="secondary"
-            size="icon-sm"
+            size="sm"
+            icon={<Eye aria-hidden className="size-4" />}
             title="Detail sesi"
             aria-label={`Detail sesi ${sessionLabel(row.original)}`}
             onClick={() => setDetailId(row.original.id)}
           >
-            <Eye aria-hidden className="size-4" />
+            Detail
           </Button>
           {row.original.validity === 'rejected' && (
             <Button
