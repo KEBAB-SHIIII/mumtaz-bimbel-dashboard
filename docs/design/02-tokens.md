@@ -28,6 +28,14 @@ Format OKLCH, semua nilai di dalam gamut sRGB (tidak butuh fallback P3).
 | `--color-nav-active-to` | `oklch(0.9 0.17 125)` | Akhir gradien (lime). Teks di atasnya memakai `--color-text`, bukan putih |
 | `--color-focus-ring` | `oklch(0.48 0.12 152)` | Outline `:focus-visible`. *Dikoreksi dari `0.6 0.15`*: nilai awal hanya 1.96:1 terhadap item nav aktif |
 
+### Lapisan
+
+| Token | Nilai | Pemakaian |
+|---|---|---|
+| `--color-overlay` | `oklch(0.22 0.015 160 / 0.4)` | Scrim di belakang drawer dan dialog |
+| `--color-surface-inverse` | `oklch(0.22 0.015 160)` | Latar tooltip |
+| `--color-text-inverse` | `oklch(1 0 0)` | Teks tooltip (17.24:1 di atas `surface-inverse`) |
+
 ### Status (selalu dengan label teks)
 
 Tiap status punya tiga token: **base** (titik, ikon, teks pesan di atas `surface`), **`-subtle`** (latar badge), **`-strong`** (teks badge di atas `-subtle`).

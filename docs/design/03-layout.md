@@ -59,3 +59,17 @@ Submenu: chevron berputar 90°, anak menjorok dengan garis pandu vertikal (Ref 3
 ## Area aman
 
 Gunakan `env(safe-area-inset-*)` untuk drawer dan tombol melayang. Tidak ada scroll horizontal di level halaman; scroll horizontal hanya boleh di dalam tabel dengan bayangan tepi sebagai petunjuk.
+
+## Implementasi (Tahap 2, 2026-11-02)
+
+Kode: `frontend/src/components/layout/` (`app-shell.tsx`, `sidebar.tsx`, `navigation.ts`, `nav-search.tsx`, `account-menu.tsx`, `header-slot.tsx`, `use-sidebar-collapsed.ts`).
+
+- **Judul halaman di header**: `PageHeader` merender `<h1>` ke slot header lewat portal, jadi tetap satu h1 per halaman. Deskripsi dan aksi halaman tetap di isi halaman. `HeaderActions` tersedia untuk memindahkan **satu** aksi utama ke header (desktop) di Tahap 4.
+- **Pencarian header = pencarian menu** (Ctrl/⌘ K): lompat cepat ke halaman role, termasuk submenu. Pencarian data tetap di halaman masing-masing; tidak ada kolom pencarian yang tidak berfungsi.
+- **Submenu Master Data**: induk tetap berupa tautan (berguna saat sidebar ciut), chevron adalah tombol terpisah (`aria-expanded`). Saat submenu terbuka, sorotan gradien pindah ke anak aktif (latar putih + garis hijau di garis pandu).
+- **Sidebar ciut**: label tetap ada sebagai `sr-only` (nama tautan tidak hilang), tooltip CSS saat hover/fokus, label grup diganti garis pemisah, submenu disembunyikan.
+- **Avatar header**: menu akun (nama, role, Profil untuk Tutor, Keluar). Identitas + tombol Keluar juga ada di kaki sidebar/drawer. Inisial sementara, diganti DiceBear di Tahap 3.
+- **Drawer < 1024px**: lebar `min(18rem, 85vw)`, menghormati safe area, tertutup otomatis setelah memilih menu atau saat jendela dilebarkan ke ≥ 1024px.
+- **Frame konten** (`--radius-xl`, putih, border) hanya di ≥ 1024px; di HP/tablet konten langsung di atas `--color-background` agar tidak ada kartu di dalam kartu.
+- **Target sentuh**: item nav, tombol ikon, dan opsi menu 44px pada `pointer: coarse`.
+- Diverifikasi tanpa scroll horizontal di 360px, 768px, 1440px (Chrome, API tiruan).

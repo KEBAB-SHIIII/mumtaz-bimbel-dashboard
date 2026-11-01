@@ -22,6 +22,13 @@
   --color-nav-active-to: oklch(0.9 0.17 125);
   --color-focus-ring: oklch(0.48 0.12 152);
 
+  /* ── Lapisan ──────────────────────────────────────────────────────────── */
+  /* Scrim di belakang drawer/dialog. */
+  --color-overlay: oklch(0.22 0.015 160 / 0.4);
+  /* Tooltip: latar gelap + teks terang (kontras 17.24:1). */
+  --color-surface-inverse: oklch(0.22 0.015 160);
+  --color-text-inverse: oklch(1 0 0);
+
   /* ── Status (selalu disertai label teks, bukan warna saja) ────────────── */
   /* base = titik/ikon/teks di atas surface · -subtle = latar badge · -strong = teks di atas -subtle */
   --color-success: oklch(0.5 0.12 150);

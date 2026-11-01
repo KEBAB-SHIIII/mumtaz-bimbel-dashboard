@@ -1,6 +1,8 @@
 import { ChevronRight } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router';
+import { useHeaderSlots } from '../layout/header-slot';
 import { cn } from '../../lib/cn';
 
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
@@ -8,11 +10,32 @@ export function PageHeader({ title, description, actions }: { title: string; des
   useEffect(() => {
     document.title = `${title} · Mumtaz Bimbel`;
   }, [title]);
+  const slots = useHeaderSlots();
+
+  // Di dalam AppShell, judul tampil di header aplikasi (docs/design/03-layout.md); deskripsi & aksi tetap di isi halaman.
+  if (slots) {
+    return (
+      <>
+        {slots.title &&
+          createPortal(
+            <h1 className="line-clamp-2 text-page-title-mobile text-balance text-text lg:text-page-title">{title}</h1>,
+            slots.title,
+          )}
+        {(description || actions) && (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            {description && <p className="max-w-prose text-sm text-pretty text-muted">{description}</p>}
+            {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-text">{title}</h1>
-        {description && <p className="mt-1 text-sm text-muted">{description}</p>}
+        <h1 className="text-page-title-mobile text-balance text-text lg:text-page-title">{title}</h1>
+        {description && <p className="mt-1 max-w-prose text-sm text-pretty text-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </header>

@@ -28,6 +28,7 @@ export default defineConfig({
             { name: 'vendor-react', test: /node_modules[\\/](react|react-dom|react-router|scheduler)[\\/]/ },
             { name: 'vendor-data', test: /node_modules[\\/](@tanstack|axios|zod)[\\/]/ },
             { name: 'vendor-ui', test: /node_modules[\\/](@headlessui|@floating-ui|@react-aria|lucide-react)[\\/]/ },
+            { name: 'vendor-motion', test: /node_modules[\\/](motion|motion-dom|motion-utils|framer-motion)[\\/]/ },
             { name: 'vendor-form', test: /node_modules[\\/](react-hook-form|@hookform)[\\/]/ },
           ],
         },

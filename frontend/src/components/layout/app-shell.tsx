@@ -1,48 +1,43 @@
-import { Dialog, DialogPanel } from '@headlessui/react';
-import { LogOut, Menu, X } from 'lucide-react';
-import { Suspense, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router';
-import type { Role } from '@mumtaz/contracts';
+import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
+import { Menu } from 'lucide-react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Outlet, useNavigate } from 'react-router';
 import { ROLE_LABEL, useLogoutMutation, useSession } from '../../features/auth/session';
 import { cn } from '../../lib/cn';
-import { Button } from '../ui/button';
 import { LoadingState } from '../ui/feedback';
-import { NAVIGATION } from './navigation';
+import { AccountMenu } from './account-menu';
+import { HeaderSlotContext } from './header-slot';
+import { NavSearch } from './nav-search';
+import { Sidebar } from './sidebar';
+import { useSidebarCollapsed } from './use-sidebar-collapsed';
 
-function SidebarNav({ role, onNavigate }: { role: Role; onNavigate?: () => void }) {
-  return (
-    <nav aria-label="Navigasi utama" className="flex flex-col gap-1 p-3">
-      {NAVIGATION[role].map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          end={item.end ?? false}
-          onClick={onNavigate}
-          className={({ isActive }) =>
-            cn(
-              'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-              isActive ? 'bg-primary text-primary-foreground' : 'text-muted hover:bg-surface-muted hover:text-text',
-            )
-          }
-        >
-          <item.icon aria-hidden className="size-4" />
-          {item.label}
-        </NavLink>
-      ))}
-    </nav>
-  );
-}
+/** Sama dengan breakpoint `lg` Tailwind: di atasnya sidebar tetap, di bawahnya drawer. */
+const DESKTOP_QUERY = '(min-width: 64rem)';
 
-function Brand() {
-  return <p className="px-6 py-5 text-sm font-semibold tracking-wide text-text uppercase">Mumtaz Bimbel</p>;
-}
-
-/** Shell aplikasi per role: sidebar (drawer di mobile), topbar identitas + logout. */
+/**
+ * Shell aplikasi per role (docs/design/03-layout.md): sidebar berkelompok yang bisa diciutkan (≥ 1024px)
+ * atau drawer (< 1024px), header dengan judul halaman + pencarian menu + avatar, dan frame konten.
+ */
 export function AppShell() {
   const user = useSession().data;
   const logout = useLogoutMutation();
   const navigate = useNavigate();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { collapsed, toggle } = useSidebarCollapsed();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
+  const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
+  const slots = useMemo(() => ({ title: titleSlot, actions: actionsSlot }), [titleSlot, actionsSlot]);
+
+  // Drawer modal yang tertinggal terbuka saat jendela dilebarkan akan mengunci halaman: tutup otomatis.
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia(DESKTOP_QUERY);
+    const onChange = (event: MediaQueryListEvent) => {
+      if (event.matches) setDrawerOpen(false);
+    };
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
 
   const handleLogout = () => {
     const loginPath = user?.role === 'parent' ? '/login/orang-tua' : '/login';
@@ -52,54 +47,73 @@ export function AppShell() {
   // Sesi baru saja berakhir (logout/401): route guard sedang mengarahkan ke login, jangan render shell.
   if (!user) return null;
 
+  const sidebarProps = {
+    role: user.role,
+    fullName: user.full_name,
+    roleLabel: ROLE_LABEL[user.role],
+    onLogout: handleLogout,
+    logoutPending: logout.isPending,
+  };
+
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2">
-        Lewati ke konten
-      </a>
-      <div className="flex flex-1">
-        <aside className="hidden w-60 shrink-0 border-r border-border bg-surface lg:block">
-          <div className="sticky top-0">
-            <Brand />
-            <SidebarNav role={user.role} />
-          </div>
+    <HeaderSlotContext.Provider value={slots}>
+      <div className="min-h-dvh bg-background lg:flex">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:start-3 focus:top-3 focus:z-[60] focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:shadow-md"
+        >
+          Lewati ke konten
+        </a>
+
+        <aside
+          className={cn(
+            'sticky top-0 hidden h-dvh shrink-0 transition-[width] duration-200 ease-out motion-reduce:transition-none lg:block',
+            collapsed ? 'w-16' : 'w-60',
+          )}
+        >
+          <Sidebar {...sidebarProps} variant="desktop" collapsed={collapsed} onToggleCollapse={toggle} />
         </aside>
 
-        <Dialog open={mobileOpen} onClose={setMobileOpen} className="relative z-40 lg:hidden">
-          <div className="fixed inset-0 bg-black/40" aria-hidden />
-          <DialogPanel className="fixed inset-y-0 left-0 w-64 bg-surface shadow-md">
-            <div className="flex items-center justify-between pr-3">
-              <Brand />
-              <Button variant="ghost" size="sm" aria-label="Tutup menu" className="px-1.5" onClick={() => setMobileOpen(false)}>
-                <X aria-hidden className="size-4" />
-              </Button>
-            </div>
-            <SidebarNav role={user.role} onNavigate={() => setMobileOpen(false)} />
+        <Dialog open={drawerOpen} onClose={setDrawerOpen} className="relative z-50 lg:hidden">
+          <DialogBackdrop
+            transition
+            className="fixed inset-0 bg-overlay transition-opacity duration-300 ease-out data-closed:opacity-0 data-leave:duration-200 motion-reduce:transition-none"
+          />
+          <DialogPanel
+            transition
+            className="fixed inset-y-0 start-0 w-[min(18rem,85vw)] bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ps-[env(safe-area-inset-left)] shadow-lg transition duration-300 ease-out data-closed:-translate-x-full data-leave:duration-200 data-leave:ease-in motion-reduce:transition-none"
+          >
+            <DialogTitle className="sr-only">Menu navigasi</DialogTitle>
+            <Sidebar {...sidebarProps} variant="drawer" onClose={() => setDrawerOpen(false)} />
           </DialogPanel>
         </Dialog>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3 lg:px-8">
-            <Button variant="ghost" size="sm" aria-label="Buka menu" className="px-1.5 lg:hidden" onClick={() => setMobileOpen(true)}>
+          <header className="z-30 flex h-16 shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-6 lg:sticky lg:top-0 lg:bg-background/85 lg:px-8 lg:backdrop-blur-md">
+            <button
+              type="button"
+              aria-label="Buka menu"
+              onClick={() => setDrawerOpen(true)}
+              className="grid size-10 shrink-0 place-items-center rounded-md text-text transition-colors duration-150 hover:bg-surface pointer-coarse:size-11 motion-reduce:transition-none lg:hidden"
+            >
               <Menu aria-hidden className="size-5" />
-            </Button>
-            <div className="ml-auto flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-sm font-medium text-text">{user.full_name}</p>
-                <p className="text-xs text-muted">{ROLE_LABEL[user.role]}</p>
-              </div>
-              <Button variant="secondary" size="sm" icon={<LogOut aria-hidden className="size-4" />} loading={logout.isPending} onClick={handleLogout}>
-                Keluar
-              </Button>
-            </div>
+            </button>
+            {/* Judul halaman (h1) dirender di sini oleh PageHeader lewat portal. */}
+            <div ref={setTitleSlot} className="min-w-0 flex-1" />
+            <div ref={setActionsSlot} className="hidden items-center gap-2 lg:flex lg:empty:hidden" />
+            <NavSearch role={user.role} />
+            <AccountMenu fullName={user.full_name} role={user.role} roleLabel={ROLE_LABEL[user.role]} onLogout={handleLogout} />
           </header>
-          <main id="main" className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-6 lg:px-8">
-            <Suspense fallback={<LoadingState label="Memuat halaman…" />}>
-              <Outlet />
-            </Suspense>
+
+          <main id="main" tabIndex={-1} className="flex flex-1 flex-col px-4 pb-8 focus:outline-none sm:px-6 lg:px-8">
+            <div className="mx-auto flex w-full max-w-[90rem] flex-1 flex-col gap-6 lg:rounded-xl lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-sm">
+              <Suspense fallback={<LoadingState label="Memuat halaman…" />}>
+                <Outlet />
+              </Suspense>
+            </div>
           </main>
         </div>
       </div>
-    </div>
+    </HeaderSlotContext.Provider>
   );
 }
