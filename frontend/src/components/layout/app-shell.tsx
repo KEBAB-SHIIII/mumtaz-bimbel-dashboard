@@ -70,7 +70,7 @@ export function AppShell() {
 
         <aside
           className={cn(
-            'sticky top-0 hidden h-dvh shrink-0 transition-[width] duration-200 ease-out motion-reduce:transition-none lg:block',
+            'sticky top-0 z-40 hidden h-dvh shrink-0 transition-[width] duration-200 ease-out motion-reduce:transition-none lg:block',
             collapsed ? 'w-16' : 'w-60',
           )}
         >
@@ -92,7 +92,7 @@ export function AppShell() {
         </Dialog>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="z-30 flex h-16 shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-6 lg:sticky lg:top-0 lg:bg-background/85 lg:px-8 lg:backdrop-blur-md">
+          <header className="z-30 flex h-16 shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-6 lg:sticky lg:top-0 lg:bg-background/85 lg:ps-2 lg:pe-4 lg:backdrop-blur-md">
             <button
               type="button"
               aria-label="Buka menu"
@@ -112,8 +112,8 @@ export function AppShell() {
             <AccountMenu userId={user.id} fullName={user.full_name} role={user.role} roleLabel={ROLE_LABEL[user.role]} onLogout={handleLogout} />
           </header>
 
-          <main id="main" tabIndex={-1} className="flex flex-1 flex-col px-4 pb-8 focus:outline-none sm:px-6 lg:px-8">
-            <div className="mx-auto flex w-full max-w-[90rem] flex-1 flex-col gap-4 lg:rounded-xl lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-sm">
+          <main id="main" tabIndex={-1} className="flex flex-1 flex-col px-4 pb-8 focus:outline-none sm:px-6 lg:ps-2 lg:pe-4">
+            <div className="mx-auto lg:ms-0 flex w-full max-w-[90rem] flex-1 flex-col gap-4 lg:rounded-xl lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-sm">
               {/* Pindah halaman: isi frame memudar + naik 6px (keyframe), sidebar & header diam. */}
               <div key={location.pathname} className="flex flex-1 flex-col gap-4 animate-fade-up motion-reduce:animate-none">
                 <Suspense
