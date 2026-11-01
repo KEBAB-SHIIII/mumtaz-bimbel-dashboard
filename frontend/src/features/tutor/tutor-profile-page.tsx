@@ -64,7 +64,7 @@ export function TutorProfilePage() {
           <div className="flex items-center gap-4 sm:flex-col sm:items-center sm:text-center">
             <Avatar seed={user.id} name={user.full_name} size={72} decorative />
             <div className="min-w-0 sm:hidden">
-              <p className="truncate text-card-title text-text">{user.full_name}</p>
+              <p className="text-card-title break-words text-text">{user.full_name}</p>
               <p className="text-meta text-muted">Tutor</p>
             </div>
           </div>

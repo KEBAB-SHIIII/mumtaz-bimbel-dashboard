@@ -89,7 +89,7 @@ function ChildCard({ student, children }: { student: ParentStudent; children?: R
       <div className="flex min-w-0 items-center gap-3">
         <Avatar seed={student.id} name={student.full_name} size={40} decorative />
         <div className="min-w-0">
-          <p className="truncate text-card-title text-text">{student.full_name}</p>
+          <p className="text-card-title break-words text-text">{student.full_name}</p>
           <p className="text-meta text-pretty text-muted">
             {student.grade} · {student.school_name}
           </p>

@@ -44,6 +44,8 @@
   --color-danger: oklch(0.53 0.19 27);
   --color-danger-subtle: oklch(0.96 0.018 25);
   --color-danger-strong: oklch(0.43 0.15 27);
+  /* Teks di atas tombol `danger` (5.82:1; hover 90% 5.02:1). */
+  --color-danger-foreground: oklch(1 0 0);
   --color-info: oklch(0.5 0.1 250);
   --color-info-subtle: oklch(0.96 0.018 250);
   --color-info-strong: oklch(0.42 0.09 250);
@@ -108,6 +110,8 @@
   /* ── Shadow (sangat tipis) ────────────────────────────────────────────── */
   --shadow-sm: 0 1px 2px 0 oklch(0.22 0.015 160 / 0.05);
   --shadow-md: 0 4px 12px -2px oklch(0.22 0.015 160 / 0.08), 0 2px 4px -2px oklch(0.22 0.015 160 / 0.04);
+  /* Bayangan tepi kolom sticky kanan pada tabel yang digeser. */
+  --shadow-edge: -8px 0 8px -8px oklch(0.22 0.015 160 / 0.18);
   --shadow-lg: 0 16px 40px -8px oklch(0.22 0.015 160 / 0.16), 0 4px 12px -4px oklch(0.22 0.015 160 / 0.06);
 
   /* ── Motion ───────────────────────────────────────────────────────────── */

@@ -16,7 +16,7 @@ function Indicator({ layoutId }: { layoutId: string }) {
       aria-hidden
       layoutId={layoutId}
       transition={INDICATOR_SPRING}
-      className="absolute inset-0 -z-10 rounded-[inherit] bg-surface shadow-sm ring-1 ring-border"
+      className="absolute inset-0 -z-10 rounded-[inherit] bg-surface shadow-sm ring-1 ring-border forced-colors:outline-2 forced-colors:-outline-offset-2 forced-colors:outline-solid"
     />
   );
 }

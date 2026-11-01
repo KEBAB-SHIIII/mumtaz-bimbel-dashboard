@@ -33,7 +33,7 @@ export function AccountMenu({ userId, fullName, role, roleLabel, onLogout }: Acc
         <div className="flex items-center gap-2.5 px-2.5 py-2">
           <Avatar seed={userId} name={fullName} size={40} decorative />
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-text">{fullName}</p>
+            <p className="text-sm font-medium break-words text-text">{fullName}</p>
             <p className="truncate text-meta text-muted">{roleLabel}</p>
           </div>
         </div>

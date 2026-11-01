@@ -12,7 +12,8 @@ const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 
 const ITEM_BASE =
   'group/item relative flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-sm font-medium transition-colors duration-150 pointer-coarse:h-11 motion-reduce:transition-none';
-const ITEM_ACTIVE = 'bg-linear-to-r from-nav-active-from to-nav-active-to text-text shadow-sm';
+/** Forced colors membuang gradien/latar: outline menjaga item aktif tetap terlihat di mode kontras tinggi. */
+const ITEM_ACTIVE = 'bg-linear-to-r from-nav-active-from to-nav-active-to text-text shadow-sm forced-colors:outline-2 forced-colors:-outline-offset-2 forced-colors:outline-solid';
 const ITEM_IDLE = 'text-muted hover:bg-surface hover:text-text';
 
 /** Tooltip sidebar ciut: nama aksesibel tetap dari label sr-only, jadi tooltip disembunyikan dari AT. */
@@ -129,7 +130,7 @@ function ParentItem({ item, collapsed, onNavigate }: ItemProps) {
                         'relative flex h-8 items-center rounded-md px-2.5 text-sm transition-colors duration-150 pointer-coarse:h-11 motion-reduce:transition-none',
                         'before:absolute before:-start-[calc(0.625rem+1.5px)] before:inset-y-1.5 before:w-0.5 before:rounded-full',
                         isActive
-                          ? 'bg-surface font-medium text-text shadow-sm before:bg-primary'
+                          ? 'bg-surface font-medium text-text shadow-sm before:bg-primary forced-colors:outline-2 forced-colors:-outline-offset-2 forced-colors:outline-solid'
                           : 'text-muted hover:bg-surface hover:text-text',
                       )
                     }
@@ -257,7 +258,7 @@ export function Sidebar({ role, userId, fullName, roleLabel, onLogout, logoutPen
         )}
         <div className="group/item relative">
           <IconButton aria-label="Keluar" disabled={logoutPending} aria-busy={logoutPending || undefined} onClick={onLogout}>
-            {logoutPending ? <LoaderCircle aria-hidden className="size-4.5 animate-spin" /> : <LogOut aria-hidden className="size-4.5" />}
+            {logoutPending ? <LoaderCircle aria-hidden className="size-4.5 animate-spin motion-reduce:animate-none" /> : <LogOut aria-hidden className="size-4.5" />}
           </IconButton>
           {isCollapsed && <CollapsedTooltip label="Keluar" />}
         </div>

@@ -62,6 +62,17 @@ function useHorizontalOverflow() {
   return { ref, edges, measure };
 }
 
+/**
+ * Render sel/header sebagai panggilan fungsi biasa, bukan komponen. `flexRender` memperlakukan fungsi inline
+ * sebagai tipe komponen; karena definisi kolom dibuat ulang tiap render, tipe itu selalu baru sehingga isi sel
+ * di-remount (tombol kehilangan fokus, dialog tidak bisa mengembalikan fokus ke pemicunya).
+ * Konsekuensi: fungsi `cell`/`header` tidak boleh memanggil hook; pakai komponen terpisah (mis. `<ApprovalSelect />`).
+ */
+function renderSlot<P extends object>(slot: unknown, props: P): ReactNode {
+  if (typeof slot === 'function') return (slot as (props: P) => ReactNode)(props);
+  return flexRender(slot as Parameters<typeof flexRender>[0], props);
+}
+
 /** Bar tipis tak tentu di tepi atas saat data diperbarui. Dekoratif: status sibuk diumumkan lewat `aria-busy`. */
 function FetchingBar({ active }: { active: boolean }) {
   if (!active) return null;
@@ -101,12 +112,18 @@ function Table<T>({ table, caption, footer }: { table: TableInstance<T>; caption
   const { ref, edges, measure } = useHorizontalOverflow();
   const hasSticky = table.getAllColumns().some((column) => column.columnDef.meta?.stickyRight);
   const stickyClass = (sticky: boolean | undefined) =>
-    sticky ? cn('sticky end-0 bg-inherit', edges.right && 'shadow-[-8px_0_8px_-8px_oklch(0_0_0/0.18)]') : undefined;
+    sticky ? cn('sticky end-0 bg-inherit', edges.right && 'shadow-edge') : undefined;
 
   return (
     <div className="relative">
       {/* `relative` menahan elemen sr-only (caption) agar tidak melebarkan halaman. */}
-      <div ref={ref} onScroll={measure} className="relative overflow-x-auto">
+      {/* Saat bisa digeser, wadah ikut urutan Tab agar tabel bisa digulir dengan panah keyboard. */}
+      <div
+        ref={ref}
+        onScroll={measure}
+        className="relative overflow-x-auto focus-visible:-outline-offset-2"
+        {...(edges.left || edges.right ? { tabIndex: 0, role: 'region', 'aria-label': `${caption} (geser horizontal)` } : {})}
+      >
         <table className="w-full border-collapse text-sm">
           <caption className="sr-only">{caption}</caption>
           <thead>
@@ -121,7 +138,7 @@ function Table<T>({ table, caption, footer }: { table: TableInstance<T>; caption
                       stickyClass(header.column.columnDef.meta?.stickyRight),
                     )}
                   >
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.isPlaceholder ? null : renderSlot(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
               </tr>
@@ -136,7 +153,7 @@ function Table<T>({ table, caption, footer }: { table: TableInstance<T>; caption
               >
                 {row.getVisibleCells().map((cell) => (
                   <td key={cell.id} className={cn('h-11 px-4 py-2.5 align-middle text-text', stickyClass(cell.column.columnDef.meta?.stickyRight))}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    {renderSlot(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
               </m.tr>
@@ -160,7 +177,7 @@ function Table<T>({ table, caption, footer }: { table: TableInstance<T>; caption
 }
 
 function headerLabel<T>(header: Header<T, unknown> | undefined) {
-  return header && !header.isPlaceholder ? flexRender(header.column.columnDef.header, header.getContext()) : null;
+  return header && !header.isPlaceholder ? renderSlot(header.column.columnDef.header, header.getContext()) : null;
 }
 
 /** Tampilan HP: tiap baris menjadi blok berpemisah garis (tanpa kartu di dalam kartu). Judul di atas, aksi di kanan atas, kolom lain sebagai label–nilai. */
@@ -190,11 +207,11 @@ function CardList<T>({ table, caption, footer }: { table: TableInstance<T>; capt
             <article className="px-4 py-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1 text-sm font-semibold break-words text-text">
-                  {title && flexRender(title.column.columnDef.cell, title.getContext())}
+                  {title && renderSlot(title.column.columnDef.cell, title.getContext())}
                 </div>
                 {actions.map((cell) => (
                   <div key={cell.id} className="-me-1 -mt-1 shrink-0">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    {renderSlot(cell.column.columnDef.cell, cell.getContext())}
                   </div>
                 ))}
               </div>
@@ -203,7 +220,7 @@ function CardList<T>({ table, caption, footer }: { table: TableInstance<T>; capt
                   {details.map((cell) => (
                     <div key={cell.id} className="min-w-0">
                       <dt className="text-meta text-muted">{headerLabel(headerOf(cell.column.id))}</dt>
-                      <dd className="mt-0.5 text-sm break-words text-text">{flexRender(cell.column.columnDef.cell, cell.getContext())}</dd>
+                      <dd className="mt-0.5 text-sm break-words text-text">{renderSlot(cell.column.columnDef.cell, cell.getContext())}</dd>
                     </div>
                   ))}
                 </dl>

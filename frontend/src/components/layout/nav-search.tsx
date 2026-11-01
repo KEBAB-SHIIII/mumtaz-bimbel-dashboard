@@ -79,7 +79,8 @@ export function NavSearch({ role }: { role: Role }) {
           >
             <DialogTitle className="sr-only">Cari menu</DialogTitle>
             <Combobox<NavDestination | null> value={null} onChange={go}>
-              <div className="flex items-center gap-2.5 border-b border-border px-4">
+              {/* Indikator fokus pengganti outline: garis bawah 2px hijau saat kolom difokus. */}
+              <div className="flex items-center gap-2.5 border-b-2 border-border px-4 transition-colors duration-150 focus-within:border-primary motion-reduce:transition-none">
                 <Search aria-hidden className="size-4.5 shrink-0 text-muted" />
                 <ComboboxInput
                   autoFocus

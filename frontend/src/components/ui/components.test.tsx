@@ -243,6 +243,27 @@ describe('DataTable < 640px: daftar kartu', () => {
     expect(within(first as HTMLElement).getByRole('button', { name: 'Ubah' })).toBeInTheDocument();
   });
 
+  it('sel tidak di-remount saat halaman render ulang (fokus tombol tetap & bisa dikembalikan dialog)', () => {
+    mockMatchMedia(() => false);
+    // Kolom dibuat ulang tiap render, seperti di halaman.
+    const makeColumns = (): ColumnDef<Row, unknown>[] => [
+      { accessorKey: 'name', header: 'Nama' },
+      { id: 'actions', header: 'Aksi', cell: ({ row }) => <button type="button">Ubah {row.original.name}</button> },
+    ];
+    const table = (tick: number) => (
+      <Providers>
+        <span data-tick={tick} />
+        <DataTable caption="Daftar siswa" columns={makeColumns()} data={data} getRowId={(row) => row.id} />
+      </Providers>
+    );
+    const { rerender } = render(table(0));
+    const before = screen.getByRole('button', { name: 'Ubah Citra' });
+    before.focus();
+    rerender(table(1));
+    expect(screen.getByRole('button', { name: 'Ubah Citra' })).toBe(before);
+    expect(before).toHaveFocus();
+  });
+
   it('≥ 640px tetap tabel', () => {
     mockMatchMedia(() => false);
     renderUi(<DataTable caption="Daftar siswa" columns={columns} data={data} getRowId={(row) => row.id} />);

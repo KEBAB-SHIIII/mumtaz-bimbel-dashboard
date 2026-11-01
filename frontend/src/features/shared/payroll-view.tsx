@@ -29,7 +29,8 @@ interface SessionRow {
 /** Rincian sesi untuk crosscheck dengan tutor. `amountLabel`: tarif kotor (Admin) atau honor bersih (Tutor). */
 function SessionLines({ caption, rows, amountLabel }: { caption: string; rows: SessionRow[]; amountLabel: string }) {
   return (
-    <div className="overflow-x-auto">
+    // Di layar sempit tabel digeser; wadah dapat difokus agar bisa digulir dengan keyboard.
+    <div tabIndex={0} role="region" aria-label={caption} className="overflow-x-auto focus-visible:-outline-offset-2">
       <table className="w-full text-sm">
         <caption className="sr-only">{caption}</caption>
         <thead>

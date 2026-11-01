@@ -29,7 +29,7 @@ export function PeriodSelector({ value, onChange }: { value: string; onChange: (
         Periode
       </label>
       {/* Satu kontrol tersegmentasi (Ref 2): ‹ bulan › dengan batas bersama. */}
-      <div className="flex h-9 w-fit items-stretch overflow-hidden rounded-md border border-border-strong bg-surface shadow-xs pointer-coarse:h-11">
+      <div className="flex h-9 w-fit items-stretch overflow-hidden rounded-md border border-border-strong bg-surface shadow-xs pointer-coarse:h-[2.875rem]">
         <button type="button" aria-label="Bulan sebelumnya" className={stepClass} onClick={() => onChange(shiftPeriod(value, -1))}>
           <ChevronLeft aria-hidden className="size-4" />
         </button>

@@ -34,8 +34,8 @@ export function MasterDataLayout() {
                 to={tab.to}
                 className={({ isActive }) =>
                   cn(
-                    'inline-flex h-8 items-center rounded-[0.375rem] px-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 pointer-coarse:h-10 motion-reduce:transition-none',
-                    isActive ? 'bg-surface text-text shadow-sm ring-1 ring-border' : 'text-muted hover:text-text',
+                    'inline-flex h-8 items-center rounded-[0.375rem] px-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 pointer-coarse:h-11 motion-reduce:transition-none',
+                    isActive ? 'bg-surface text-text shadow-sm ring-1 ring-border forced-colors:outline-2 forced-colors:-outline-offset-2 forced-colors:outline-solid' : 'text-muted hover:text-text',
                   )
                 }
               >

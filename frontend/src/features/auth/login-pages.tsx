@@ -76,7 +76,7 @@ export function StaffLoginPage() {
       description="Gunakan username dan password akun Anda."
       footer={
         <>
-          Orang tua/wali? <Link className="font-medium text-primary underline underline-offset-4" to="/login/orang-tua">Masuk dengan ID Akses</Link>
+          Orang tua/wali? <Link className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4 sm:min-h-0" to="/login/orang-tua">Masuk dengan ID Akses</Link>
         </>
       }
     >
@@ -149,7 +149,7 @@ export function ParentLoginPage() {
       description="Masukkan ID Akses Orang Tua untuk melihat progres belajar anak."
       footer={
         <>
-          Admin atau tutor? <Link className="font-medium text-primary underline underline-offset-4" to="/login">Masuk dengan username</Link>
+          Admin atau tutor? <Link className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4 sm:min-h-0" to="/login">Masuk dengan username</Link>
         </>
       }
     >

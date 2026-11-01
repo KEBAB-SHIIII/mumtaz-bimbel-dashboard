@@ -89,3 +89,32 @@ Periksa: kontras (termasuk badge & nav aktif), navigasi keyboard dan urutan foku
 Perbaiki semua temuan, catat yang sengaja tidak diperbaiki beserta alasannya.
 Jalankan typecheck, test, lint, build; laporkan hasil dan ukuran bundle akhir, lalu berhenti untuk review.
 ```
+
+---
+
+## Hasil Tahap 5 — audit (2026-11-02)
+
+Diperiksa di Chrome (Playwright) memakai fake backend in-memory (data sintetis test; tanpa Neon/kredensial asli): axe-core (WCAG 2.0/2.1/2.2 A–AA + best practice) di 15 halaman × 360px & 1440px, jalan Tab keyboard, pengembalian fokus dialog/drawer, target sentuh & reflow di 320px, `prefers-reduced-motion: reduce`, dan `forced-colors: active`.
+
+**Diperbaiki**
+
+| Temuan | Perbaikan |
+|---|---|
+| Fokus tidak kembali ke tombol "Detail sesi" setelah dialog ditutup; sel tabel di-remount tiap render (bug lama, semua DataTable) | `DataTable` memanggil fungsi `cell`/`header` langsung, bukan lewat `flexRender` sebagai komponen; ada test regresi |
+| Tabel yang bisa digeser tidak bisa dijangkau keyboard (axe `scrollable-region-focusable`) | Wadah gulir jadi `region` berlabel dengan `tabIndex=0` saat bisa digeser (DataTable, rincian honor) |
+| Target sentuh < 44px: PeriodSelector (42px), tab pil Master Data (40px), tautan pindah login & "Lihat riwayat" | Tinggi 44px pada `pointer: coarse` |
+| Input pencarian menu memakai `focus:outline-none` tanpa pengganti | Garis bawah 2px `primary` saat fokus |
+| Spinner tetap berputar saat reduced motion | `motion-reduce:animate-none` |
+| Item aktif (nav, submenu, tab pil, segmented) tak terlihat di mode kontras tinggi | Outline `forced-colors` |
+| Nama pengguna/murid dipotong tanpa cara melihat nilai penuh | Dibungkus (`break-words`) |
+| Warna hardcode di luar tokens.css (`oklch` bayangan tooltip & tepi tabel, `text-white`) | Token `--shadow-md`, `--shadow-edge`, `--color-danger-foreground` |
+
+**Sengaja tidak diubah**
+
+| Hal | Alasan |
+|---|---|
+| Sorotan opsi Menu/Combobox (`data-focus:bg-surface-muted`, ~1.04:1) | Pola bawaan Headless UI (aktif-descendant + `aria-activedescendant`); memenuhi 2.4.7 (terlihat). Penguatan ke 3:1 (2.4.13, AAA) bisa dilakukan bila owner menginginkan |
+| Bagian dalam `<input type="date/time">` (segmen & tombol kalender) | Kontrol native browser; fokus segmen ditangani browser |
+| Nama di kaki sidebar dipotong (`title` saja) | Nama lengkap selalu tersedia di menu akun header |
+| Tautan kartu statistik terukur kecil | Tautan meregang ke seluruh kartu (`after:inset-0`), area sentuh = ukuran kartu |
+| Filter validitas/status berupa `<select>` | Lihat `05-pages.md` (dipakai test, ringkas di HP) |

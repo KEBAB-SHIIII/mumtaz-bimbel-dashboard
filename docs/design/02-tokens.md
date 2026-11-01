@@ -37,6 +37,8 @@ Format OKLCH, semua nilai di dalam gamut sRGB (tidak butuh fallback P3).
 | `--color-surface-inverse` | `oklch(0.22 0.015 160)` | Latar tooltip |
 | `--color-text-inverse` | `oklch(1 0 0)` | Teks tooltip (17.24:1 di atas `surface-inverse`) |
 | `--color-image-outline` | `oklch(0 0 0 / 0.1)` | Garis 1px di tepi gambar/avatar |
+| `--color-danger-foreground` | `oklch(1 0 0)` | Teks tombol `danger` (5.82:1; hover 90% 5.02:1) |
+| `--shadow-edge` | `-8px 0 8px -8px oklch(0.22 0.015 160 / 0.18)` | Bayangan tepi kolom aksi sticky saat tabel digeser |
 
 ### Status (selalu dengan label teks)
 

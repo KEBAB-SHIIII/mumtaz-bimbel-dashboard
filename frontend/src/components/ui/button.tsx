@@ -8,7 +8,7 @@ type Size = 'sm' | 'md' | 'icon' | 'icon-sm';
 const VARIANTS: Record<Variant, string> = {
   primary: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90',
   secondary: 'border border-border bg-surface text-text shadow-sm hover:bg-surface-muted',
-  danger: 'bg-danger text-white shadow-sm hover:bg-danger/90',
+  danger: 'bg-danger text-danger-foreground shadow-sm hover:bg-danger/90',
   ghost: 'text-text hover:bg-surface-muted',
 };
 
@@ -67,7 +67,7 @@ export function Button({
       </span>
       {loading && (
         <span className="absolute inset-0 grid place-items-center">
-          <LoaderCircle aria-hidden className="size-4 animate-spin" />
+          <LoaderCircle aria-hidden className="size-4 animate-spin motion-reduce:animate-none" />
         </span>
       )}
     </button>

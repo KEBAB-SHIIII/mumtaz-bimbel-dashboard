@@ -49,7 +49,7 @@ function chartStyle(colors: ThemeColors) {
     axis: { tick: { fontSize: 12, fill: colors.muted }, tickLine: false, axisLine: false } as const,
     // Tooltip putih bergaris tipis (Ref 2), tanpa jeda mengikuti kursor.
     tooltip: {
-      contentStyle: { borderRadius: 10, border: `1px solid ${colors.border}`, fontSize: 12, boxShadow: '0 4px 12px -2px oklch(0.22 0.015 160 / 0.08)' },
+      contentStyle: { borderRadius: 10, border: `1px solid ${colors.border}`, fontSize: 12, boxShadow: 'var(--shadow-md)' },
       labelStyle: { fontWeight: 600, color: colors.text },
       cursor: { stroke: colors.muted, strokeDasharray: '4 4' },
       isAnimationActive: false,

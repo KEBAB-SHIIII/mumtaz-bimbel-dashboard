@@ -14,7 +14,7 @@ import { usePeriodParam } from '../../lib/period';
 import { queryKeys } from '../../lib/query-keys';
 import { fetchTutorAttendance, fetchTutorDashboard } from './api';
 
-const LINK_CLASS = 'inline-flex items-center gap-1 rounded-sm text-sm font-medium text-primary underline-offset-4 hover:underline';
+const LINK_CLASS = 'inline-flex items-center gap-1 rounded-sm text-sm font-medium text-primary underline-offset-4 hover:underline pointer-coarse:min-h-11';
 
 /** CTA utama Tutor (mobile-first): satu aksi terisi warna per tampilan. */
 function FillAttendanceCta() {
@@ -127,7 +127,7 @@ export function TutorDashboardPage() {
                 renderItem={(item) => (
                   <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-text">
+                      <p className="text-sm font-medium break-words text-text">
                         {item.student_name} · {item.subject_name}
                       </p>
                       <p className="text-meta text-muted tabular-nums">
