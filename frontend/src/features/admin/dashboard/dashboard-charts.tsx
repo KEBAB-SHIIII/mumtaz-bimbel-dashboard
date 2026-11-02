@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useSyncExternalStore, type ReactNode } from 'react';
 import {
   Area,
   AreaChart,
@@ -28,11 +28,13 @@ import {
   SAMPLE_TUTOR_RANKING,
 } from './sample-chart-data';
 
-// Palet pastel grafik mengikuti referensi: hijau, mint, dan lavender.
+// Warna seri mengikuti kartu ringkasan dengan pastel yang sedikit lebih pekat.
 const CHART_PALETTE = {
-  green: '#60AD76',
-  mint: '#ADE8BD',
-  lavender: '#A39DE8',
+  sessions: '#8FCBA3',
+  studentGrowth: '#73B98A',
+  tutor: '#91BCE8',
+  students: '#B7A4DE',
+  revenue: '#E7B68E',
 };
 
 const compactRupiah = new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 });
@@ -102,16 +104,6 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
   );
 }
 
-/** Indeks batang/potongan yang sedang di-hover; sisanya diredupkan (transisi `fill-opacity` di index.css). */
-function useHoverIndex() {
-  const [index, setIndex] = useState<number | null>(null);
-  return {
-    onMouseEnter: (_: unknown, next: number) => setIndex(next),
-    onMouseLeave: () => setIndex(null),
-    opacityOf: (i: number) => (index === null || index === i ? 1 : 0.4),
-  };
-}
-
 /** Kartu grafik; `sample` memberi label "Data contoh" kecil untuk angka yang belum dari data operasional. */
 function ChartCard({ title, subtitle, summary, wide = false, sample = true, children }: { title: string; subtitle: string; summary: string; wide?: boolean; sample?: boolean; children: ReactNode }) {
   return (
@@ -150,11 +142,11 @@ function RevenueTooltip({ active, payload, label }: { active?: boolean; payload?
     <div className="rounded-[0.625rem] border border-border bg-surface px-3 py-2 text-meta shadow-md animate-pop-in motion-reduce:animate-none">
       <p className="font-semibold text-text">{label}</p>
       <dl className="mt-1 grid grid-cols-[auto_auto] gap-x-4 gap-y-0.5 tabular-nums">
-        <dt className="flex items-center gap-2 font-medium text-text"><span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: CHART_PALETTE.mint }} />Omzet kotor</dt>
+        <dt className="flex items-center gap-2 font-medium text-text"><span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: CHART_PALETTE.revenue }} />Omzet kotor</dt>
         <dd className="text-end font-semibold text-text">{formatRupiah(String(point.gross))}</dd>
-        <dt className="flex items-center gap-2 text-muted"><span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: CHART_PALETTE.lavender }} />Gaji tutor</dt>
+        <dt className="flex items-center gap-2 text-muted"><span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: CHART_PALETTE.tutor }} />Gaji tutor</dt>
         <dd className="text-end text-text">{formatRupiah(String(point.salary))}</dd>
-        <dt className="flex items-center gap-2 text-muted"><span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: CHART_PALETTE.green }} />Pendapatan bersih bimbel</dt>
+        <dt className="flex items-center gap-2 text-muted"><span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: CHART_PALETTE.sessions }} />Pendapatan bersih bimbel</dt>
         <dd className="text-end text-text">{formatRupiah(String(point.net))}</dd>
       </dl>
     </div>
@@ -162,18 +154,15 @@ function RevenueTooltip({ active, payload, label }: { active?: boolean; payload?
 }
 
 /**
- * Seri grafik memakai palet hijau, mint, dan lavender.
+ * Seri grafik mengikuti warna kategori pada kartu ringkasan.
  * Pendapatan: tiga seri tidak ditumpuk agar setiap garis menunjukkan nominal sebenarnya.
  */
 export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['revenue_by_month'] }) {
   const animate = !usePrefersReducedMotion();
   const colors = useThemeColors();
   const style = chartStyle(colors, animate);
-  const pieHover = useHoverIndex();
-  const tutorHover = useHoverIndex();
-  const sourceHover = useHoverIndex();
   const revenueData = toRevenueChart(revenue);
-  const pieColors = [CHART_PALETTE.green, CHART_PALETTE.lavender];
+  const pieColors = [CHART_PALETTE.tutor, CHART_PALETTE.revenue];
 
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
@@ -189,12 +178,12 @@ export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['r
             <ComposedChart data={revenueData} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
               <defs>
                 <linearGradient id="revenueNetFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={CHART_PALETTE.green} stopOpacity={0.5} />
-                  <stop offset="100%" stopColor={CHART_PALETTE.green} stopOpacity={0.1} />
+                  <stop offset="0%" stopColor={CHART_PALETTE.sessions} stopOpacity={0.5} />
+                  <stop offset="100%" stopColor={CHART_PALETTE.sessions} stopOpacity={0.1} />
                 </linearGradient>
                 <linearGradient id="revenueSalaryFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={CHART_PALETTE.lavender} stopOpacity={0.45} />
-                  <stop offset="100%" stopColor={CHART_PALETTE.lavender} stopOpacity={0.1} />
+                  <stop offset="0%" stopColor={CHART_PALETTE.tutor} stopOpacity={0.45} />
+                  <stop offset="100%" stopColor={CHART_PALETTE.tutor} stopOpacity={0.1} />
                 </linearGradient>
               </defs>
               <CartesianGrid stroke={colors.border} vertical={false} />
@@ -202,9 +191,9 @@ export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['r
               <YAxis {...style.axis} width={72} tickFormatter={formatCompactRupiah} />
               <Tooltip {...style.tooltip} content={<RevenueTooltip />} />
               <Legend {...style.legend} itemSorter={(item) => ['Omzet kotor', 'Gaji tutor', 'Pendapatan bersih bimbel'].indexOf(String(item.value))} />
-              <Area type="monotone" dataKey="net" name="Pendapatan bersih bimbel" stroke={CHART_PALETTE.green} strokeWidth={2.5} fill="url(#revenueNetFill)" activeDot={style.activeDot(CHART_PALETTE.green)} isAnimationActive={animate} />
-              <Area type="monotone" dataKey="salary" name="Gaji tutor" stroke={CHART_PALETTE.lavender} strokeWidth={2.5} fill="url(#revenueSalaryFill)" activeDot={style.activeDot(CHART_PALETTE.lavender)} isAnimationActive={animate} />
-              <Line type="monotone" dataKey="gross" name="Omzet kotor" stroke={CHART_PALETTE.mint} strokeWidth={3} dot={false} activeDot={style.activeDot(CHART_PALETTE.mint)} isAnimationActive={animate} />
+              <Area type="monotone" dataKey="net" name="Pendapatan bersih bimbel" stroke={CHART_PALETTE.sessions} strokeWidth={3} fill="url(#revenueNetFill)" activeDot={style.activeDot(CHART_PALETTE.sessions)} isAnimationActive={animate} />
+              <Area type="monotone" dataKey="salary" name="Gaji tutor" stroke={CHART_PALETTE.tutor} strokeWidth={3} fill="url(#revenueSalaryFill)" activeDot={style.activeDot(CHART_PALETTE.tutor)} isAnimationActive={animate} />
+              <Line type="monotone" dataKey="gross" name="Omzet kotor" stroke={CHART_PALETTE.revenue} strokeWidth={3} dot={false} activeDot={style.activeDot(CHART_PALETTE.revenue)} isAnimationActive={animate} />
             </ComposedChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -223,11 +212,9 @@ export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['r
                 paddingAngle={3}
                 stroke="none"
                 isAnimationActive={animate}
-                onMouseEnter={pieHover.onMouseEnter}
-                onMouseLeave={pieHover.onMouseLeave}
               >
                 {SAMPLE_GRADE_COMPOSITION.map((entry, index) => (
-                  <Cell key={entry.tier} fill={pieColors[index % pieColors.length] ?? CHART_PALETTE.green} fillOpacity={pieHover.opacityOf(index)} />
+                  <Cell key={entry.tier} fill={pieColors[index % pieColors.length] ?? CHART_PALETTE.tutor} />
                 ))}
               </Pie>
             </PieChart>
@@ -243,9 +230,9 @@ export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['r
               <XAxis type="number" allowDecimals={false} {...style.axis} />
               <YAxis type="category" dataKey="name" width={72} {...style.axis} />
               <Tooltip {...style.tooltip} cursor={style.barCursor} />
-              <Bar dataKey="sessions" name="Sesi" fill={CHART_PALETTE.green} radius={[0, 6, 6, 0]} barSize={16} isAnimationActive={animate} onMouseEnter={tutorHover.onMouseEnter} onMouseLeave={tutorHover.onMouseLeave}>
-                {SAMPLE_TUTOR_RANKING.map((entry, index) => (
-                  <Cell key={entry.name} fillOpacity={tutorHover.opacityOf(index)} />
+              <Bar dataKey="sessions" name="Sesi" fill={CHART_PALETTE.tutor} radius={[0, 6, 6, 0]} barSize={16} isAnimationActive={animate}>
+                {SAMPLE_TUTOR_RANKING.map((entry) => (
+                  <Cell key={entry.name} />
                 ))}
               </Bar>
             </BarChart>
@@ -257,15 +244,15 @@ export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['r
             <AreaChart data={SAMPLE_STUDENT_GROWTH} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
               <defs>
                 <linearGradient id="studentGrowthFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={CHART_PALETTE.mint} stopOpacity={1} />
-                  <stop offset="100%" stopColor={CHART_PALETTE.mint} stopOpacity={0.1} />
+                  <stop offset="0%" stopColor={CHART_PALETTE.studentGrowth} stopOpacity={0.6} />
+                  <stop offset="100%" stopColor={CHART_PALETTE.studentGrowth} stopOpacity={0.15} />
                 </linearGradient>
               </defs>
               <CartesianGrid stroke={colors.border} vertical={false} />
               <XAxis dataKey="month" {...style.axis} />
               <YAxis allowDecimals={false} width={40} {...style.axis} />
               <Tooltip {...style.tooltip} />
-              <Area type="monotone" dataKey="students" name="Siswa" stroke={CHART_PALETTE.green} strokeWidth={2.5} fill="url(#studentGrowthFill)" activeDot={style.activeDot(CHART_PALETTE.green)} isAnimationActive={animate} />
+              <Area type="monotone" dataKey="students" name="Siswa" stroke={CHART_PALETTE.studentGrowth} strokeWidth={3} fill="url(#studentGrowthFill)" activeDot={style.activeDot(CHART_PALETTE.studentGrowth)} isAnimationActive={animate} />
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -278,9 +265,9 @@ export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['r
               <XAxis type="number" allowDecimals={false} {...style.axis} />
               <YAxis type="category" dataKey="source" width={76} {...style.axis} />
               <Tooltip {...style.tooltip} cursor={style.barCursor} />
-              <Bar dataKey="students" name="Murid" fill={CHART_PALETTE.lavender} radius={[0, 6, 6, 0]} barSize={16} isAnimationActive={animate} onMouseEnter={sourceHover.onMouseEnter} onMouseLeave={sourceHover.onMouseLeave}>
-                {SAMPLE_REGISTRATION_SOURCES.map((entry, index) => (
-                  <Cell key={entry.source} fillOpacity={sourceHover.opacityOf(index)} />
+              <Bar dataKey="students" name="Murid" fill={CHART_PALETTE.students} radius={[0, 6, 6, 0]} barSize={16} isAnimationActive={animate}>
+                {SAMPLE_REGISTRATION_SOURCES.map((entry) => (
+                  <Cell key={entry.source} />
                 ))}
               </Bar>
             </BarChart>
