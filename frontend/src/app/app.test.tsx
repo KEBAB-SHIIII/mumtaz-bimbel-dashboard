@@ -90,8 +90,8 @@ describe('halaman berbasis periode', () => {
   });
 });
 
-describe('Admin: validitas data (label AI) & status approval', () => {
-  it('Perlu revisi: Admin memilih status approval dari dropdown di tabel', async () => {
+describe('Admin: validitas data (label AI)', () => {
+  it('Perlu revisi: tabel hanya menampilkan validitas tanpa kolom approval', async () => {
     useFakeBackend();
     renderApp('/login');
     const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
@@ -100,12 +100,9 @@ describe('Admin: validitas data (label AI) & status approval', () => {
     await choosePeriod('2026-10');
     await chooseFilter('Validitas', 'Perlu revisi');
 
-    // s03: Citra 5 Okt, Perlu revisi dengan approval menunggu.
-    const approval = await screen.findByRole('combobox', { name: 'Status approval sesi Citra 5 Okt 2026' });
-    expect(approval).toHaveValue('pending');
-    await user.selectOptions(approval, 'approved');
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Status approval sesi Citra 5 Okt 2026' })).toHaveValue('approved'));
-    // Label validitas AI tetap Perlu revisi; tidak ada aksi "Tinjau" per baris.
+    await screen.findAllByText('Perlu revisi');
+    expect(screen.queryByRole('columnheader', { name: 'Status approval' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /Status approval/ })).not.toBeInTheDocument();
     expect(within(screen.getByRole('table')).getAllByText('Perlu revisi').length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /^Tinjau/ })).not.toBeInTheDocument();
   });
@@ -126,7 +123,7 @@ describe('Admin: validitas data (label AI) & status approval', () => {
     expect(within(dialog).queryByRole('button', { name: 'Review temuan' })).not.toBeInTheDocument();
 
     await user.selectOptions(within(dialog).getByLabelText(/^Validitas data/), 'needs_revision');
-    await user.selectOptions(within(dialog).getByLabelText(/^Status approval/), 'pending');
+    expect(within(dialog).queryByLabelText(/^Status approval/)).not.toBeInTheDocument();
     await user.type(within(dialog).getByLabelText(/^Pesan untuk tutor/), 'Konfirmasi durasi via WA');
     await user.click(within(dialog).getByRole('button', { name: 'Simpan validitas' }));
     expect(await within(dialog).findByText('Validitas tersimpan.')).toBeInTheDocument();

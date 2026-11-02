@@ -3,17 +3,15 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Eye, Plus, RotateCcw, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import {
-  approvalStatusSchema,
   sessionValiditySchema,
   type AdminAttendanceDetail,
   type AdminAttendanceListItem,
 } from '@mumtaz/contracts';
-import { APPROVAL_LABELS, ValidityBadge, VALIDITY_LABELS } from '../../../components/ui/badge';
+import { ValidityBadge, VALIDITY_LABELS } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { DataTable, rowNumber } from '../../../components/ui/data-table';
 import { ConfirmDialog } from '../../../components/ui/dialog';
 import { EmptyState, ErrorState, InlineAlert, NoResultsState } from '../../../components/ui/feedback';
-import { Select } from '../../../components/ui/field';
 import { Card, PageHeader } from '../../../components/ui/layout-primitives';
 import { FilterSelect } from '../../../components/ui/filter-select';
 import { PeriodSelector } from '../../../components/ui/period-selector';
@@ -24,7 +22,7 @@ import { formatDuration, formatLessonDate, formatLessonTime, formatPeriod } from
 import { usePeriodParam } from '../../../lib/period';
 import { queryKeys } from '../../../lib/query-keys';
 import { useSearchState } from '../../../lib/use-search-state';
-import { deleteAttendance, fetchAdminAttendance, fetchAdminAttendanceOptions, setAttendanceValidity, type AttendanceFilters } from '../api';
+import { deleteAttendance, fetchAdminAttendance, fetchAdminAttendanceOptions, type AttendanceFilters } from '../api';
 import { ANALYSIS_POLL_MS } from './analysis-polling';
 import { AttendanceDetailDialog } from './attendance-detail-dialog';
 import { FINDING_LABEL } from './finding-list';
@@ -34,34 +32,7 @@ import { SheetsExportButton, SheetsExportDialog, SheetsExportHistory, SheetsExpo
 const PAGE_SIZE = 20;
 const FILTER_KEYS = ['validity', 'tutor_id', 'student_id', 'subject_id', 'search'] as const;
 const VALIDITY_FILTERS = [...sessionValiditySchema.options, 'unvalidated'] as const;
-const TABLE_HEADERS = ['No', 'Tanggal & jam', 'Nama tutor', 'Nama murid', 'Mata pelajaran', 'Durasi', 'Validitas data', 'Temuan', 'Status approval', ''];
-
-/** Status approval — hanya untuk sesi Perlu revisi; dipilih manual Admin (hasil banding via WA). */
-function ApprovalSelect({ item }: { item: AdminAttendanceListItem }) {
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: (approval: string) =>
-      setAttendanceValidity(item.id, { validity: 'needs_revision', approval: approvalStatusSchema.parse(approval) }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin'] }),
-  });
-  if (item.validity !== 'needs_revision' || !item.approval_status) return <span className="text-meta text-muted">—</span>;
-  return (
-    <div className="flex flex-col gap-1">
-      <Select
-        aria-label={`Status approval sesi ${item.student_name} ${formatLessonDate(item.lesson_date)}`}
-        value={mutation.isPending ? (mutation.variables ?? item.approval_status) : item.approval_status}
-        disabled={mutation.isPending}
-        onChange={(event) => mutation.mutate(event.target.value)}
-        className="min-w-40"
-      >
-        {approvalStatusSchema.options.map((option) => (
-          <option key={option} value={option}>{APPROVAL_LABELS[option]}</option>
-        ))}
-      </Select>
-      {mutation.isError && <span role="alert" className="text-meta text-danger">{toApiError(mutation.error).message}</span>}
-    </div>
-  );
-}
+const TABLE_HEADERS = ['No', 'Tanggal & jam', 'Nama tutor', 'Nama murid', 'Mata pelajaran', 'Durasi', 'Validitas data', 'Temuan', ''];
 
 export function AttendancePage() {
   const queryClient = useQueryClient();
@@ -144,7 +115,6 @@ export function AttendancePage() {
         return labels.length === 0 ? <span className="text-meta text-muted">—</span> : <p className="max-w-48 min-w-32 text-meta text-text">{labels.join(', ')}</p>;
       },
     },
-    { id: 'approval', header: 'Status approval', cell: ({ row }) => <ApprovalSelect item={row.original} /> },
     {
       id: 'actions',
       header: () => <span className="sr-only">Aksi</span>,
@@ -181,7 +151,7 @@ export function AttendancePage() {
     <>
       <PageHeader
         title="Data Absensi"
-        description={`Sesi ${formatPeriod(period)} berdasarkan tanggal les, divalidasi otomatis oleh AI. Hanya Valid dan Perlu revisi yang Disetujui masuk rekap gaji.`}
+        description={`Sesi ${formatPeriod(period)} berdasarkan tanggal les, divalidasi otomatis oleh AI. Hanya sesi Valid masuk rekap gaji.`}
       />
       <SheetsExportResult exporter={exporter} />
       <SheetsExportDialog

@@ -4,7 +4,7 @@ import { Eye, PencilLine, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { sessionStatusSchema, type TutorSession } from '@mumtaz/contracts';
-import { ApprovalBadge, SESSION_STATUS_LABELS, ValidityBadge } from '../../components/ui/badge';
+import { SESSION_STATUS_LABELS, ValidityBadge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { DataTable } from '../../components/ui/data-table';
 import { EmptyState, ErrorState, NoResultsState } from '../../components/ui/feedback';
@@ -44,7 +44,6 @@ export function TutorHistoryPage() {
     { accessorKey: 'subject_name', header: 'Mata pelajaran' },
     { id: 'duration', header: 'Durasi', cell: ({ row }) => <span className="whitespace-nowrap">{formatDuration(row.original.duration_minutes)}</span> },
     { id: 'validity', header: 'Validitas data', cell: ({ row }) => <ValidityBadge validity={row.original.validity} /> },
-    { id: 'approval', header: 'Status approval', cell: ({ row }) => <ApprovalBadge approval={row.original.approval_status} /> },
     { id: 'material', header: 'Materi', cell: ({ row }) => <p className="line-clamp-2 max-w-xs">{row.original.learning_material}</p> },
     {
       id: 'actions',
@@ -106,7 +105,7 @@ export function TutorHistoryPage() {
         {list.isError && !list.data ? (
           <ErrorState error={list.error} onRetry={() => void list.refetch()} />
         ) : (
-          <LoadingSwitch loading={!list.data} skeleton={<SkeletonDataTable headers={['Tanggal les', 'Siswa', 'Kelas', 'Mata pelajaran', 'Durasi', 'Validitas data', 'Status approval', 'Materi', '']} />}>
+          <LoadingSwitch loading={!list.data} skeleton={<SkeletonDataTable headers={['Tanggal les', 'Siswa', 'Kelas', 'Mata pelajaran', 'Durasi', 'Validitas data', 'Materi', '']} />}>
             {() =>
               list.data && (
                 <DataTable

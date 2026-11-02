@@ -3,7 +3,7 @@ import { PencilLine, Send } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { reviseAttendanceRequestSchema, type ReviseAttendanceRequest, type TutorSession } from '@mumtaz/contracts';
-import { ApprovalBadge, ValidityBadge } from '../../components/ui/badge';
+import { ValidityBadge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Modal } from '../../components/ui/dialog';
 import { ErrorState, InlineAlert, LoadingState } from '../../components/ui/feedback';
@@ -123,11 +123,7 @@ export function TutorSessionDialog({ session, onClose }: { session: TutorSession
           <>
             <div className="flex flex-wrap items-center gap-2">
               <ValidityBadge validity={revised ? null : session.validity} />
-              {!revised && session.approval_status && (
-                <span className="inline-flex items-center gap-1 text-meta text-muted">
-                  Approval: <ApprovalBadge approval={session.approval_status} />
-                </span>
-              )}
+
             </div>
             <DescriptionList
               items={[

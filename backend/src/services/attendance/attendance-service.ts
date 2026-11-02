@@ -605,7 +605,7 @@ export async function setAttendanceValidity(
       .limit(1);
     if (!locked) throw notFound('Sesi');
 
-    const approval = input.validity === 'needs_revision' ? input.approval : 'pending';
+    const approval = 'pending';
     const now = ctx.now();
     await tx
       .update(lessonSessions)

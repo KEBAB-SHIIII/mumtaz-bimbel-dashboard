@@ -20,7 +20,6 @@ import {
   type Parent,
   type PayrollPreviewResponse,
   type TutorPayrollResponse,
-  type ApprovalStatus,
   type BillingResponse,
   type SessionStatus,
   type SessionValidity,
@@ -568,8 +567,7 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
         const s = sessions.find((row) => row.id === id);
         if (!s) throw new FakeError(404, 'NOT_FOUND', 'Sesi tidak ditemukan');
         const validity = req.body.validity as SessionValidity;
-        const approval = (req.body.approval ?? 'pending') as ApprovalStatus;
-        const status = sessionStatusFor(validity, approval);
+        const status = sessionStatusFor(validity);
         Object.assign(s, {
           validity,
           status,

@@ -95,14 +95,12 @@ export const adminUpdateAttendanceRequestSchema = adminCreateAttendanceRequestSc
 export type AdminUpdateAttendanceRequest = AdminCreateAttendanceRequest;
 
 /**
- * `PATCH /admin/attendance/:id/validity` — Admin mengoreksi label validitas AI atau memilih
- * status approval sesi Perlu revisi. Catatan Admin opsional (ditampilkan ke Tutor).
+ * `PATCH /admin/attendance/:id/validity` — Admin mengoreksi label validitas AI. Catatan Admin opsional (ditampilkan ke Tutor).
  */
 export const setValidityRequestSchema = z.discriminatedUnion('validity', [
   z.strictObject({ validity: z.literal(sessionValiditySchema.enum.valid), admin_note: optionalText(NOTES_MAX) }),
   z.strictObject({
     validity: z.literal(sessionValiditySchema.enum.needs_revision),
-    approval: approvalStatusSchema,
     admin_note: optionalText(NOTES_MAX),
   }),
   z.strictObject({ validity: z.literal(sessionValiditySchema.enum.rejected), admin_note: optionalText(NOTES_MAX) }),

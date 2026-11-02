@@ -112,7 +112,7 @@ export function BillingPage() {
     <>
       <PageHeader
         title="Penagihan Orang Tua"
-        description={`Tagihan les ${formatPeriod(period)} per murid (berdasarkan tanggal les). Hanya sesi Valid dan Perlu revisi yang Disetujui yang ditagihkan.`}
+        description={`Tagihan les ${formatPeriod(period)} per murid (berdasarkan tanggal les). Hanya sesi Valid yang ditagihkan.`}
         actions={
           <div className="flex flex-wrap items-end gap-3">
         <div className="w-60 max-w-full">
