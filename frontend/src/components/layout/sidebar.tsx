@@ -1,4 +1,4 @@
-import { ChevronRight, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { AnimatePresence, m } from 'motion/react';
 import { useId, useState, type ButtonHTMLAttributes } from 'react';
 import { NavLink, useMatch } from 'react-router';
@@ -212,7 +212,7 @@ interface SidebarProps {
 }
 
 /** Isi sidebar: brand, navigasi berkelompok, identitas pengguna + Keluar (docs/design/03-layout.md). */
-export function Sidebar({ role, userId, fullName, variant, collapsed = false, onToggleCollapse, onClose }: SidebarProps) {
+export function Sidebar({ role, userId, fullName, onLogout, logoutPending, variant, collapsed = false, onToggleCollapse, onClose }: SidebarProps) {
   const isCollapsed = variant === 'desktop' && collapsed;
   const onNavigate = variant === 'drawer' ? onClose : undefined;
 
@@ -251,6 +251,15 @@ export function Sidebar({ role, userId, fullName, variant, collapsed = false, on
               <p className="text-base font-semibold break-words text-[#193923]">{fullName}</p>
               {role === 'tutor' && <p className="mt-1 text-xs text-muted">as tutor</p>}
             </div>
+            <button
+              type="button"
+              onClick={onLogout}
+              disabled={logoutPending}
+              className="mt-1 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-[#193923]/15 bg-white/65 px-5 py-2 text-sm font-medium text-[#193923] shadow-sm transition-colors hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#193923] disabled:cursor-not-allowed disabled:opacity-60 pointer-coarse:min-h-11 motion-reduce:transition-none"
+            >
+              <LogOut aria-hidden className="size-4" />
+              {logoutPending ? 'Keluar…' : 'Logout'}
+            </button>
           </div>
         )}
 

@@ -55,7 +55,7 @@ describe('autentikasi & navigasi per role', () => {
     useFakeBackend();
     renderApp('/login');
     const user = await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
-    await user.click(await screen.findByRole('button', { name: 'Keluar' }));
+    await user.click(await screen.findByRole('button', { name: 'Logout' }));
     expect(await screen.findByRole('heading', { name: 'Masuk Admin / Tutor' })).toBeInTheDocument();
   });
 });
