@@ -1,3 +1,4 @@
+import { listAvailablePeriods } from '../services/period-service.js';
 import { Router } from 'express';
 import {
   adminAttendanceListQuerySchema,
@@ -49,6 +50,10 @@ const idOf = (params: unknown) => parseInput(idParamSchema, params).id;
 export function adminRouter(ctx: ServiceContext, exportDeps: ExportDeps, anomalyQueue: AnomalyQueue) {
   const router = Router();
   router.use('/admin', requireRole('admin'));
+
+  router.get('/admin/periods', async (_req, res) => {
+    res.json(await listAvailablePeriods(ctx, {}));
+  });
 
   // --- Dashboard, penagihan, honor --------------------------------------------
   router.get('/admin/dashboard/summary', async (req, res) => {

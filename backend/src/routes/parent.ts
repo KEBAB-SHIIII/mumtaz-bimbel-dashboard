@@ -1,3 +1,4 @@
+import { listAvailablePeriods } from '../services/period-service.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import { parentDashboardQuerySchema, periodQuerySchema, uuidSchema } from '@mumtaz/contracts';
@@ -13,6 +14,10 @@ const studentParamSchema = z.object({ student_id: uuidSchema });
 export function parentRouter(ctx: ServiceContext) {
   const router = Router();
   router.use('/parent', requireRole('parent'));
+
+  router.get('/parent/periods', async (req, res) => {
+    res.json(await listAvailablePeriods(ctx, { parentId: authOf(req).userId }));
+  });
 
   router.get('/parent/me/students', async (req, res) => {
     res.json({ items: await listParentStudents(ctx, authOf(req).userId) });

@@ -418,6 +418,13 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
   type Handler = (req: FakeRequest, match: string[]) => FakeResponse;
   const routes: [string, RegExp, Handler][] = [
     ['get', /^\/health$/, () => ok({ status: 'ok' })],
+    ['get', /^\/(admin|tutor|parent)\/periods$/, () => {
+      const user = requireUser();
+      const visible = sessions.filter((session) => user.role === 'admin' || (user.role === 'tutor'
+        ? session.tutor_id === tutorIdOf(user)
+        : session.status === 'approved' && links.some((link) => link.parent_user_id === user.id && link.student_id === session.student_id)));
+      return ok({ periods: [...new Set(visible.map((session) => session.lesson_date.slice(0, 7)))].sort().reverse() });
+    }],
     ['get', /^\/auth\/csrf$/, () => ok({ csrf_token: csrfToken })],
     ['get', /^\/auth\/me$/, () => ok({ user: requireUser() })],
     [

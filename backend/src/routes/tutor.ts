@@ -1,3 +1,4 @@
+import { listAvailablePeriods } from '../services/period-service.js';
 import { Router } from 'express';
 import {
   changePasswordRequestSchema,
@@ -31,6 +32,10 @@ import { getTutorPayroll } from '../services/payroll-service.js';
 export function tutorRouter(ctx: ServiceContext, limiters: AuthRateLimiters, anomalyQueue: AnomalyQueue) {
   const router = Router();
   router.use('/tutor', requireRole('tutor'));
+
+  router.get('/tutor/periods', async (req, res) => {
+    res.json(await listAvailablePeriods(ctx, { tutorId: tutorIdOf(req) }));
+  });
 
   router.get('/tutor/dashboard/summary', async (req, res) => {
     const { period } = parseInput(periodQuerySchema, req.query);
