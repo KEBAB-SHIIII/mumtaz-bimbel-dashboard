@@ -1,3 +1,4 @@
+import { SessionDisclosure } from '../../shared/session-disclosure';
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { CalendarCheck, Download, GraduationCap, ReceiptText } from 'lucide-react';
@@ -50,7 +51,7 @@ function StudentInvoice({ student, period }: { student: BillingStudent; period: 
 
   return (
     <section aria-labelledby={headingId} className="overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
+      <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3 sm:px-5">
         <div className="flex min-w-0 items-center gap-3">
           <Avatar seed={student.student_id} name={student.student_name} size={40} decorative />
           <div className="min-w-0">
@@ -83,6 +84,7 @@ function StudentInvoice({ student, period }: { student: BillingStudent; period: 
           <InlineAlert tone="danger" title="Invoice gagal diunduh">{toApiError(download.error).message}</InlineAlert>
         </div>
       )}
+      <SessionDisclosure count={student.sessions} defaultOpen={false}>
       <DataTable
         caption={`Rincian tagihan ${student.student_name} ${formatPeriod(period)}`}
         columns={columns}
@@ -90,6 +92,7 @@ function StudentInvoice({ student, period }: { student: BillingStudent; period: 
         getRowId={(row) => row.session_id}
         footer={['', 'Total', '', '', '', `${student.sessions} sesi`, <span key="total" className="block text-right tabular-nums">{formatRupiah(student.total_amount)}</span>]}
       />
+      </SessionDisclosure>
     </section>
   );
 }

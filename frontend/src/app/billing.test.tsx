@@ -17,7 +17,10 @@ afterEach(() => vi.restoreAllMocks());
 describe('Penagihan Orang Tua', () => {
   it('tagihan per murid: tarif per sesi, subtotal per murid, dan total keseluruhan', async () => {
     useFakeBackend();
-    await openBilling('2026-10');
+    const user = await openBilling('2026-10');
+    const card = (await screen.findByRole('heading', { name: 'Aisyah', level: 2 })).closest('section')!;
+    expect(within(card).queryByRole('table')).not.toBeInTheDocument();
+    await user.click(within(card).getByRole('button', { name: /Rincian sesi/ }));
 
     // Tunggu data Oktober (data bulan sebelumnya tampil sementara saat periode diganti).
     const table = await screen.findByRole('table', { name: 'Rincian tagihan Aisyah Oktober 2026' });
@@ -34,7 +37,7 @@ describe('Penagihan Orang Tua', () => {
   it('filter murid hanya menampilkan tagihan murid itu', async () => {
     useFakeBackend();
     await openBilling('2026-10');
-    await screen.findByRole('table', { name: 'Rincian tagihan Aisyah Oktober 2026' });
+    await screen.findByRole('heading', { name: 'Aisyah', level: 2 });
     await chooseFilter('Murid', 'Bima');
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'Aisyah', level: 2 })).not.toBeInTheDocument());
     expect(screen.getByRole('heading', { name: 'Bima', level: 2 })).toBeInTheDocument();
@@ -48,7 +51,7 @@ describe('Penagihan Orang Tua', () => {
       expect(this.download).toBe('tagihan-2026-10-aisyah.pdf');
     });
     const user = await openBilling('2026-10');
-    await screen.findByRole('table', { name: 'Rincian tagihan Aisyah Oktober 2026' });
+    await screen.findByRole('heading', { name: 'Aisyah', level: 2 });
     await user.click(screen.getByRole('button', { name: 'Unduh invoice PDF Aisyah' }));
     await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
     expect(createUrl).toHaveBeenCalledTimes(1);
