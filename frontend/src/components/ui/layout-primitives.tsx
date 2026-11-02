@@ -41,6 +41,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
 }
 
 interface CardProps {
+  leading?: ReactNode;
   title?: string;
   /** Subjudul di bawah judul (Ref 2), mis. periode. */
   description?: ReactNode;
@@ -50,15 +51,18 @@ interface CardProps {
 }
 
 /** Kartu konten: judul + subjudul di kiri, aksi di kanan (Ref 2). Radius `lg` (14px). */
-export function Card({ title, description, actions, children, className }: CardProps) {
+export function Card({ title, description, actions, leading, children, className }: CardProps) {
   return (
     <section className={cn('overflow-clip rounded-lg border border-border bg-surface shadow-sm', className)}>
       {(title || actions) && (
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 border-b border-border px-4 py-3 sm:px-5">
           {title && (
-            <div className="min-w-0">
-              <h2 className="text-card-title text-balance text-text">{title}</h2>
-              {description && <p className="mt-0.5 text-meta text-muted">{description}</p>}
+            <div className="flex min-w-0 items-center gap-3">
+              {leading}
+              <div className="min-w-0">
+                <h2 className="text-card-title text-balance text-text">{title}</h2>
+                {description && <p className="mt-0.5 text-meta text-muted">{description}</p>}
+              </div>
             </div>
           )}
           {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}

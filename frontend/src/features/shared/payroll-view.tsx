@@ -83,6 +83,7 @@ function TutorPayrollCard({ tutor }: { tutor: PayrollTutorSummary }) {
   return (
     <Card
       className="[&>div:first-child]:bg-[#e9eeec]"
+      leading={<Avatar seed={tutor.tutor_id} name={tutor.tutor_name} size={40} decorative />}
       title={tutor.tutor_name}
       description={`${tutor.counted_sessions} sesi dihitung`}
       actions={
@@ -91,7 +92,6 @@ function TutorPayrollCard({ tutor }: { tutor: PayrollTutorSummary }) {
             <span className="block text-meta text-muted">Total pendapatan bersih tutor</span>
             <span className="block text-base font-semibold tabular-nums text-text">{formatRupiah(tutor.net_amount)}</span>
           </span>
-          <Avatar seed={tutor.tutor_id} name={tutor.tutor_name} size={40} decorative className="max-sm:hidden" />
         </div>
       }
     >
