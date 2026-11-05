@@ -1,13 +1,15 @@
+import { useNotification } from '../../components/ui/feedback/notification-provider';
+import { SessionDetailSkeleton } from '../../components/ui/feedback/skeleton';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PencilLine, Send } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { reviseAttendanceRequestSchema, type ReviseAttendanceRequest, type TutorSession } from '@mumtaz/contracts';
-import { ValidityBadge } from '../../components/ui/badge';
-import { Button } from '../../components/ui/button';
-import { Modal } from '../../components/ui/dialog';
-import { ErrorState, InlineAlert, LoadingState } from '../../components/ui/feedback';
-import { DescriptionList } from '../../components/ui/layout-primitives';
+import { ValidityBadge } from '../../components/ui/data-display/status-badge';
+import { Button } from '../../components/ui/actions/button';
+import { Modal } from '../../components/ui/overlay/dialog';
+import { ErrorState, InlineAlert } from '../../components/ui/feedback/states';
+import { DescriptionList } from '../../components/ui/surfaces/layout-primitives';
 import { toApiError } from '../../lib/api-error';
 import { formatDuration, formatLessonDate, formatLessonTime, formatTimestamp } from '../../lib/format';
 import { applyServerErrors, hasFieldErrors, validateWith } from '../../lib/form';
@@ -27,12 +29,14 @@ import {
 function RevisionForm({ session, onDone, onCancel }: { session: TutorSession; onDone: () => void; onCancel: () => void }) {
   const user = useCurrentUser();
   const queryClient = useQueryClient();
+  const notify = useNotification();
   const options = useQuery({ queryKey: queryKeys.tutor.attendanceOptions, queryFn: fetchAttendanceOptions });
   const form = useForm<AttendanceFormValues>({ defaultValues: attendanceValuesOf(session) });
 
   const mutation = useMutation({
     mutationFn: (payload: ReviseAttendanceRequest) => reviseAttendance(session.id, payload),
     onSuccess: () => {
+      notify({ status: 'success', title: 'Revisi terkirim', description: 'Data sesi divalidasi ulang otomatis; hasilnya muncul di Riwayat Mengajar.' });
       // Riwayat, dashboard, dan honor Tutor ikut diperbarui.
       void queryClient.invalidateQueries({ queryKey: ['tutor'] });
       onDone();
@@ -45,7 +49,7 @@ function RevisionForm({ session, onDone, onCancel }: { session: TutorSession; on
     if (payload) mutation.mutate(payload);
   });
 
-  if (options.isPending) return <LoadingState label="Memuat pilihan murid…" />;
+  if (options.isPending) return <SessionDetailSkeleton />;
   if (options.isError) return <ErrorState error={options.error} onRetry={() => void options.refetch()} />;
 
   return (
@@ -77,19 +81,26 @@ export function TutorSessionDialog({ session, onClose }: { session: TutorSession
   const [editing, setEditing] = useState(false);
   const [revised, setRevised] = useState(false);
 
-  const close = () => {
-    setEditing(false);
-    setRevised(false);
-    onClose();
-  };
-
+  const open = session !== null;
+  const [retainedSession, setRetainedSession] = useState(session);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setEditing(false);
+      setRevised(false);
+    }
+  }
+  if (session && session !== retainedSession) setRetainedSession(session);
+  session = session ?? retainedSession;
   if (!session) return null;
   const canRevise = session.status === 'revision_requested' && !revised;
 
   return (
     <Modal
-      open
-      onClose={close}
+      open={open}
+      onClose={onClose}
+      stableHeight
       size="lg"
       title={editing ? 'Revisi sesi' : 'Detail sesi'}
       footer={
@@ -99,11 +110,6 @@ export function TutorSessionDialog({ session, onClose }: { session: TutorSession
       }
     >
       <div className="flex flex-col gap-4">
-        {revised && (
-          <InlineAlert tone="success" title="Revisi terkirim">
-            Data sesi divalidasi ulang otomatis; hasilnya muncul di Riwayat Mengajar.
-          </InlineAlert>
-        )}
         {!revised && (session.validity_reason || session.admin_note) && (session.status === 'revision_requested' || session.status === 'rejected') && (
           <InlineAlert tone={session.status === 'rejected' ? 'danger' : 'info'} title={session.status === 'rejected' ? 'Alasan penolakan' : 'Yang perlu diperbaiki'}>
             {session.validity_reason && <p>{session.validity_reason}</p>}

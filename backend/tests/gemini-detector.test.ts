@@ -108,7 +108,7 @@ describe('GeminiAnomalyDetector (klien di-mock, tanpa credential)', () => {
     expect(detector.provider).toBe('gemini');
   });
 
-  it('additional unusual_pattern dipetakan; referensi sesi asing ditolak', async () => {
+  it('additional unusual_pattern tidak diterima, termasuk referensi diri dan sesi asing', async () => {
     const withExtra = {
       ...validOutput,
       additional_findings: [{ finding_type: 'unusual_pattern', related_ref: 'S1', severity: 'low', reason: 'Dua sesi berurutan.', evidence_summary: '' }],
@@ -119,10 +119,11 @@ describe('GeminiAnomalyDetector (klien di-mock, tanpa credential)', () => {
 
     const self = { ...withExtra, additional_findings: [{ ...withExtra.additional_findings[0], related_ref: 'S0' }] };
     const selfResult = await new GeminiAnomalyDetector({ model: 'm', client: fakeClient(JSON.stringify(self)).client }).detect(input, { signal });
-    expect(selfResult.findings.at(-1)).toMatchObject({ finding_type: 'unusual_pattern', related_lesson_session_id: null });
+    expect(selfResult.findings.some((f) => f.finding_type === 'unusual_pattern')).toBe(false);
 
     const bad = { ...withExtra, additional_findings: [{ ...withExtra.additional_findings[0], related_ref: 'S9' }] };
-    await expect(new GeminiAnomalyDetector({ model: 'm', client: fakeClient(JSON.stringify(bad)).client }).detect(input, { signal })).rejects.toMatchObject({ reason: 'invalid_output' });
+    const ignored = await new GeminiAnomalyDetector({ model: 'm', client: fakeClient(JSON.stringify(bad)).client }).detect(input, { signal });
+    expect(ignored.findings).toHaveLength(2);
   });
 
   it.each([
@@ -195,5 +196,26 @@ describe('retry error transien', () => {
     const error = await new GeminiAnomalyDetector({ model: 'm', client }).detect(input, { signal }).catch((e: unknown) => e);
     expect(calls).toBe(1);
     expect(error).toMatchObject({ reason: 'request_failed', message: 'Permintaan ke provider anomali gagal (HTTP 400)' });
+  });
+});
+
+describe('temuan antar-pembanding tidak memengaruhi target', () => {
+  it('membuang duplikat bebas dan status rejected tanpa kandidat target', async () => {
+    const output = { ...validOutput, classifications: [], additional_findings: [{
+      finding_type: 'unusual_pattern', related_ref: 'S1', severity: 'low',
+      reason: 'S1 dan S2 duplikat tanggal 31 Oktober.', evidence_summary: 'Pembanding sama.',
+    }] };
+    const result = await new GeminiAnomalyDetector({ model: 'm', client: fakeClient(JSON.stringify(output)).client })
+      .detect({ ...input, candidates: [] }, { signal });
+    expect(result).toEqual({ findings: [], validity: 'valid', validity_reason: 'Tidak ditemukan anomali pada sesi ini.' });
+  });
+  it('durasi berlebih tetap perlu revisi tanpa tambahan duplikat pembanding', async () => {
+    const output = { ...validOutput, classifications: [{ ...validOutput.classifications[0], candidate_ref: 'C1', reason: 'Durasi 300 menit.' }],
+      additional_findings: [{ finding_type: 'unusual_pattern', related_ref: 'S1', severity: 'low', reason: 'Pembanding duplikat.', evidence_summary: '' }] };
+    const result = await new GeminiAnomalyDetector({ model: 'm', client: fakeClient(JSON.stringify(output)).client })
+      .detect({ ...input, target: { ...target, duration_minutes: 300 }, candidates: input.candidates.slice(1) }, { signal });
+    expect(result.findings).toHaveLength(1);
+    expect(result.validity).toBe('needs_revision');
+    expect(result.validity_reason).toBe('Durasi 300 menit.');
   });
 });

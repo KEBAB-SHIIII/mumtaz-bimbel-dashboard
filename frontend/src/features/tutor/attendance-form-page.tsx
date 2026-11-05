@@ -1,13 +1,14 @@
+import { useNotification } from '../../components/ui/feedback/notification-provider';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Send } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link } from 'react-router';
+import { useNavigate } from 'react-router';
 import { submitAttendanceRequestSchema } from '@mumtaz/contracts';
-import { Button } from '../../components/ui/button';
-import { EmptyState, ErrorState, InlineAlert } from '../../components/ui/feedback';
-import { Card, PageHeader } from '../../components/ui/layout-primitives';
-import { LoadingSwitch, SkeletonForm } from '../../components/ui/skeleton';
+import { Button } from '../../components/ui/actions/button';
+import { EmptyState, ErrorState, InlineAlert } from '../../components/ui/feedback/states';
+import { Card, PageHeader } from '../../components/ui/surfaces/layout-primitives';
+import { LoadingSwitch, SkeletonForm } from '../../components/ui/feedback/skeleton';
 import { useCurrentUser } from '../auth/session';
 import { toApiError } from '../../lib/api-error';
 import { formatLessonDate } from '../../lib/format';
@@ -31,7 +32,8 @@ export function AttendanceFormPage() {
   const user = useCurrentUser();
   const queryClient = useQueryClient();
   const [submissionId, setSubmissionId] = useState(() => crypto.randomUUID());
-  const [savedDate, setSavedDate] = useState<string | null>(null);
+  const notify = useNotification();
+  const navigate = useNavigate();
   const options = useQuery({ queryKey: queryKeys.tutor.attendanceOptions, queryFn: fetchAttendanceOptions });
   const form = useForm<AttendanceFormValues>({ defaultValues: EMPTY_ATTENDANCE_VALUES });
 
@@ -39,7 +41,11 @@ export function AttendanceFormPage() {
     mutationFn: submitAttendance,
     // Sukses hanya ditampilkan setelah server mengonfirmasi penyimpanan (201).
     onSuccess: (_session, variables) => {
-      setSavedDate(variables.lesson_date);
+      notify({
+        status: 'success', title: 'Absensi tersimpan',
+        description: `Sesi ${formatLessonDate(variables.lesson_date)} tercatat dan sedang divalidasi. Hasilnya muncul di Riwayat Mengajar.`,
+        actions: [{ label: 'Lihat riwayat', onClick: () => navigate('/tutor/riwayat') }],
+      });
       form.reset(EMPTY_ATTENDANCE_VALUES);
       // Pengisian berikutnya adalah submission baru.
       setSubmissionId(crypto.randomUUID());
@@ -49,7 +55,6 @@ export function AttendanceFormPage() {
   });
 
   const onSubmit = form.handleSubmit((values) => {
-    setSavedDate(null);
     const payload = validateWith(form, submitAttendanceRequestSchema, {
       client_submission_id: submissionId,
       ...toEditablePayload(values),
@@ -82,13 +87,6 @@ export function AttendanceFormPage() {
   return (
     <>
       {header}
-
-      {savedDate && (
-        <InlineAlert tone="success" title="Absensi tersimpan">
-          Sesi {formatLessonDate(savedDate)} tercatat dan sedang divalidasi. Hasilnya muncul di Riwayat Mengajar.{' '}
-          <Link to="/tutor/riwayat" className="font-medium text-primary hover:underline">Lihat riwayat</Link>
-        </InlineAlert>
-      )}
 
       {options.data.students.length === 0 || options.data.subjects.length === 0 ? (
         <Card>

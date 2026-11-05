@@ -1,11 +1,17 @@
-import { ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchAdminAttendance } from '../../../features/admin/api';
+import { usePeriodParam } from '../../../hooks/use-period-param';
+import { queryKeys } from '../../../lib/query-keys';
+import { formatPeriod } from '../../../lib/format';
+import { LockKeyhole, ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { AnimatePresence, m } from 'motion/react';
 import { useId, useState, type ButtonHTMLAttributes } from 'react';
 import { NavLink, useMatch } from 'react-router';
 import type { Role } from '@mumtaz/contracts';
-import { cn } from '../../lib/cn';
-import { Avatar } from '../ui/avatar';
-import { NAVIGATION, type NavItem } from './navigation';
+import { cn } from '../../../lib/cn';
+import { Chip } from '../../ui/data-display/chip';
+import { Avatar } from '../../ui/data-display/avatar';
+import { NAVIGATION, type NavItem } from '../navigation';
 
 /** Ikuti --ease-out di tokens.css (Motion butuh nilai numerik). */
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
@@ -45,16 +51,38 @@ interface ItemProps {
   onNavigate?: (() => void) | undefined;
 }
 
+/** Server total counts sessions, not findings or only the visible page. */
+function AttendanceAnomalyBadge({ collapsed }: { collapsed: boolean }) {
+  const [period] = usePeriodParam();
+  const filters = { period, has_anomaly: 'true' as const, page: 1, page_size: 1 };
+  const query = useQuery({
+    queryKey: queryKeys.admin.attendance(filters),
+    queryFn: () => fetchAdminAttendance(filters),
+    refetchInterval: 15_000,
+    staleTime: 10_000,
+  });
+  const count = query.data?.total ?? 0;
+  if (count === 0) return null;
+  const label = `${count} sesi dengan temuan anomali · ${formatPeriod(period)}`;
+  return <Chip variant="caption" color="yellow" title={label} aria-label={label} className={cn(
+    'min-w-5',
+    collapsed ? 'absolute -end-2 -top-2' : 'ms-auto',
+  )}>{count > 99 ? '99+' : count}</Chip>;
+}
+
 function LeafItem({ item, collapsed, onNavigate }: ItemProps) {
+  const [period] = usePeriodParam();
   return (
     <NavLink
-      to={item.to}
+      to={item.to === '/admin/absensi' ? `${item.to}?period=${period}` : item.to}
+      aria-label={item.label}
       end={item.end ?? false}
       onClick={onNavigate}
       className={({ isActive }) => cn(ITEM_BASE, collapsed && 'justify-center px-0', isActive ? ITEM_ACTIVE : ITEM_IDLE)}
     >
       <item.icon aria-hidden className="size-4.5 shrink-0" />
       <ItemLabel label={item.label} collapsed={collapsed} />
+      {item.to === '/admin/absensi' && <AttendanceAnomalyBadge collapsed={collapsed} />}
     </NavLink>
   );
 }
@@ -147,7 +175,7 @@ function ParentItem({ item, collapsed, onNavigate }: ItemProps) {
   );
 }
 
-export function SidebarNav({ role, collapsed = false, onNavigate }: { role: Role; collapsed?: boolean; onNavigate?: (() => void) | undefined }) {
+export function SidebarNav({ role, collapsed = false, onNavigate, passwordRequired = false }: { role: Role; passwordRequired?: boolean; collapsed?: boolean; onNavigate?: (() => void) | undefined }) {
   const groups = NAVIGATION[role];
   const showLabels = groups.length > 1;
   const baseId = useId();
@@ -166,7 +194,14 @@ export function SidebarNav({ role, collapsed = false, onNavigate }: { role: Role
             <ul aria-labelledby={showLabels ? labelId : undefined} className="flex flex-col gap-0.5">
               {group.items.map((item) => (
                 <li key={item.to}>
-                  {item.children ? (
+                  {passwordRequired && item.to !== '/tutor/profil' ? (
+                    <button type="button" disabled aria-disabled="true" aria-label={item.label}
+                      title="Ganti password di Profil untuk membuka menu ini"
+                      className={cn(ITEM_BASE, 'cursor-not-allowed text-muted opacity-60', collapsed && 'justify-center px-0')}>
+                      <LockKeyhole aria-hidden className="size-4.5 shrink-0" />
+                      <ItemLabel label={item.label} collapsed={collapsed} />
+                    </button>
+                  ) : item.children ? (
                     <ParentItem item={item} collapsed={collapsed} onNavigate={onNavigate} />
                   ) : (
                     <LeafItem item={item} collapsed={collapsed} onNavigate={onNavigate} />
@@ -197,6 +232,7 @@ function IconButton({ className, ...props }: ButtonHTMLAttributes<HTMLButtonElem
 }
 
 interface SidebarProps {
+  passwordRequired?: boolean;
   role: Role;
   /** ID internal akun: seed avatar. */
   userId: string;
@@ -212,7 +248,7 @@ interface SidebarProps {
 }
 
 /** Isi sidebar: brand, navigasi berkelompok, identitas pengguna + Keluar (docs/design/03-layout.md). */
-export function Sidebar({ role, userId, fullName, onLogout, logoutPending, variant, collapsed = false, onToggleCollapse, onClose }: SidebarProps) {
+export function Sidebar({ passwordRequired = false, role, userId, fullName, onLogout, logoutPending, variant, collapsed = false, onToggleCollapse, onClose }: SidebarProps) {
   const isCollapsed = variant === 'desktop' && collapsed;
   const onNavigate = variant === 'drawer' ? onClose : undefined;
 
@@ -236,7 +272,7 @@ export function Sidebar({ role, userId, fullName, onLogout, logoutPending, varia
       </div>
 
       <div className={cn('min-h-0 flex-1', isCollapsed ? 'overflow-visible' : 'overflow-y-auto overscroll-contain')}>
-        <SidebarNav role={role} collapsed={isCollapsed} onNavigate={onNavigate} />
+        <SidebarNav passwordRequired={passwordRequired} role={role} collapsed={isCollapsed} onNavigate={onNavigate} />
       </div>
 
       <div className={cn('shrink-0 p-3', isCollapsed ? 'flex flex-col items-center gap-2' : 'pt-8')}>

@@ -5,7 +5,7 @@
  */
 import { m } from 'motion/react';
 import type { ReactNode } from 'react';
-import { cn } from '../../lib/cn';
+import { cn } from '../../../lib/cn';
 
 /** Hanya 10 item pertama yang distagger 20ms; sisanya tampil tanpa animasi agar daftar panjang tidak terasa lambat. */
 const MAX_STAGGERED = 10;

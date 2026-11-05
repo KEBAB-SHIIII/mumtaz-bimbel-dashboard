@@ -1,8 +1,8 @@
 import { Description, Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { cn } from '../../lib/cn';
-import { Button } from './button';
+import { cn } from '../../../lib/cn';
+import { Button } from '../actions/button';
 
 interface ModalProps {
   open: boolean;
@@ -12,13 +12,14 @@ interface ModalProps {
   children: ReactNode;
   footer?: ReactNode | undefined;
   size?: 'md' | 'lg';
+  stableHeight?: boolean | 'compact';
 }
 
 /**
  * Dialog aksesibel (Headless UI): fokus terkunci di dalam, Escape menutup,
  * fokus dikembalikan ke pemicu saat ditutup.
  */
-export function Modal({ open, onClose, title, description, children, footer, size = 'md' }: ModalProps) {
+export function Modal({ open, onClose, title, description, children, footer, size = 'md', stableHeight = false }: ModalProps) {
   return (
     <Dialog open={open} onClose={onClose} className="relative z-50">
       <DialogBackdrop
@@ -34,6 +35,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
             'rounded-t-xl pb-[env(safe-area-inset-bottom)] transition duration-300 ease-out data-closed:translate-y-full',
             'sm:rounded-lg sm:pb-0 sm:duration-250 sm:data-closed:translate-y-2 sm:data-closed:scale-96 sm:data-closed:opacity-0',
             'data-leave:duration-180 data-leave:ease-in motion-reduce:transition-none',
+            stableHeight === 'compact' ? 'h-[min(34rem,85dvh)]' : stableHeight && 'h-[85dvh] sm:h-[min(44rem,85dvh)]',
             size === 'lg' ? 'sm:max-w-2xl' : 'sm:max-w-md',
           )}
         >
@@ -48,9 +50,9 @@ export function Modal({ open, onClose, title, description, children, footer, siz
               <X aria-hidden className="size-4" />
             </Button>
           </div>
-          <div className="overflow-y-auto overscroll-contain px-5 pb-4">{children}</div>
+          <div className={cn("min-h-0 overflow-y-auto overscroll-contain px-5 pb-4", stableHeight && "flex-1")}>{children}</div>
           {footer && (
-            <div className="flex flex-col-reverse gap-2 border-t border-border px-5 py-3 sm:flex-row sm:justify-end max-sm:*:w-full">
+            <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border px-5 py-3 sm:flex-row sm:justify-end max-sm:*:w-full">
               {footer}
             </div>
           )}

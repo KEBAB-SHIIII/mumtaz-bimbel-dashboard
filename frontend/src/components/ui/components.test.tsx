@@ -5,15 +5,15 @@ import { LazyMotion, MotionConfig, domMax } from 'motion/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Avatar, backgroundFor, loadAvatarRenderer } from './avatar';
-import { ValidityBadge } from './badge';
-import { Button } from './button';
-import { CountUp } from './count-up';
-import { DataTable } from './data-table';
-import { SearchInput } from './search-input';
-import { SegmentedControl, SegmentedTabs } from './segmented-tabs';
-import { LoadingSwitch, SKELETON_DELAY_MS, SKELETON_MIN_VISIBLE_MS, setSkeletonBooting, useDelayedSkeleton } from './skeleton';
-import { StatCard } from './stat-card';
+import { Avatar, backgroundFor, loadAvatarRenderer } from './data-display/avatar';
+import { ValidityBadge } from './data-display/status-badge';
+import { Button } from './actions/button';
+import { CountUp } from './motion/count-up';
+import { DataTable } from './data-display/data-table';
+import { SearchInput } from './forms/search-input';
+import { SegmentedControl, SegmentedTabs } from './navigation/segmented-tabs';
+import { LoadingSwitch, SKELETON_DELAY_MS, SKELETON_MIN_VISIBLE_MS, setSkeletonBooting, useDelayedSkeleton } from './feedback/skeleton';
+import { StatCard } from './data-display/stat-card';
 
 function Providers({ children }: { children: ReactNode }) {
   return (

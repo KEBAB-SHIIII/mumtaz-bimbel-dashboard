@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { cn } from '../../lib/cn';
-import { ErrorState } from './feedback';
+import { cn } from '../../../lib/cn';
+import { ErrorState } from './states';
 import { LoadingSwitch } from './skeleton';
 
 /** Bagian hasil TanStack Query yang dibutuhkan untuk memilih state tampilan. */

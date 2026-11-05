@@ -1,16 +1,17 @@
+import { useNotification } from '../../../components/ui/feedback/notification-provider';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Check, Copy, KeyRound, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { createParentRequestSchema, updateParentRequestSchema, type Parent, type ParentAccessCodeIssued } from '@mumtaz/contracts';
-import { Button } from '../../../components/ui/button';
-import { DataTable } from '../../../components/ui/data-table';
-import { ConfirmDialog, Modal } from '../../../components/ui/dialog';
-import { EmptyState, ErrorState, InlineAlert, LoadingState, NoResultsState } from '../../../components/ui/feedback';
-import { FormField, Input, describedBy } from '../../../components/ui/field';
-import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/skeleton';
-import { Card } from '../../../components/ui/layout-primitives';
+import { Button } from '../../../components/ui/actions/button';
+import { DataTable } from '../../../components/ui/data-display/data-table';
+import { ConfirmDialog, Modal } from '../../../components/ui/overlay/dialog';
+import { EmptyState, ErrorState, InlineAlert, LoadingState, NoResultsState } from '../../../components/ui/feedback/states';
+import { FormField, Input, describedBy } from '../../../components/ui/forms/field';
+import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/feedback/skeleton';
+import { Card } from '../../../components/ui/surfaces/layout-primitives';
 import { toApiError } from '../../../lib/api-error';
 import { queryKeys } from '../../../lib/query-keys';
 import { createParent, rotateParentAccessCode, updateMasterData } from '../api';
@@ -73,6 +74,7 @@ function ParentFormDialog({
   onIssued: (issued: ParentAccessCodeIssued) => void;
 }) {
   const queryClient = useQueryClient();
+  const notify = useNotification();
   const students = useMasterOptions('students');
   const isEdit = parent !== null;
   const [pendingPayload, setPendingPayload] = useState<object | null>(null);
@@ -97,6 +99,7 @@ function ParentFormDialog({
       return createParent(body);
     },
     onSuccess: (issued) => {
+      notify({ status: 'success', title: isEdit ? 'Orang tua/wali berhasil diperbarui' : 'Orang tua/wali berhasil ditambahkan' });
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.masterDataAll('parents') });
       setPendingPayload(null);
       onClose();
@@ -208,6 +211,7 @@ function ParentFormDialog({
 
 export function ParentsPage() {
   const queryClient = useQueryClient();
+  const notify = useNotification();
   const { query, page, search, update } = useMasterList('parents');
   const [editing, setEditing] = useState<Parent | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -217,6 +221,7 @@ export function ParentsPage() {
   const rotate = useMutation({
     mutationFn: (id: string) => rotateParentAccessCode(id),
     onSuccess: (result) => {
+      notify({ status: 'success', title: 'ID akses berhasil diperbarui', description: 'Sampaikan ID akses baru kepada orang tua/wali secara pribadi.' });
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.masterDataAll('parents') });
       setRotating(null);
       setIssued(result);

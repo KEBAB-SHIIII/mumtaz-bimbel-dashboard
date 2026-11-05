@@ -1,3 +1,4 @@
+import { NotificationProvider } from '../components/ui/feedback/notification-provider';
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { LazyMotion, MotionConfig } from 'motion/react';
 import { useState, type ReactNode } from 'react';
@@ -18,7 +19,7 @@ export function AppProviders({ children, queryClient }: AppProvidersProps) {
       {/* Motion: komponen `m.*` ringan di bundle awal; fitur domMax (termasuk layoutId) dimuat async. Gerak dimatikan bila pengguna memilih reduced motion. */}
       <LazyMotion features={loadMotionFeatures} strict>
         <MotionConfig reducedMotion="user">
-          <SessionWatcher>{children}</SessionWatcher>
+          <NotificationProvider><SessionWatcher>{children}</SessionWatcher></NotificationProvider>
         </MotionConfig>
       </LazyMotion>
     </QueryClientProvider>

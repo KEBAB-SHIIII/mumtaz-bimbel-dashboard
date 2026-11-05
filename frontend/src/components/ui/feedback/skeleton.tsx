@@ -1,8 +1,6 @@
-import { AnimatePresence, m } from 'motion/react';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { cn } from '../../lib/cn';
-import { MOBILE_QUERY, useMediaQuery } from '../../lib/use-media-query';
-import { FadeContent } from './fade-content';
+import { cn } from '../../../lib/cn';
+import { MOBILE_QUERY, useMediaQuery } from '../../../hooks/use-media-query';
 
 /** Skeleton baru muncul bila loading > 150ms, lalu bertahan minimal 300ms (docs/design/04-components.md). */
 export const SKELETON_DELAY_MS = 150;
@@ -80,6 +78,7 @@ export function SkeletonRegion({ children, label = 'Memuat data…', className }
 interface LoadingSwitchProps {
   /** Loading pertama (TanStack Query `isPending`), bukan refetch. */
   loading: boolean;
+  /** Shape follows the actual content layout. */
   skeleton: ReactNode;
   /** Dipanggil hanya setelah loading selesai, jadi aman membaca data. */
   children: () => ReactNode;
@@ -89,7 +88,7 @@ interface LoadingSwitchProps {
 
 /**
  * Skeleton → konten tanpa kedip: < 150ms tidak menampilkan apa pun, lalu skeleton (minimal 300ms),
- * lalu konten memudar masuk 200ms di posisi yang sama.
+ * lalu konten menggantikan skeleton tanpa animasi tumpang tindih.
  */
 export function LoadingSwitch({ loading, skeleton, children, className }: LoadingSwitchProps) {
   const showSkeleton = useDelayedSkeleton(loading);
@@ -98,24 +97,14 @@ export function LoadingSwitch({ loading, skeleton, children, className }: Loadin
     if (state === 'content') booting = false;
   }, [state]);
   return (
-    // popLayout: skeleton yang keluar ditumpuk di posisinya sementara konten masuk, tanpa lompatan layout.
-    <AnimatePresence mode="popLayout" initial={false}>
-      {state === 'skeleton' && (
-        <m.div key="skeleton" className={className} exit={{ opacity: 0, transition: { duration: 0.2, ease: 'easeOut' } }}>
+    <div className={className}>
+      {state === 'waiting' && <span role="status" aria-busy="true" className="sr-only">Memuat data…</span>}
+      {state === 'content' ? children() : (
+        <div className={cn(className, state === 'waiting' && 'invisible')} aria-hidden={state === 'waiting' || undefined}>
           {skeleton}
-        </m.div>
+        </div>
       )}
-      {state === 'waiting' && (
-        <SkeletonRegion key="waiting">
-          <span />
-        </SkeletonRegion>
-      )}
-      {state === 'content' && (
-        <FadeContent key="content" {...(className ? { className } : {})}>
-          {children()}
-        </FadeContent>
-      )}
-    </AnimatePresence>
+    </div>
   );
 }
 
@@ -126,16 +115,17 @@ function CardFrame({ children, className }: { children: ReactNode; className?: s
 }
 
 /** 4 kartu statistik (2 di HP): kotak ikon + label + angka. */
-export function SkeletonStatCards({ count = 4 }: { count?: number }) {
+export function SkeletonStatCards({ count = 4, dashboard = false }: { count?: number; dashboard?: boolean }) {
   return (
-    <SkeletonRegion className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+    <SkeletonRegion className={cn("grid grid-cols-2 gap-3 sm:gap-4", count === 5 ? "lg:grid-cols-5" : count === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4")}>
       {Array.from({ length: count }, (_, index) => (
-        <CardFrame key={index} className={cn('flex flex-col gap-3', index >= 2 && 'max-sm:hidden')}>
+        <CardFrame key={index} className={cn('flex min-w-0 flex-col gap-3', count === 5 && index === 4 && 'max-lg:col-span-2', dashboard && count === 4 && index === 3 && 'max-sm:col-span-2')}>
           <div className="flex items-center gap-2.5">
-            <Skeleton className="size-8 rounded-full" />
+            <Skeleton className="size-4 rounded-sm" />
             <Skeleton className="h-3.5 w-24" />
           </div>
-          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-8 w-24 max-w-full" />
+          {dashboard && (index === 1 || index === 3) && <Skeleton className="h-4 w-3/4" />}
         </CardFrame>
       ))}
     </SkeletonRegion>
@@ -254,4 +244,48 @@ export function PageSkeleton({ children }: { children: ReactNode }) {
 export function SkeletonDataTable({ headers, rows = 6 }: { headers: readonly string[]; rows?: number }) {
   const isMobile = useMediaQuery(MOBILE_QUERY);
   return isMobile ? <SkeletonCardList /> : <SkeletonTable headers={headers} rows={rows} />;
+}
+
+/** Shared loading body for session dialogs; no separate spinner or pre-modal screen. */
+export function SessionDetailSkeleton() {
+  return (
+    <SkeletonRegion label="Memuat data…" className="flex min-h-80 flex-col gap-5 py-1">
+      <Skeleton className="h-6 w-28" />
+      <div className="grid grid-cols-2 gap-5">
+        {Array.from({ length: 6 }, (_, index) => (
+          <div key={index} className="space-y-2">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-5 w-3/4" />
+          </div>
+        ))}
+      </div>
+      <Skeleton className="h-20 w-full" />
+    </SkeletonRegion>
+  );
+}
+
+/** Admin dashboard: two charts above, three below, matching DashboardCharts. */
+export function DashboardChartsSkeleton() {
+  const chart = (key: number) => (
+    <SkeletonRegion key={key} className="overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
+      <div className="flex flex-col gap-1 border-b border-border px-4 py-3 sm:px-5">
+        <Skeleton className="h-5 w-44 max-w-full" />
+        <Skeleton className="h-4 w-32" />
+      </div>
+      <div className="px-2 py-4 sm:px-4"><Skeleton className="h-64 w-full" /></div>
+    </SkeletonRegion>
+  );
+  return <>
+    <div className="grid gap-3 sm:gap-4 lg:grid-cols-3"><div className="lg:col-span-2">{chart(0)}</div>{chart(1)}</div>
+    <div className="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">{[2, 3, 4].map(chart)}</div>
+  </>;
+}
+
+export function RecentSessionsSkeleton() {
+  return <SkeletonRegion className="divide-y divide-border">
+    {Array.from({ length: 5 }, (_, index) => <div key={index} className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+      <div className="flex min-w-0 flex-1 flex-col gap-1"><Skeleton className="h-5 w-3/4" /><Skeleton className="h-4 w-36" /></div>
+      <Skeleton className="h-6 w-20 rounded-full" />
+    </div>)}
+  </SkeletonRegion>;
 }

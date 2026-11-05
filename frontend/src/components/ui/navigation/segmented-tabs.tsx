@@ -1,7 +1,7 @@
 import { Radio, RadioGroup, Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
 import { m } from 'motion/react';
 import { useId, type ReactNode } from 'react';
-import { cn } from '../../lib/cn';
+import { cn } from '../../../lib/cn';
 
 /** Pegas indikator "pil" yang meluncur (docs/design/02-tokens.md). */
 const INDICATOR_SPRING = { type: 'spring', stiffness: 400, damping: 32 } as const;

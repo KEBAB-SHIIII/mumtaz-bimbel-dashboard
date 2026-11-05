@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import type { Role } from '@mumtaz/contracts';
 import { cn } from '../../lib/cn';
-import { Skeleton, SkeletonRegion } from '../ui/skeleton';
+import { Skeleton, SkeletonRegion, SkeletonStatCards, DashboardChartsSkeleton, RecentSessionsSkeleton } from '../ui/feedback/skeleton';
 import { NAVIGATION } from './navigation';
-import { readSidebarCollapsed } from './use-sidebar-collapsed';
+import { readSidebarCollapsed } from './sidebar/use-sidebar-collapsed';
 
 /*
  * Skeleton yang meniru tata letak asli (docs/design/04-components.md § Skeleton): dipakai saat sesi diperiksa
@@ -62,22 +62,6 @@ function CardHeader() {
   );
 }
 
-function Charts() {
-  return (
-    <div className="grid gap-3 sm:gap-4 lg:grid-cols-3">
-      <Frame className="lg:col-span-2">
-        <CardHeader />
-        <div className="p-4"><Skeleton className="h-64 w-full" /></div>
-      </Frame>
-      <Frame>
-        <CardHeader />
-        <div className="grid place-items-center p-4"><Skeleton className="size-48 rounded-full" /></div>
-      </Frame>
-    </div>
-  );
-}
-
-/** Tabel (≥ 640px) / daftar kartu (HP) tanpa JS: dua bentuk, ditukar oleh breakpoint CSS. */
 function Table({ rows = 6, columns = 6 }: { rows?: number; columns?: number }) {
   return (
     <Frame className="overflow-hidden">
@@ -200,12 +184,12 @@ function Timeline() {
 /** Isi frame halaman sesuai rute (tanpa wadah status; dibungkus pemanggil). */
 export function RouteSkeletonContent({ pathname }: { pathname: string }) {
   const path = pathname.replace(/\/+$/, '');
-  if (path === '/admin') return (<><Description /><Period /><Stats count={4} /><Charts /></>);
+  if (path === '/admin') return (<><Description /><Period /><SkeletonStatCards dashboard /><DashboardChartsSkeleton /></>);
   if (path === '/admin/absensi') return (<><Description /><Toolbar chips={4} actions={2} /><Table columns={8} /></>);
   if (path === '/admin/penagihan') return (<><Description /><div className="flex gap-2"><Period /><Skeleton className="h-8 w-24 rounded-full" /></div><Stats count={3} columns="lg:grid-cols-3" /><Table rows={4} columns={7} /></>);
   if (path === '/admin/honor') return (<><Description /><Period /><Stats count={3} columns="lg:grid-cols-3" /><ListCard rows={3} /></>);
   if (path.startsWith('/admin/master-data')) return (<><Description /><div className="flex flex-wrap items-center justify-between gap-3"><Skeleton className="h-9 w-full sm:w-64 pointer-coarse:h-11" /><Skeleton className="h-9 w-32 pointer-coarse:h-11 max-sm:w-full" /></div><Table columns={5} /></>);
-  if (path === '/tutor') return (<><div className="flex flex-wrap items-end justify-between gap-3"><Skeleton className="h-3.5 w-56" /><Period /></div><Frame className="flex items-center gap-3 p-4 sm:p-5"><Skeleton className="size-10 rounded-full" /><div className="flex flex-1 flex-col gap-1.5"><Skeleton className="h-4 w-44" /><Skeleton className="h-3 w-56" /></div><Skeleton className="h-10 w-36 max-sm:hidden" /></Frame><Stats count={5} columns="lg:grid-cols-5" lastWide /><ListCard rows={5} /></>);
+  if (path === '/tutor') return (<><div className="flex flex-wrap items-end justify-between gap-3"><Skeleton className="h-3.5 w-56" /><Period /></div><Frame className="flex items-center gap-3 p-4 sm:p-5"><Skeleton className="size-10 rounded-full" /><div className="flex flex-1 flex-col gap-1.5"><Skeleton className="h-4 w-44" /><Skeleton className="h-3 w-56" /></div><Skeleton className="h-10 w-36 max-sm:hidden" /></Frame><SkeletonStatCards count={5} /><Frame><CardHeader /><RecentSessionsSkeleton /></Frame></>);
   if (path === '/tutor/absensi') return (<><Description /><Form fields={7} /></>);
   if (path === '/tutor/riwayat') return (<><Description /><Period /><Chips count={2} /><Table columns={7} /></>);
   if (path === '/tutor/honor') return (<><Description /><Period /><Stats count={3} columns="lg:grid-cols-3" /><Table rows={4} columns={6} /></>);
@@ -258,19 +242,19 @@ function SidebarSkeleton({ role, collapsed }: { role: Role | undefined; collapse
 export function AppShellSkeleton({ role, pathname }: { role?: Role; pathname: string }) {
   const collapsed = readSidebarCollapsed();
   return (
-    <SkeletonRegion label="Memuat aplikasi…" className="min-h-dvh bg-background animate-fade-up motion-reduce:animate-none lg:flex">
+    <SkeletonRegion label="Memuat aplikasi…" className="min-h-dvh bg-background lg:flex">
       <aside aria-hidden className={cn('sticky top-0 hidden h-dvh shrink-0 lg:block', collapsed ? 'w-16' : 'w-60')}>
         <SidebarSkeleton role={role} collapsed={collapsed} />
       </aside>
       <div aria-hidden className="flex min-w-0 flex-1 flex-col">
-        <div className="flex h-16 shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-6 lg:px-8">
+        <div className="flex h-16 shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-6 lg:ps-2 lg:pe-4">
           <Skeleton className="size-10 rounded-md lg:hidden" />
           <div className="min-w-0 flex-1"><Skeleton className="h-6 w-40" /></div>
           <Skeleton className="size-10 rounded-md md:h-9 md:w-60" />
           <Skeleton className="size-8 rounded-full" />
         </div>
-        <div className="flex flex-1 flex-col px-4 pb-8 sm:px-6 lg:px-8">
-          <div className="mx-auto flex w-full max-w-[90rem] flex-1 flex-col gap-4 lg:rounded-xl lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-sm">
+        <div className="flex flex-1 flex-col px-4 pb-8 sm:px-6 lg:ps-2 lg:pe-4">
+          <div className="mx-auto lg:ms-0 flex w-full max-w-[90rem] flex-1 flex-col gap-4 lg:rounded-xl lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-sm">
             <RouteSkeletonContent pathname={pathname} />
           </div>
         </div>

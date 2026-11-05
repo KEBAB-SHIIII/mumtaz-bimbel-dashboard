@@ -15,6 +15,7 @@ let counter = 0;
 
 beforeAll(async () => {
   t = await createTestApp();
+  await t.database.db.update(lessonSessions).set({ start_time: '16:00', end_time: '17:00', learning_material: 'Sesi uji anomali', learning_notes: null, next_focus: null }).where(eq(lessonSessions.id, SESSION_IDS.s08));
   tutorA = await as.tutorA(t.app);
 });
 afterAll(() => t.close());
@@ -90,7 +91,7 @@ describe('analyzeSession — validasi oleh AI (baseline LLM, fake detector di te
     expect((await flagsOf(id)).map((f) => f.finding_type)).toEqual(['duration_outlier']);
   });
 
-  it('mulai di atas jam 21.00 → Perlu revisi (temuan late_start); tepat 21.00 tidak', async () => {
+  it('mulai pada atau setelah 21.00 → Perlu revisi (temuan late_start)', async () => {
     const late = await submit({ lesson_date: '2026-11-07', ...lessonTimes(60, '21:15') });
     await analyzeSession(deps(new FakeAnomalyDetector()), late);
     expect(await sessionRow(late)).toMatchObject({ validity: 'needs_revision', status: 'revision_requested' });
@@ -98,7 +99,8 @@ describe('analyzeSession — validasi oleh AI (baseline LLM, fake detector di te
 
     const onTime = await submit({ lesson_date: '2026-11-08', ...lessonTimes(60, '21:00') });
     await analyzeSession(deps(new FakeAnomalyDetector()), onTime);
-    expect(await sessionRow(onTime)).toMatchObject({ validity: 'valid', status: 'approved' });
+    expect(await sessionRow(onTime)).toMatchObject({ validity: 'needs_revision', status: 'revision_requested' });
+    expect((await flagsOf(onTime)).map((f) => f.finding_type)).toEqual(['late_start']);
   });
 
   it('detektor menilai tidak bermasalah → Valid, langsung dihitung (snapshot per jenjang)', async () => {
@@ -191,13 +193,14 @@ describe('AnomalyWorker', () => {
       },
     });
     try {
+      await app.database.db.update(lessonSessions).set({ start_time: '16:00', end_time: '17:00', learning_material: 'Sesi uji anomali', learning_notes: null, next_focus: null }).where(eq(lessonSessions.id, SESSION_IDS.s08));
       const tutor = await as.tutorA(app.app);
       const res = await tutor
         .post('/tutor/attendance', {
           client_submission_id: '00000000-0000-4000-9000-000000000800',
           student_id: STUDENT_IDS.murid2, subject_ids: [SUBJECT_IDS.bahasaInggris],
           ...duplicateOfS08,
-          learning_material: 'Duplikat untuk worker',
+          learning_material: 'Sesi uji anomali',
         })
         .expect(201);
       expect(res.body.session.anomaly_analysis_status).toBe('pending');

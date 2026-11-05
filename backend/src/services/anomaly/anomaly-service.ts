@@ -34,6 +34,10 @@ function snapshotColumns(subjectAgg: ReturnType<typeof sessionSubjects>) {
     subject_ids: subjectAgg.subject_ids,
     lesson_date: lessonSessions.lesson_date,
     start_time: lessonSessions.start_time,
+    end_time: lessonSessions.end_time,
+    learning_material: lessonSessions.learning_material,
+    learning_notes: lessonSessions.learning_notes,
+    next_focus: lessonSessions.next_focus,
     duration_minutes: lessonSessions.duration_minutes,
     submitted_at: lessonSessions.submitted_at,
   };
@@ -52,6 +56,7 @@ type SnapshotRow = Awaited<ReturnType<ReturnType<typeof selectSnapshots>['execut
 const toSnapshot = (row: SnapshotRow): AnomalySessionSnapshot => ({
   ...row,
   start_time: hhmm(row.start_time),
+  end_time: hhmm(row.end_time),
   submitted_at: row.submitted_at.toISOString(),
 });
 

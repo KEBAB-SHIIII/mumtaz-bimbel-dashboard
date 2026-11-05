@@ -439,6 +439,9 @@ export async function listAdminAttendance(
     query.status ? eq(lessonSessions.status, query.status) : undefined,
     validityFilter(query.validity),
     query.anomaly_status ? eq(lessonSessions.anomaly_analysis_status, query.anomaly_status) : undefined,
+    query.has_anomaly === 'true'
+      ? sql`exists (select 1 from ${anomalyFlags} where ${anomalyFlags.lesson_session_id} = ${lessonSessions.id} and ${anomalyFlags.review_status} <> 'superseded')`
+      : undefined,
     query.search
       ? or(
           ilike(tutorUser.full_name, likePattern(query.search)),

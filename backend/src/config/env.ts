@@ -55,7 +55,7 @@ export const envSchema = z
     BOOTSTRAP_ADMIN_USERNAME: optionalString,
     BOOTSTRAP_ADMIN_PASSWORD: optionalString,
     // Default teknis development, bukan kebijakan bisnis final (docs/04 §1).
-    SESSION_IDLE_TIMEOUT_MINUTES: positiveInt(480),
+    SESSION_IDLE_TIMEOUT_MINUTES: positiveInt(10080),
     AUTH_RATE_LIMIT_MAX: positiveInt(5),
     AUTH_RATE_LIMIT_WINDOW_MINUTES: positiveInt(15),
     SEED_TUTOR_PASSWORD: optionalString,
@@ -78,7 +78,7 @@ export const envSchema = z
     GEMINI_MODEL: optionalString,
     /** Durasi di atas ini dilabeli Perlu revisi (revisi PM: > 180 menit). */
     ANOMALY_DURATION_OUTLIER_MINUTES: positiveInt(180),
-    /** Les yang dimulai setelah jam ini (WIB, "HH:MM") dilabeli Perlu revisi (revisi PM: di atas 21.00). */
+    /** Les yang dimulai pada atau setelah jam ini (WIB, "HH:MM") dilabeli Perlu revisi (revisi PM: mulai 21.00). */
     ANOMALY_LATE_START_AFTER: lessonTimeSchema.default('21:00'),
     /** Batas waktu satu panggilan provider anomali; lewat batas → `failed`. */
     ANOMALY_PROVIDER_TIMEOUT_MS: positiveInt(20_000),

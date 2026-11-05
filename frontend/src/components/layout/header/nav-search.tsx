@@ -3,8 +3,8 @@ import { Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import type { Role } from '@mumtaz/contracts';
-import { cn } from '../../lib/cn';
-import { listDestinations, type NavDestination } from './navigation';
+import { cn } from '../../../lib/cn';
+import { listDestinations, type NavDestination } from '../navigation';
 
 /** Huruf kecil tanpa diakritik, agar "honor" cocok dengan "Honor" dan pencarian toleran. */
 function normalize(text: string) {

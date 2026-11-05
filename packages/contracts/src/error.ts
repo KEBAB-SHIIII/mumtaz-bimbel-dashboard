@@ -6,6 +6,7 @@ export const errorCodeSchema = z.enum([
   'VALIDATION_FAILED',
   'UNAUTHENTICATED',
   'FORBIDDEN',
+  'PASSWORD_CHANGE_REQUIRED',
   'CSRF_INVALID',
   'NOT_FOUND',
   /** Konflik data unik/overlap (mis. username dipakai, periode tarif overlap). */

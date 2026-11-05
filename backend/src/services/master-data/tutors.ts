@@ -96,6 +96,7 @@ export async function createTutor(ctx: ServiceContext, input: CreateTutorRequest
         username: input.username,
         password_hash: passwordHash,
         role: 'tutor',
+        must_change_password: true,
       })
       .returning({ id: users.id });
     if (!user) throw new Error('Insert user gagal');
@@ -118,6 +119,7 @@ export async function resetTutorPassword(ctx: ServiceContext, id: string): Promi
     .update(users)
     .set({
       password_hash: passwordHash,
+      must_change_password: true,
       credential_version: sql`${users.credential_version} + 1`,
       updated_at: ctx.now(),
     })

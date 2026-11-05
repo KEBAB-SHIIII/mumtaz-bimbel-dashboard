@@ -2,13 +2,13 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { NavLink, Outlet } from 'react-router';
-import { Badge } from '../../../components/ui/badge';
-import { Button } from '../../../components/ui/button';
-import { FilterBar, PageHeader } from '../../../components/ui/layout-primitives';
-import { SearchInput } from '../../../components/ui/search-input';
+import { Chip } from '../../../components/ui/data-display/chip';
+import { Button } from '../../../components/ui/actions/button';
+import { FilterBar, PageHeader } from '../../../components/ui/surfaces/layout-primitives';
+import { SearchInput } from '../../../components/ui/forms/search-input';
 import { cn } from '../../../lib/cn';
 import { queryKeys } from '../../../lib/query-keys';
-import { useSearchState } from '../../../lib/use-search-state';
+import { useSearchState } from '../../../hooks/use-search-state';
 import { fetchMasterData, type MasterDataEntity } from '../api';
 
 export const MASTER_PAGE_SIZE = 20;
@@ -100,7 +100,7 @@ export function MasterToolbar({
 }
 
 export function ActiveBadge({ active, activeLabel = 'Aktif', inactiveLabel = 'Nonaktif' }: { active: boolean; activeLabel?: string; inactiveLabel?: string }) {
-  return <Badge tone={active ? 'success' : 'neutral'}>{active ? activeLabel : inactiveLabel}</Badge>;
+  return <Chip color={active ? 'lime' : 'neutral'}>{active ? activeLabel : inactiveLabel}</Chip>;
 }
 
 export function CheckboxField({ id, label, description, ...props }: { id: string; label: string; description?: string } & InputHTMLAttributes<HTMLInputElement>) {

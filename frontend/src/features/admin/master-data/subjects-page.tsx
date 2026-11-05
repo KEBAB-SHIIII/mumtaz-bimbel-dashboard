@@ -1,16 +1,17 @@
+import { useNotification } from '../../../components/ui/feedback/notification-provider';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { createSubjectRequestSchema, updateSubjectRequestSchema, type Subject } from '@mumtaz/contracts';
-import { Button } from '../../../components/ui/button';
-import { DataTable } from '../../../components/ui/data-table';
-import { Modal } from '../../../components/ui/dialog';
-import { EmptyState, ErrorState, InlineAlert, NoResultsState } from '../../../components/ui/feedback';
-import { FormField, Input, describedBy } from '../../../components/ui/field';
-import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/skeleton';
-import { Card } from '../../../components/ui/layout-primitives';
+import { Button } from '../../../components/ui/actions/button';
+import { DataTable } from '../../../components/ui/data-display/data-table';
+import { Modal } from '../../../components/ui/overlay/dialog';
+import { EmptyState, ErrorState, InlineAlert, NoResultsState } from '../../../components/ui/feedback/states';
+import { FormField, Input, describedBy } from '../../../components/ui/forms/field';
+import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/feedback/skeleton';
+import { Card } from '../../../components/ui/surfaces/layout-primitives';
 import { toApiError } from '../../../lib/api-error';
 import { queryKeys } from '../../../lib/query-keys';
 import { createMasterData, updateMasterData } from '../api';
@@ -21,6 +22,7 @@ const SERVER_FIELDS = ['name'] as const;
 
 function SubjectFormDialog({ subject, open, onClose }: { subject: Subject | null; open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
+  const notify = useNotification();
   const isEdit = subject !== null;
   const form = useForm<{ name: string; is_active: boolean }>({
     values: { name: subject?.name ?? '', is_active: subject?.is_active ?? true },
@@ -30,6 +32,7 @@ function SubjectFormDialog({ subject, open, onClose }: { subject: Subject | null
   const mutation = useMutation({
     mutationFn: (body: object) => (isEdit ? updateMasterData('subjects', subject.id, body) : createMasterData('subjects', body)),
     onSuccess: () => {
+      notify({ status: 'success', title: isEdit ? 'Mata pelajaran berhasil diperbarui' : 'Mata pelajaran berhasil ditambahkan' });
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.masterDataAll('subjects') });
       onClose();
     },

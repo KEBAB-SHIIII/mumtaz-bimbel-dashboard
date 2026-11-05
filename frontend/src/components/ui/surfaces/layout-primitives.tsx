@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { useHeaderSlots } from '../layout/header-slot';
-import { cn } from '../../lib/cn';
+import { useHeaderSlots } from '../../layout/header/header-slot';
+import { cn } from '../../../lib/cn';
 
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   // Judul tab browser mengikuti halaman aktif (riwayat & banyak tab mudah dibedakan).
@@ -73,7 +73,7 @@ export function Card({ title, description, actions, leading, children, className
   );
 }
 
-export { StatCard } from './stat-card';
+export { StatCard } from '../data-display/stat-card';
 
 /** Baris filter: satu kolom selebar layar di HP, berjajar & membungkus di layar lebih besar. */
 export function FilterBar({ children }: { children: ReactNode }) {

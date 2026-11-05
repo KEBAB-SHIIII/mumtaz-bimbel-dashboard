@@ -17,10 +17,10 @@ import {
   YAxis,
 } from 'recharts';
 import type { AdminDashboardSummary } from '@mumtaz/contracts';
-import { Badge } from '../../../components/ui/badge';
-import { Card } from '../../../components/ui/layout-primitives';
+import { Chip } from '../../../components/ui/data-display/chip';
+import { Card } from '../../../components/ui/surfaces/layout-primitives';
 import { formatRupiah } from '../../../lib/format';
-import { useThemeColors, type ThemeColors } from '../../../lib/theme-colors';
+import { useThemeColors, type ThemeColors } from '../../../hooks/use-theme-colors';
 import {
   SAMPLE_GRADE_COMPOSITION,
   SAMPLE_REGISTRATION_SOURCES,
@@ -107,7 +107,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 /** Kartu grafik; `sample` memberi label "Data contoh" kecil untuk angka yang belum dari data operasional. */
 function ChartCard({ title, subtitle, summary, wide = false, sample = true, children }: { title: string; subtitle: string; summary: string; wide?: boolean; sample?: boolean; children: ReactNode }) {
   return (
-    <Card title={title} description={subtitle} actions={sample ? <Badge size="sm">Data contoh</Badge> : undefined} className={wide ? 'lg:col-span-2' : ''}>
+    <Card title={title} description={subtitle} actions={sample ? <Chip variant="caption">Data contoh</Chip> : undefined} className={wide ? 'lg:col-span-2' : ''}>
       <figure className="m-0 px-2 py-4 sm:px-4" aria-label={`${title}${sample ? ' (data contoh)' : ''}: ${summary}`}>
         <div className="h-64 w-full">{children}</div>
       </figure>

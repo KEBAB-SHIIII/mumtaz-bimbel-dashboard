@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, type ReactNode } from 'react';
 import type { AuthUser, Role } from '@mumtaz/contracts';
-import { onUnauthenticated } from '../../lib/api-client';
+import { onPasswordChangeRequired, onUnauthenticated } from '../../lib/api-client';
 import { queryKeys } from '../../lib/query-keys';
 import { fetchSession, login, logout, parentAccess } from './api';
 
@@ -73,5 +73,9 @@ export function SessionWatcher({ children }: { children: ReactNode }) {
       }),
     [queryClient],
   );
+  useEffect(() => onPasswordChangeRequired(() => {
+    queryClient.setQueryData<AuthUser | null>(queryKeys.me, (user) =>
+      user?.role === 'tutor' ? { ...user, must_change_password: true } : user);
+  }), [queryClient]);
   return <>{children}</>;
 }

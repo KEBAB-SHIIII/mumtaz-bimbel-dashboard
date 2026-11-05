@@ -1,3 +1,4 @@
+import { useNotification } from '../../../components/ui/feedback/notification-provider';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Eye, Plus, RotateCcw, SlidersHorizontal, Trash2 } from 'lucide-react';
@@ -7,27 +8,27 @@ import {
   type AdminAttendanceDetail,
   type AdminAttendanceListItem,
 } from '@mumtaz/contracts';
-import { ValidityBadge, VALIDITY_LABELS } from '../../../components/ui/badge';
-import { Button } from '../../../components/ui/button';
-import { DataTable, rowNumber } from '../../../components/ui/data-table';
-import { ConfirmDialog } from '../../../components/ui/dialog';
-import { EmptyState, ErrorState, InlineAlert, NoResultsState } from '../../../components/ui/feedback';
-import { Card, PageHeader } from '../../../components/ui/layout-primitives';
-import { FilterSelect } from '../../../components/ui/filter-select';
-import { PeriodSelector } from '../../../components/ui/period-selector';
-import { SearchInput } from '../../../components/ui/search-input';
-import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/skeleton';
+import { ValidityBadge, VALIDITY_LABELS } from '../../../components/ui/data-display/status-badge';
+import { Button } from '../../../components/ui/actions/button';
+import { DataTable, rowNumber } from '../../../components/ui/data-display/data-table';
+import { ConfirmDialog } from '../../../components/ui/overlay/dialog';
+import { EmptyState, ErrorState, InlineAlert, NoResultsState } from '../../../components/ui/feedback/states';
+import { Card, PageHeader } from '../../../components/ui/surfaces/layout-primitives';
+import { FilterSelect } from '../../../components/ui/forms/filter-select';
+import { PeriodSelector } from '../../../components/ui/forms/period-selector';
+import { SearchInput } from '../../../components/ui/forms/search-input';
+import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/feedback/skeleton';
 import { toApiError } from '../../../lib/api-error';
 import { formatDuration, formatLessonDate, formatLessonTime, formatPeriod } from '../../../lib/format';
-import { usePeriodParam } from '../../../lib/period';
+import { usePeriodParam } from '../../../hooks/use-period-param';
 import { queryKeys } from '../../../lib/query-keys';
-import { useSearchState } from '../../../lib/use-search-state';
+import { useSearchState } from '../../../hooks/use-search-state';
 import { deleteAttendance, fetchAdminAttendance, fetchAdminAttendanceOptions, type AttendanceFilters } from '../api';
 import { ANALYSIS_POLL_MS } from './analysis-polling';
 import { AttendanceDetailDialog } from './attendance-detail-dialog';
 import { FINDING_LABEL } from './finding-list';
 import { SessionFormDialog } from './session-form-dialog';
-import { SheetsExportButton, SheetsExportDialog, SheetsExportHistory, SheetsExportResult, useSheetsExport } from './sheets-export';
+import { SheetsExportButton, SheetsExportDialog, SheetsExportHistory, useSheetsExport } from './sheets-export';
 
 const PAGE_SIZE = 20;
 const FILTER_KEYS = ['validity', 'tutor_id', 'student_id', 'subject_id', 'search'] as const;
@@ -36,6 +37,7 @@ const TABLE_HEADERS = ['No', 'Tanggal & jam', 'Nama tutor', 'Nama murid', 'Mata 
 
 export function AttendancePage() {
   const queryClient = useQueryClient();
+  const notify = useNotification();
   const [period, setPeriod] = usePeriodParam();
   const { values, page, update } = useSearchState(FILTER_KEYS);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -67,6 +69,7 @@ export function AttendancePage() {
   const removal = useMutation({
     mutationFn: (id: string) => deleteAttendance(id),
     onSuccess: (_result, id) => {
+      notify({ status: 'success', title: 'Absensi berhasil dihapus' });
       queryClient.removeQueries({ queryKey: queryKeys.admin.attendanceDetail(id) });
       void queryClient.invalidateQueries({ queryKey: ['admin'] });
       if (detailId === id) setDetailId(null);
@@ -153,7 +156,6 @@ export function AttendancePage() {
         title="Data Absensi"
         description={`Sesi ${formatPeriod(period)} berdasarkan tanggal les, divalidasi otomatis oleh AI. Hanya sesi Valid masuk rekap gaji.`}
       />
-      <SheetsExportResult exporter={exporter} />
       <SheetsExportDialog
         exporter={exporter}
         totalSessions={!hasFilters && list.data && exporter.dialog?.period === period ? list.data.total : undefined}

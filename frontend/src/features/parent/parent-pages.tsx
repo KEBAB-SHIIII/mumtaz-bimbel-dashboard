@@ -3,18 +3,18 @@ import { BookOpen, CalendarCheck, Clock } from 'lucide-react';
 import { m } from 'motion/react';
 import type { ReactNode } from 'react';
 import type { ParentProgressItem, ParentStudent } from '@mumtaz/contracts';
-import { itemEnter } from '../../components/ui/animated-list';
-import { Avatar } from '../../components/ui/avatar';
-import { EmptyState, ErrorState } from '../../components/ui/feedback';
-import { FilterSelect } from '../../components/ui/filter-select';
-import { Card, PageHeader, StatCard } from '../../components/ui/layout-primitives';
-import { PeriodSelector } from '../../components/ui/period-selector';
-import { QueryView } from '../../components/ui/query-view';
-import { LoadingSwitch, SkeletonCardList, SkeletonProfile, SkeletonStatCards } from '../../components/ui/skeleton';
+import { itemEnter } from '../../components/ui/motion/animated-list';
+import { Avatar } from '../../components/ui/data-display/avatar';
+import { EmptyState, ErrorState } from '../../components/ui/feedback/states';
+import { FilterSelect } from '../../components/ui/forms/filter-select';
+import { Card, PageHeader, StatCard } from '../../components/ui/surfaces/layout-primitives';
+import { PeriodSelector } from '../../components/ui/forms/period-selector';
+import { QueryView } from '../../components/ui/feedback/query-view';
+import { LoadingSwitch, SkeletonCardList, SkeletonProfile, SkeletonStatCards } from '../../components/ui/feedback/skeleton';
 import { formatDuration, formatLessonDate, formatPeriod } from '../../lib/format';
-import { usePeriodParam } from '../../lib/period';
+import { usePeriodParam } from '../../hooks/use-period-param';
 import { queryKeys } from '../../lib/query-keys';
-import { useSearchState } from '../../lib/use-search-state';
+import { useSearchState } from '../../hooks/use-search-state';
 import { fetchParentDashboard, fetchParentProgress, fetchParentStudents } from './api';
 
 /** Anak terpilih dari URL; default anak pertama yang terhubung. */

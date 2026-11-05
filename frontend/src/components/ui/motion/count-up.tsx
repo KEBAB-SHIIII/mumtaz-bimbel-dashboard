@@ -5,7 +5,7 @@
  */
 import { useReducedMotion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
-import { cn } from '../../lib/cn';
+import { cn } from '../../../lib/cn';
 
 const DURATION_MS = 600;
 const integerFormat = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });

@@ -18,6 +18,8 @@
   /* ── Brand hijau (Ref 1) ──────────────────────────────────────────────── */
   --color-primary: oklch(0.49 0.12 152);
   --color-primary-foreground: oklch(0.99 0 0);
+  /* Toast: permukaan sage agar terpisah jelas dari kartu putih. */
+  --color-notification-surface: oklch(0.92 0.035 150);
   --color-primary-subtle: oklch(0.955 0.033 150);
   /* Gradien item nav aktif: teks di atasnya memakai --color-text, bukan putih. */
   --color-nav-active-from: oklch(0.78 0.16 148);
@@ -63,6 +65,22 @@
   --color-accent-orange-subtle: oklch(0.955 0.032 70);
   --color-accent-coral: oklch(0.6 0.16 25);
   --color-accent-coral-subtle: oklch(0.95 0.024 25);
+
+  /* ── Chip (adaptasi BoardUI Chip): pasangan latar 200 / teks 800 ala Tailwind ── */
+  --color-status-lime-background: #d9f99d;
+  --color-status-lime-text: #3f6212;
+  --color-status-rose-background: #fecdd3;
+  --color-status-rose-text: #9f1239;
+  --color-status-yellow-background: #fef08a;
+  --color-status-yellow-text: #854d0e;
+  --color-status-cyan-background: #a5f3fc;
+  --color-status-cyan-text: #155e75;
+  --color-status-blue-background: #bfdbfe;
+  --color-status-blue-text: #1e40af;
+  --color-status-orange-background: #fed7aa;
+  --color-status-orange-text: #9a3412;
+  --color-status-purple-background: #f3e8ff;
+  --color-status-purple-text: #7e22ce;
 
   /* ── Tipografi (Inter Variable, self-host) ────────────────────────────── */
   --font-sans:

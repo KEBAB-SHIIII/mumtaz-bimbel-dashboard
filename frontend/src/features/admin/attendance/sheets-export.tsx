@@ -1,20 +1,21 @@
+import { useNotification } from '../../../components/ui/feedback/notification-provider';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { CircleCheck, CircleX, ExternalLink, FileSpreadsheet, LoaderCircle, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
-import { sheetTitleForPeriod, type ExportRunStatus, type SheetExportResponse, type SheetExportRun } from '@mumtaz/contracts';
-import { Badge } from '../../../components/ui/badge';
-import { Button } from '../../../components/ui/button';
-import { DataTable } from '../../../components/ui/data-table';
-import { Modal } from '../../../components/ui/dialog';
-import { EmptyState, ErrorState, InlineAlert, LoadingState } from '../../../components/ui/feedback';
-import { Card } from '../../../components/ui/layout-primitives';
+import { sheetTitleForPeriod, type ExportRunStatus, type SheetExportRun } from '@mumtaz/contracts';
+import { TONE_COLOR } from '../../../components/ui/data-display/status-badge';
+import { Chip } from '../../../components/ui/data-display/chip';
+import { cn } from '../../../lib/cn';
+import { Button } from '../../../components/ui/actions/button';
+import { DataTable } from '../../../components/ui/data-display/data-table';
+import { Modal } from '../../../components/ui/overlay/dialog';
+import { EmptyState, ErrorState, InlineAlert, LoadingState } from '../../../components/ui/feedback/states';
+import { Card } from '../../../components/ui/surfaces/layout-primitives';
 import { toApiError } from '../../../lib/api-error';
 import { formatPeriod, formatTimestamp } from '../../../lib/format';
 import { queryKeys } from '../../../lib/query-keys';
 import { exportAttendanceToSheets, fetchExportHistory } from '../api';
-
-type ExportedRun = SheetExportResponse['export'];
 
 const RUN_STATUS: Record<ExportRunStatus, { label: string; tone: 'success' | 'danger' | 'info'; icon: typeof CircleCheck }> = {
   running: { label: 'Berjalan', tone: 'info', icon: LoaderCircle },
@@ -44,13 +45,16 @@ interface DialogState {
  */
 export function useSheetsExport() {
   const queryClient = useQueryClient();
+  const notify = useNotification();
   const [dialog, setDialog] = useState<DialogState | null>(null);
-  const [lastResult, setLastResult] = useState<ExportedRun | null>(null);
 
   const mutation = useMutation({
     mutationFn: exportAttendanceToSheets,
     onSuccess: (run) => {
-      setLastResult(run);
+      notify({
+        status: 'success', title: 'Ekspor berhasil',
+        description: <>{run.records_exported} baris ditulis ke tab {run.sheet_title}. <SpreadsheetLink href={run.spreadsheet_url} /></>,
+      });
       setDialog(null);
     },
     onError: (error, variables) => {
@@ -66,11 +70,10 @@ export function useSheetsExport() {
 
   const open = (period: string) => {
     mutation.reset();
-    setLastResult(null);
     setDialog({ period, emptyReplaceMessage: null });
   };
 
-  return { dialog, setDialog, mutation, lastResult, open };
+  return { dialog, setDialog, mutation, open };
 }
 
 type SheetsExport = ReturnType<typeof useSheetsExport>;
@@ -155,16 +158,6 @@ export function SheetsExportDialog({ exporter, totalSessions }: { exporter: Shee
   );
 }
 
-export function SheetsExportResult({ exporter }: { exporter: SheetsExport }) {
-  const run = exporter.lastResult;
-  if (!run) return null;
-  return (
-    <InlineAlert tone="success" title="Ekspor berhasil">
-      {run.records_exported} baris ditulis ke tab {run.sheet_title}. <SpreadsheetLink href={run.spreadsheet_url} />
-    </InlineAlert>
-  );
-}
-
 export function SheetsExportHistory({ exporter }: { exporter: SheetsExport }) {
   const history = useQuery({
     queryKey: queryKeys.admin.exportHistory,
@@ -181,9 +174,10 @@ export function SheetsExportHistory({ exporter }: { exporter: SheetsExport }) {
       cell: ({ row }) => {
         const config = RUN_STATUS[row.original.status];
         return (
-          <Badge tone={config.tone} icon={config.icon}>
+          <Chip color={TONE_COLOR[config.tone]}>
+            <config.icon aria-hidden className={cn('size-3.5 shrink-0', row.original.status === 'running' && 'animate-spin motion-reduce:animate-none')} />
             {config.label}
-          </Badge>
+          </Chip>
         );
       },
     },

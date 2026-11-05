@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { cn } from '../../lib/cn';
+import { cn } from '../../../lib/cn';
 
 /**
  * Avatar DiceBear "critters" (CC0), dibuat di browser — tidak ada request ke api.dicebear.com.

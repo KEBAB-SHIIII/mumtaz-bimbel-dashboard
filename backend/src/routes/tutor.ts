@@ -12,6 +12,7 @@ import {
 import { authOf, requireRole, tutorIdOf } from '../auth/middleware.js';
 import type { AuthRateLimiters } from '../auth/rate-limit.js';
 import { establishSession } from '../auth/session-helpers.js';
+import { HttpError } from '../lib/http-error.js';
 import { parseInput } from '../lib/validation.js';
 import {
   listAttendanceOptions,
@@ -31,7 +32,13 @@ import { getTutorPayroll } from '../services/payroll-service.js';
  */
 export function tutorRouter(ctx: ServiceContext, limiters: AuthRateLimiters, anomalyQueue: AnomalyQueue) {
   const router = Router();
-  router.use('/tutor', requireRole('tutor'));
+  router.use('/tutor', requireRole('tutor'), (req, _res, next) => {
+    if (authOf(req).mustChangePassword && !(req.method === 'PATCH' && req.path === '/me/password')) {
+      next(new HttpError(403, 'PASSWORD_CHANGE_REQUIRED', 'Ganti password untuk melanjutkan'));
+      return;
+    }
+    next();
+  });
 
   router.get('/tutor/periods', async (req, res) => {
     res.json(await listAvailablePeriods(ctx, { tutorId: tutorIdOf(req) }));

@@ -1,3 +1,4 @@
+import { createFakeBackend } from '../test/fake-api/fake-backend';
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
@@ -32,6 +33,7 @@ describe('Master Data Tutor: akun login tanpa password dari Admin', () => {
 
     const issued = await screen.findByRole('dialog', { name: 'Akun login tutor' });
     expect(within(issued).getByText('dewi')).toBeInTheDocument();
+    expect(screen.getByText('Tutor berhasil ditambahkan')).toBeInTheDocument();
     expect(within(issued).getByText(/Fake-\d{4}-Pass/)).toBeInTheDocument();
     expect(within(issued).getByText(/hanya ditampilkan sekali/)).toBeInTheDocument();
 
@@ -50,6 +52,7 @@ describe('Master Data Tutor: akun login tanpa password dari Admin', () => {
 
     const issued = await screen.findByRole('dialog', { name: 'Akun login tutor' });
     expect(within(issued).getByText('farhan')).toBeInTheDocument();
+    expect(screen.getByText('Password tutor berhasil direset')).toBeInTheDocument();
     expect(within(issued).getByText(/Fake-\d{4}-Pass/)).toBeInTheDocument();
   });
 });
@@ -66,5 +69,61 @@ describe('Sesi dicabut di tengah pemakaian', () => {
 
     expect(await screen.findByRole('heading', { name: 'Masuk Admin / Tutor' })).toBeInTheDocument();
     expect(screen.queryByText('Memuat data…')).not.toBeInTheDocument();
+  });
+});
+
+
+describe('Wajib ganti password melalui Profil', () => {
+  it('login mengunci menu dan membuka dashboard setelah password pribadi disimpan', async () => {
+    useFakeBackend(createFakeBackend({ passwordRequired: true }));
+    renderApp('/login');
+    const user = await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
+    expect(await screen.findByText('Ganti password untuk melanjutkan')).toBeInTheDocument();
+    for (const name of ['Dashboard', 'Form Absensi', 'Riwayat Mengajar', 'Honor Saya', 'Cari menu']) {
+      expect(screen.getByRole('button', { name })).toBeDisabled();
+    }
+    expect(screen.getByRole('link', { name: 'Profil' })).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/^Password saat ini/), TEST_ONLY_CREDENTIALS.tutorPassword);
+    await user.type(screen.getByLabelText(/^Password baru/), 'password-pribadi-123');
+    await user.type(screen.getByLabelText(/^Konfirmasi password baru/), 'berbeda');
+    await user.click(screen.getByRole('button', { name: 'Simpan dan lanjutkan ke Dashboard' }));
+    expect(await screen.findByText('Konfirmasi password tidak sama')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dashboard' })).toBeDisabled();
+    await user.clear(screen.getByLabelText(/^Konfirmasi password baru/));
+    await user.type(screen.getByLabelText(/^Konfirmasi password baru/), 'password-pribadi-123');
+    await user.click(screen.getByRole('button', { name: 'Simpan dan lanjutkan ke Dashboard' }));
+    expect(await screen.findByRole('heading', { name: 'Halo, Farhan!' })).toBeInTheDocument();
+    expect(screen.getByText('Password berhasil diganti')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Tutup notifikasi' }));
+    await waitFor(() => expect(screen.queryByText('Password berhasil diganti')).not.toBeInTheDocument());
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
+  });
+});
+
+
+describe('Validasi password tidak mengeluarkan tutor', () => {
+  it('password pendek dan password saat ini salah tetap di Profil; sesi dicabut kembali ke login', async () => {
+    const backend = useFakeBackend(createFakeBackend({ passwordRequired: true }));
+    renderApp('/login');
+    const user = await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
+    await screen.findByText('Ganti password untuk melanjutkan');
+    await user.type(screen.getByLabelText(/^Password saat ini/), 'password-lama-salah');
+    await user.type(screen.getByLabelText(/^Password baru/), 'short');
+    await user.type(screen.getByLabelText(/^Konfirmasi password baru/), 'short');
+    const submit = screen.getByRole('button', { name: 'Simpan dan lanjutkan ke Dashboard' });
+    await user.click(submit);
+    expect(await screen.findByText('Password baru minimal 6 karakter')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Masuk Admin / Tutor' })).not.toBeInTheDocument();
+    await user.clear(screen.getByLabelText(/^Password baru/));
+    await user.clear(screen.getByLabelText(/^Konfirmasi password baru/));
+    await user.type(screen.getByLabelText(/^Password baru/), 'password-baru-valid');
+    await user.type(screen.getByLabelText(/^Konfirmasi password baru/), 'password-baru-valid');
+    await user.click(submit);
+    expect(await screen.findByText('Password saat ini tidak sesuai')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dashboard' })).toBeDisabled();
+    expect(screen.queryByRole('heading', { name: 'Masuk Admin / Tutor' })).not.toBeInTheDocument();
+    backend.revokeSession();
+    await user.click(submit);
+    expect(await screen.findByRole('heading', { name: 'Masuk Admin / Tutor' })).toBeInTheDocument();
   });
 });

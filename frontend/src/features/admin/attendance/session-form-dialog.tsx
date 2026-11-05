@@ -1,10 +1,11 @@
+import { useNotification } from '../../../components/ui/feedback/notification-provider';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { adminCreateAttendanceRequestSchema, type AdminAttendanceDetail } from '@mumtaz/contracts';
-import { Button } from '../../../components/ui/button';
-import { Modal } from '../../../components/ui/dialog';
-import { ErrorState, InlineAlert, LoadingState } from '../../../components/ui/feedback';
-import { FormField, Select, describedBy } from '../../../components/ui/field';
+import { Button } from '../../../components/ui/actions/button';
+import { Modal } from '../../../components/ui/overlay/dialog';
+import { ErrorState, InlineAlert, LoadingState } from '../../../components/ui/feedback/states';
+import { FormField, Select, describedBy } from '../../../components/ui/forms/field';
 import { toApiError } from '../../../lib/api-error';
 import { applyServerErrors, hasFieldErrors, validateWith } from '../../../lib/form';
 import { queryKeys } from '../../../lib/query-keys';
@@ -24,6 +25,7 @@ import { createAttendance, fetchAdminAttendanceOptions, updateAttendance } from 
  */
 export function SessionFormDialog({ session, onClose }: { session: AdminAttendanceDetail | null; onClose: () => void }) {
   const queryClient = useQueryClient();
+  const notify = useNotification();
   const isEdit = session !== null;
   const options = useQuery({ queryKey: queryKeys.admin.attendanceOptions, queryFn: fetchAdminAttendanceOptions });
   const form = useForm<AttendanceFormValues>({ defaultValues: session ? attendanceValuesOf(session) : EMPTY_ATTENDANCE_VALUES });
@@ -33,6 +35,7 @@ export function SessionFormDialog({ session, onClose }: { session: AdminAttendan
     mutationFn: (payload: ReturnType<typeof adminCreateAttendanceRequestSchema.parse>) =>
       session ? updateAttendance(session.id, payload) : createAttendance(payload),
     onSuccess: (saved) => {
+      notify({ status: 'success', title: isEdit ? 'Absensi berhasil diperbarui' : 'Absensi berhasil ditambahkan' });
       queryClient.setQueryData(queryKeys.admin.attendanceDetail(saved.id), saved);
       void queryClient.invalidateQueries({ queryKey: ['admin'] });
       onClose();

@@ -8,7 +8,7 @@ import {
   verifyPassword,
 } from '../auth/password.js';
 import { tutors, users } from '../db/schema.js';
-import { invalidCredentials, notFound } from '../lib/http-error.js';
+import { invalidCredentials, notFound, validationFailed } from '../lib/http-error.js';
 import type { ServiceContext } from './context.js';
 
 export interface AuthenticatedIdentity {
@@ -26,6 +26,7 @@ async function toAuthUser(ctx: ServiceContext, userId: string): Promise<AuthUser
       role: users.role,
       username: users.username,
       phone: tutors.phone,
+      must_change_password: users.must_change_password,
     })
     .from(users)
     .leftJoin(tutors, eq(tutors.user_id, users.id))
@@ -38,6 +39,7 @@ async function toAuthUser(ctx: ServiceContext, userId: string): Promise<AuthUser
     id: row.id,
     full_name: row.full_name,
     role,
+    must_change_password: row.must_change_password,
     ...(row.username ? { username: row.username } : {}),
     ...(role === 'tutor' ? { phone: row.phone } : {}),
   };
@@ -113,13 +115,14 @@ export async function changePassword(
 ): Promise<{ credentialVersion: number }> {
   const [user] = await ctx.db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user?.password_hash || !(await verifyPassword(user.password_hash, input.current_password))) {
-    throw invalidCredentials();
+    throw validationFailed([{ field: 'current_password', message: 'Password saat ini tidak sesuai' }]);
   }
 
   const [updated] = await ctx.db
     .update(users)
     .set({
       password_hash: await hashPassword(input.new_password),
+      must_change_password: false,
       credential_version: sql`${users.credential_version} + 1`,
       updated_at: ctx.now(),
     })

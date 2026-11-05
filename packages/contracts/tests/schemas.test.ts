@@ -84,9 +84,9 @@ describe('auth', () => {
     expect(loginRequestSchema.safeParse({ username: 'a', password: 'x', role: 'admin' }).success).toBe(false);
   });
 
-  it('ganti password: password baru minimal 8 dan berbeda dari lama', () => {
-    expect(changePasswordRequestSchema.safeParse({ current_password: 'lama-123', new_password: 'baru-12345' }).success).toBe(true);
-    expect(changePasswordRequestSchema.safeParse({ current_password: 'lama-123', new_password: 'pendek' }).success).toBe(false);
+  it('ganti password: password baru minimal 6 dan berbeda dari lama', () => {
+    expect(changePasswordRequestSchema.safeParse({ current_password: 'lama-123', new_password: 'baru12' }).success).toBe(true);
+    expect(changePasswordRequestSchema.safeParse({ current_password: 'lama-123', new_password: 'short' }).success).toBe(false);
     const same = changePasswordRequestSchema.safeParse({ current_password: 'sama-12345', new_password: 'sama-12345' });
     expect(same.success).toBe(false);
     expect(same.error?.issues[0]?.path).toEqual(['new_password']);

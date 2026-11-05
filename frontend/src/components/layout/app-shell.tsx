@@ -4,13 +4,13 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { ROLE_LABEL, useLogoutMutation, useSession } from '../../features/auth/session';
 import { cn } from '../../lib/cn';
-import { PageSkeleton } from '../ui/skeleton';
+import { PageSkeleton } from '../ui/feedback/skeleton';
 import { RouteSkeletonContent } from './route-skeleton';
-import { AccountMenu } from './account-menu';
-import { HeaderSlotContext } from './header-slot';
-import { NavSearch } from './nav-search';
-import { Sidebar } from './sidebar';
-import { useSidebarCollapsed } from './use-sidebar-collapsed';
+import { AccountMenu } from './header/account-menu';
+import { HeaderSlotContext } from './header/header-slot';
+import { NavSearch } from './header/nav-search';
+import { Sidebar } from './sidebar/sidebar';
+import { useSidebarCollapsed } from './sidebar/use-sidebar-collapsed';
 
 /** Sama dengan breakpoint `lg` Tailwind: di atasnya sidebar tetap, di bawahnya drawer. */
 const DESKTOP_QUERY = '(min-width: 64rem)';
@@ -50,6 +50,7 @@ export function AppShell() {
   if (!user) return null;
 
   const sidebarProps = {
+    passwordRequired: user.role === 'tutor' && Boolean(user.must_change_password),
     role: user.role,
     userId: user.id,
     fullName: user.full_name,
@@ -108,14 +109,16 @@ export function AppShell() {
               className="min-w-0 flex-1 empty:before:block empty:before:h-6 empty:before:w-40 empty:before:animate-pulse-soft empty:before:rounded-md empty:before:bg-surface-muted motion-reduce:empty:before:animate-none"
             />
             <div ref={setActionsSlot} className="hidden items-center gap-2 lg:flex lg:empty:hidden" />
-            <NavSearch role={user.role} />
+            {sidebarProps.passwordRequired ? (
+              <button type="button" disabled aria-label="Cari menu" title="Ganti password di Profil untuk membuka pencarian menu" className="rounded-md border border-border px-3 py-2 text-sm text-muted opacity-60">Cari menu…</button>
+            ) : <NavSearch role={user.role} />}
             <AccountMenu userId={user.id} fullName={user.full_name} role={user.role} roleLabel={ROLE_LABEL[user.role]} onLogout={handleLogout} />
           </header>
 
           <main id="main" tabIndex={-1} className="flex flex-1 flex-col px-4 pb-8 focus:outline-none sm:px-6 lg:ps-2 lg:pe-4">
             <div className="mx-auto lg:ms-0 flex w-full max-w-[90rem] flex-1 flex-col gap-4 lg:rounded-xl lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-sm">
               {/* Pindah halaman: isi frame memudar + naik 6px (keyframe), sidebar & header diam. */}
-              <div key={location.pathname} className="flex flex-1 flex-col gap-4 animate-fade-up motion-reduce:animate-none">
+              <div key={location.pathname} className="flex flex-1 flex-col gap-4">
                 <Suspense
                   fallback={
                     <PageSkeleton>

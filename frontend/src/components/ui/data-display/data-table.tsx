@@ -2,10 +2,10 @@ import { flexRender, getCoreRowModel, useReactTable, type ColumnDef, type Header
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { m } from 'motion/react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { cn } from '../../lib/cn';
-import { MOBILE_QUERY, useMediaQuery } from '../../lib/use-media-query';
-import { AnimatedList, itemEnter } from './animated-list';
-import { Button } from './button';
+import { cn } from '../../../lib/cn';
+import { MOBILE_QUERY, useMediaQuery } from '../../../hooks/use-media-query';
+import { AnimatedList, itemEnter } from '../motion/animated-list';
+import { Button } from '../actions/button';
 
 declare module '@tanstack/react-table' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature wajib sama dengan deklarasi TanStack.

@@ -1,16 +1,17 @@
+import { useNotification } from '../../../components/ui/feedback/notification-provider';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { GRADE_OPTIONS, createStudentRequestSchema, updateStudentRequestSchema, type Student } from '@mumtaz/contracts';
-import { Button } from '../../../components/ui/button';
-import { DataTable } from '../../../components/ui/data-table';
-import { Modal } from '../../../components/ui/dialog';
-import { EmptyState, ErrorState, NoResultsState, InlineAlert } from '../../../components/ui/feedback';
-import { FormField, Input, Select, describedBy } from '../../../components/ui/field';
-import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/skeleton';
-import { Card } from '../../../components/ui/layout-primitives';
+import { Button } from '../../../components/ui/actions/button';
+import { DataTable } from '../../../components/ui/data-display/data-table';
+import { Modal } from '../../../components/ui/overlay/dialog';
+import { EmptyState, ErrorState, NoResultsState, InlineAlert } from '../../../components/ui/feedback/states';
+import { FormField, Input, Select, describedBy } from '../../../components/ui/forms/field';
+import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/feedback/skeleton';
+import { Card } from '../../../components/ui/surfaces/layout-primitives';
 import { toApiError } from '../../../lib/api-error';
 import { queryKeys } from '../../../lib/query-keys';
 import { createMasterData, updateMasterData } from '../api';
@@ -28,6 +29,7 @@ interface StudentFormValues {
 
 function StudentFormDialog({ student, open, onClose }: { student: Student | null; open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
+  const notify = useNotification();
   const isEdit = student !== null;
   const form = useForm<StudentFormValues>({
     values: {
@@ -42,6 +44,7 @@ function StudentFormDialog({ student, open, onClose }: { student: Student | null
   const mutation = useMutation({
     mutationFn: (body: object) => (isEdit ? updateMasterData('students', student.id, body) : createMasterData('students', body)),
     onSuccess: () => {
+      notify({ status: 'success', title: isEdit ? 'Siswa berhasil diperbarui' : 'Siswa berhasil ditambahkan' });
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.masterDataAll('students') });
       onClose();
     },

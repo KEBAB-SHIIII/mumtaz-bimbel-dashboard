@@ -1,8 +1,8 @@
 import { CircleAlert, CircleCheck, Inbox, Info, LoaderCircle, RotateCcw, SearchX, TriangleAlert, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { toApiError } from '../../lib/api-error';
-import { cn } from '../../lib/cn';
-import { Button } from './button';
+import { toApiError } from '../../../lib/api-error';
+import { cn } from '../../../lib/cn';
+import { Button } from '../actions/button';
 
 export function LoadingState({ label = 'Memuat data…', className }: { label?: string; className?: string }) {
   return (

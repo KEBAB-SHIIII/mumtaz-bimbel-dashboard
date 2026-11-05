@@ -2,10 +2,10 @@ import { CalendarCheck, CalendarClock, HandCoins, Landmark, Wallet } from 'lucid
 import type { ReactNode } from 'react';
 import { SessionDisclosure } from './session-disclosure';
 import type { PayrollPreviewResponse, PayrollTutorSummary, TutorPayrollResponse } from '@mumtaz/contracts';
-import { Avatar } from '../../components/ui/avatar';
-import { ValidityBadge } from '../../components/ui/badge';
-import { EmptyState, InlineAlert } from '../../components/ui/feedback';
-import { Card, StatCard } from '../../components/ui/layout-primitives';
+import { Avatar } from '../../components/ui/data-display/avatar';
+import { ValidityBadge } from '../../components/ui/data-display/status-badge';
+import { EmptyState, InlineAlert } from '../../components/ui/feedback/states';
+import { Card, StatCard } from '../../components/ui/surfaces/layout-primitives';
 import { cn } from '../../lib/cn';
 import { formatDuration, formatLessonDate, formatPeriod, formatRupiah } from '../../lib/format';
 
@@ -50,7 +50,7 @@ function SessionLines({ caption, rows, amountLabel }: { caption: string; rows: S
               <td>{line.student_name}</td>
               <td>{line.subject_name}</td>
               <td className="whitespace-nowrap">{formatDuration(line.duration_minutes)}</td>
-              <td><ValidityBadge validity={line.validity} size="sm" /></td>
+              <td><ValidityBadge validity={line.validity} variant="caption" /></td>
               <td className="text-end whitespace-nowrap"><AmountCell amount={line.amount} counted={line.counted} /></td>
             </tr>
           ))}

@@ -6,7 +6,7 @@ import { roleSchema } from './enums.js';
  * Panjang minimal password baru. Working default teknis; docs/04 menyebut
  * "panjang minimal dikonfigurasi" sehingga backend boleh menaikkannya.
  */
-export const PASSWORD_MIN_LENGTH = 8;
+export const PASSWORD_MIN_LENGTH = 6;
 const PASSWORD_MAX_LENGTH = 256;
 
 export const usernameSchema = z
@@ -45,6 +45,7 @@ export const authUserSchema = z.strictObject({
   /** Admin/Tutor saja; untuk tab Profil Tutor (read-only). */
   username: z.string().optional(),
   phone: z.string().nullable().optional(),
+  must_change_password: z.boolean().optional(),
 });
 export type AuthUser = z.infer<typeof authUserSchema>;
 
@@ -61,7 +62,7 @@ export type MeResponse = z.infer<typeof meResponseSchema>;
 export const changePasswordRequestSchema = z
   .strictObject({
     current_password: z.string().min(1).max(PASSWORD_MAX_LENGTH),
-    new_password: z.string().min(PASSWORD_MIN_LENGTH).max(PASSWORD_MAX_LENGTH),
+    new_password: z.string().min(PASSWORD_MIN_LENGTH, `Password baru minimal ${PASSWORD_MIN_LENGTH} karakter`).max(PASSWORD_MAX_LENGTH),
   })
   .refine((body) => body.current_password !== body.new_password, {
     path: ['new_password'],

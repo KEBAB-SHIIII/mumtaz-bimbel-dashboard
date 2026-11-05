@@ -1,27 +1,26 @@
-import { lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import { AppShell } from '../components/layout/app-shell';
 import { ParentLoginPage, StaffLoginPage } from '../features/auth/login-pages';
 import { HomeRedirect, RequireRole } from '../features/auth/require-role';
 import { NotFoundPage } from './not-found-page';
 
-// Code splitting per halaman: tiap role hanya mengunduh halamannya sendiri.
-const AttendancePage = lazy(() => import('../features/admin/attendance/attendance-page').then((m) => ({ default: m.AttendancePage })));
-const AdminDashboardPage = lazy(() => import('../features/admin/dashboard/admin-dashboard-page').then((m) => ({ default: m.AdminDashboardPage })));
-const MasterDataLayout = lazy(() => import('../features/admin/master-data/master-data-shared').then((m) => ({ default: m.MasterDataLayout })));
-const ParentsPage = lazy(() => import('../features/admin/master-data/parents-page').then((m) => ({ default: m.ParentsPage })));
-const StudentsPage = lazy(() => import('../features/admin/master-data/students-page').then((m) => ({ default: m.StudentsPage })));
-const SubjectsPage = lazy(() => import('../features/admin/master-data/subjects-page').then((m) => ({ default: m.SubjectsPage })));
-const TutorsPage = lazy(() => import('../features/admin/master-data/tutors-page').then((m) => ({ default: m.TutorsPage })));
-const AdminPayrollPage = lazy(() => import('../features/admin/payroll/payroll-page').then((m) => ({ default: m.AdminPayrollPage })));
-const BillingPage = lazy(() => import('../features/admin/billing/billing-page').then((m) => ({ default: m.BillingPage })));
-const ParentDashboardPage = lazy(() => import('../features/parent/parent-pages').then((m) => ({ default: m.ParentDashboardPage })));
-const ParentHistoryPage = lazy(() => import('../features/parent/parent-pages').then((m) => ({ default: m.ParentHistoryPage })));
-const AttendanceFormPage = lazy(() => import('../features/tutor/attendance-form-page').then((m) => ({ default: m.AttendanceFormPage })));
-const TutorDashboardPage = lazy(() => import('../features/tutor/tutor-dashboard-page').then((m) => ({ default: m.TutorDashboardPage })));
-const TutorHistoryPage = lazy(() => import('../features/tutor/tutor-history-page').then((m) => ({ default: m.TutorHistoryPage })));
-const TutorPayrollPage = lazy(() => import('../features/tutor/tutor-payroll-page').then((m) => ({ default: m.TutorPayrollPage })));
-const TutorProfilePage = lazy(() => import('../features/tutor/tutor-profile-page').then((m) => ({ default: m.TutorProfilePage })));
+// Halaman tersedia langsung agar loading modul tidak mendahului skeleton data.
+import { AttendancePage } from '../features/admin/attendance/attendance-page';
+import { AdminDashboardPage } from '../features/admin/dashboard/admin-dashboard-page';
+import { MasterDataLayout } from '../features/admin/master-data/master-data-shared';
+import { ParentsPage } from '../features/admin/master-data/parents-page';
+import { StudentsPage } from '../features/admin/master-data/students-page';
+import { SubjectsPage } from '../features/admin/master-data/subjects-page';
+import { TutorsPage } from '../features/admin/master-data/tutors-page';
+import { AdminPayrollPage } from '../features/admin/payroll/payroll-page';
+import { BillingPage } from '../features/admin/billing/billing-page';
+import { ParentDashboardPage } from '../features/parent/parent-pages';
+import { ParentHistoryPage } from '../features/parent/parent-pages';
+import { AttendanceFormPage } from '../features/tutor/attendance-form-page';
+import { TutorDashboardPage } from '../features/tutor/tutor-dashboard-page';
+import { TutorHistoryPage } from '../features/tutor/tutor-history-page';
+import { TutorPayrollPage } from '../features/tutor/tutor-payroll-page';
+import { TutorProfilePage } from '../features/tutor/tutor-profile-page';
 
 /**
  * Tiga entry route role (docs/15): `/admin`, `/tutor`, `/orang-tua-murid`,

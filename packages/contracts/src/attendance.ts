@@ -216,6 +216,8 @@ export const adminAttendanceListQuerySchema = paginationQuerySchema.extend({
   /** `unvalidated` = belum ada label validitas. */
   validity: z.union([sessionValiditySchema, z.literal('unvalidated')]).optional(),
   anomaly_status: anomalyAnalysisStatusSchema.optional(),
+  /** Sesi dengan setidaknya satu temuan yang belum digantikan revisi. */
+  has_anomaly: z.literal('true').optional(),
   search: z.string().trim().max(100).optional(),
 });
 export type AdminAttendanceListQuery = z.infer<typeof adminAttendanceListQuerySchema>;

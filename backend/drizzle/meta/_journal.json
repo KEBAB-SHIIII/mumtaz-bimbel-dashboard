@@ -50,6 +50,13 @@
       "when": 1793528030504,
       "tag": "0006_drop_session_subject_id",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793803348380,
+      "tag": "0007_redundant_dreadnoughts",
+      "breakpoints": true
     }
   ]
 }

@@ -40,6 +40,7 @@ export const users = pgTable(
     username: varchar('username', { length: 64 }),
     email: varchar('email', { length: 254 }),
     password_hash: text('password_hash'),
+    must_change_password: boolean('must_change_password').notNull().default(false),
     parent_access_code_hash: char('parent_access_code_hash', { length: 64 }),
     role: varchar('role', { length: 16 }).notNull(),
     is_active: boolean('is_active').notNull().default(true),

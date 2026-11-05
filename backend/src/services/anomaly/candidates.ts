@@ -11,9 +11,6 @@ export const MAX_COMPARISONS = 30;
 
 const sameSubjects = (a: AnomalySessionSnapshot, b: AnomalySessionSnapshot) =>
   a.subject_ids.length === b.subject_ids.length && a.subject_ids.every((id, index) => id === b.subject_ids[index]);
-const sharesSubject = (a: AnomalySessionSnapshot, b: AnomalySessionSnapshot) =>
-  a.subject_ids.some((id) => b.subject_ids.includes(id));
-
 const byEarliest = (a: AnomalySessionSnapshot, b: AnomalySessionSnapshot) =>
   a.submitted_at.localeCompare(b.submitted_at) || a.id.localeCompare(b.id);
 
@@ -38,7 +35,12 @@ export function generateCandidates(
       other.student_id === target.student_id &&
       sameSubjects(other, target) &&
       other.lesson_date === target.lesson_date &&
-      other.duration_minutes === target.duration_minutes,
+      other.duration_minutes === target.duration_minutes &&
+      target.start_time !== null && other.start_time === target.start_time &&
+      target.end_time != null && other.end_time === target.end_time &&
+      target.learning_material !== undefined && other.learning_material === target.learning_material &&
+      other.learning_notes === target.learning_notes &&
+      other.next_focus === target.next_focus,
   );
   if (exact) {
     candidates.push({
@@ -47,23 +49,6 @@ export function generateCandidates(
       related_lesson_session_id: exact.id,
       default_severity: 'medium',
     });
-  } else {
-    // Murid & mapel (beririsan) sama pada tanggal sama yang dicatat tutor lain.
-    const sameStudent = earlier.find(
-      (other) =>
-        other.tutor_id !== target.tutor_id &&
-        other.student_id === target.student_id &&
-        sharesSubject(other, target) &&
-        other.lesson_date === target.lesson_date,
-    );
-    if (sameStudent) {
-      candidates.push({
-        finding_type: 'suspected_duplicate',
-        signal: 'same_student_subject_date',
-        related_lesson_session_id: sameStudent.id,
-        default_severity: 'low',
-      });
-    }
   }
 
   if (target.duration_minutes > config.durationOutlierMinutes) {
@@ -75,7 +60,7 @@ export function generateCandidates(
     });
   }
 
-  if (target.start_time !== null && target.start_time > config.lateStartAfter) {
+  if (target.start_time !== null && target.start_time >= config.lateStartAfter) {
     candidates.push({
       finding_type: 'late_start',
       signal: 'start_after_threshold',

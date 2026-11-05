@@ -1,16 +1,17 @@
+import { useNotification } from '../../../components/ui/feedback/notification-provider';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Check, Copy, KeyRound, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { createTutorRequestSchema, updateTutorRequestSchema, type Tutor, type TutorCredentialIssued } from '@mumtaz/contracts';
-import { Button } from '../../../components/ui/button';
-import { DataTable } from '../../../components/ui/data-table';
-import { ConfirmDialog, Modal } from '../../../components/ui/dialog';
-import { EmptyState, ErrorState, NoResultsState, InlineAlert } from '../../../components/ui/feedback';
-import { FormField, Input, describedBy } from '../../../components/ui/field';
-import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/skeleton';
-import { Card } from '../../../components/ui/layout-primitives';
+import { Button } from '../../../components/ui/actions/button';
+import { DataTable } from '../../../components/ui/data-display/data-table';
+import { ConfirmDialog, Modal } from '../../../components/ui/overlay/dialog';
+import { EmptyState, ErrorState, NoResultsState, InlineAlert } from '../../../components/ui/feedback/states';
+import { FormField, Input, describedBy } from '../../../components/ui/forms/field';
+import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/feedback/skeleton';
+import { Card } from '../../../components/ui/surfaces/layout-primitives';
 import { toApiError } from '../../../lib/api-error';
 import { queryKeys } from '../../../lib/query-keys';
 import { createTutor, resetTutorPassword, updateMasterData } from '../api';
@@ -42,7 +43,7 @@ function TemporaryPasswordDialog({ issued, onClose }: { issued: TutorCredentialI
     >
       <div className="flex flex-col gap-4">
         <InlineAlert tone="warning" title="Salin dan sampaikan sekarang">
-          Setelah dialog ditutup password tidak dapat dilihat lagi. Sampaikan ke tutor secara pribadi; tutor dapat menggantinya di menu Profil. Jika lupa, gunakan Reset password.
+          Setelah dialog ditutup password tidak dapat dilihat lagi. Sampaikan ke tutor secara pribadi; tutor wajib menggantinya di menu Profil setelah login sebelum menggunakan menu lainnya. Jika lupa, gunakan Reset password.
         </InlineAlert>
         <dl className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 text-sm">
           <dt className="text-muted">Username</dt>
@@ -68,6 +69,7 @@ function TemporaryPasswordDialog({ issued, onClose }: { issued: TutorCredentialI
 
 function TutorFormDialog({ tutor, open, onClose, onIssued }: { tutor: Tutor | null; open: boolean; onClose: () => void; onIssued: (issued: TutorCredentialIssued) => void }) {
   const queryClient = useQueryClient();
+  const notify = useNotification();
   const isEdit = tutor !== null;
   const form = useForm<TutorFormValues>({
     values: {
@@ -89,6 +91,7 @@ function TutorFormDialog({ tutor, open, onClose, onIssued }: { tutor: Tutor | nu
       return createTutor(body);
     },
     onSuccess: (issued) => {
+      notify({ status: 'success', title: isEdit ? 'Tutor berhasil diperbarui' : 'Tutor berhasil ditambahkan' });
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.masterDataAll('tutors') });
       onClose();
       // Tutor baru: password acak dari sistem ditampilkan sekali.
@@ -162,12 +165,14 @@ export function TutorsPage() {
   const [editing, setEditing] = useState<Tutor | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const queryClient = useQueryClient();
+  const notify = useNotification();
   const [resetting, setResetting] = useState<Tutor | null>(null);
   const [issued, setIssued] = useState<TutorCredentialIssued | null>(null);
 
   const reset = useMutation({
     mutationFn: (id: string) => resetTutorPassword(id),
     onSuccess: (result) => {
+      notify({ status: 'success', title: 'Password tutor berhasil direset', description: 'Sampaikan kredensial baru kepada tutor secara pribadi.' });
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.masterDataAll('tutors') });
       setResetting(null);
       setIssued(result);

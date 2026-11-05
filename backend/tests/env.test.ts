@@ -18,7 +18,7 @@ describe('parseEnv', () => {
 
     expect(env.PORT).toBe(3001);
     expect(env.API_PREFIX).toBe('/api/v1');
-    expect(env.SESSION_IDLE_TIMEOUT_MINUTES).toBe(480);
+    expect(env.SESSION_IDLE_TIMEOUT_MINUTES).toBe(10080);
     expect(env.AUTH_RATE_LIMIT_MAX).toBe(5);
     expect(env.AUTH_RATE_LIMIT_WINDOW_MINUTES).toBe(15);
     expect(env.ANOMALY_DURATION_OUTLIER_MINUTES).toBe(180);
@@ -105,7 +105,7 @@ describe('buildSessionConfig', () => {
   it('memakai cookie HttpOnly + SameSite=Lax, Secure mengikuti protokol origin (bukan NODE_ENV)', () => {
     const dev = buildSessionConfig(makeTestEnv());
     expect(dev.cookie).toMatchObject({ httpOnly: true, sameSite: 'lax', secure: false });
-    expect(dev.cookie.maxAge).toBe(480 * 60 * 1000);
+    expect(dev.cookie.maxAge).toBe(10080 * 60 * 1000);
     expect(dev.tableName).toBe('app_sessions');
     expect(dev.saveUninitialized).toBe(false);
 

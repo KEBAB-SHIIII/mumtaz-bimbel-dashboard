@@ -15,6 +15,11 @@ export interface AnomalySessionSnapshot {
   lesson_date: string;
   /** "HH:MM"; `null` untuk sesi lama tanpa jam. */
   start_time: string | null;
+  /** Data isi hanya untuk pencocokan lokal, tidak dikirim ke model. */
+  end_time?: string | null;
+  learning_material?: string;
+  learning_notes?: string | null;
+  next_focus?: string | null;
   duration_minutes: number;
   submitted_at: string;
 }
@@ -37,7 +42,7 @@ export interface AnomalyCandidate {
 export interface AnomalyDetectionConfig {
   /** `ANOMALY_DURATION_OUTLIER_MINUTES` — durasi di atas ini Perlu revisi (revisi PM: > 180 menit). */
   durationOutlierMinutes: number;
-  /** Les yang dimulai SETELAH jam ini Perlu revisi (revisi PM: di atas 21.00). */
+  /** Les yang dimulai PADA ATAU SETELAH jam ini Perlu revisi (revisi PM: mulai 21.00). */
   lateStartAfter: string;
 }
 

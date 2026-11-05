@@ -83,7 +83,7 @@ describe('login Admin/Tutor (username + password)', () => {
     expect(body.csrf_token).not.toBe(anonymousToken);
     expect(sessionCookie(res)).toBeDefined();
     expect(sessionCookie(res)).not.toBe(anonymousCookie);
-    expect(JSON.stringify(res.body)).not.toMatch(/hash|password/i);
+    expect(JSON.stringify(res.body)).not.toMatch(/password_hash|temporary_password/i);
   });
 
   it('username tak dikenal dan password salah → pesan generik identik (401)', async () => {
@@ -110,6 +110,7 @@ describe('login Admin/Tutor (username + password)', () => {
     const body = meResponseSchema.parse(res.body);
     expect(body.user).toEqual({
       id: USER_IDS.tutorA,
+      must_change_password: false,
       full_name: 'Farhan',
       role: 'tutor',
       username: 'farhan',
@@ -134,6 +135,7 @@ describe('login Orang Tua (satu ID Akses)', () => {
     expect(res.status).toBe(200);
     expect(loginResponseSchema.parse(res.body).user).toEqual({
       id: USER_IDS.parentA,
+      must_change_password: false,
       full_name: 'Sari',
       role: 'parent',
     });
@@ -199,10 +201,12 @@ describe('rate limit autentikasi', () => {
 });
 
 describe('PATCH /tutor/me/password (tab Profil)', () => {
-  it('password lama salah → 401; sama dengan lama → 422', async () => {
+  it('password lama salah atau sama dengan lama → 422', async () => {
     const tutor = await as.tutorB(t.app);
     const wrong = await tutor.patch('/tutor/me/password', { current_password: 'salah', new_password: 'password-baru-123' });
-    expect(wrong.status).toBe(401);
+    expect(wrong.status).toBe(422);
+    expect(wrong.body.error.details[0].field).toBe('current_password');
+    await tutor.get('/auth/me').expect(200);
     const same = await tutor.patch('/tutor/me/password', {
       current_password: TEST_ONLY_CREDENTIALS.tutorPassword,
       new_password: TEST_ONLY_CREDENTIALS.tutorPassword,
@@ -242,5 +246,39 @@ describe('PATCH /tutor/me/password (tab Profil)', () => {
     const admin = await as.admin(t.app);
     const res = await admin.patch('/tutor/me/password', { current_password: 'a', new_password: 'b'.repeat(10) });
     expect(res.status).toBe(403);
+  });
+});
+
+
+describe('Kewajiban password pribadi', () => {
+  it('akun baru dibatasi sampai password diganti; reset admin mengunci kembali', async () => {
+    const isolated = await createTestApp();
+    try {
+      const admin = await as.admin(isolated.app);
+      const created = await admin.post('/admin/tutors', { full_name: 'Tutor Baru', username: 'tutor.baru' }).expect(201);
+      const { tutor, temporary_password } = created.body;
+      const client = await new TestClient(isolated.app).login('tutor.baru', temporary_password);
+      expect((await client.get('/auth/me')).body.user.must_change_password).toBe(true);
+      for (const path of ['/tutor/dashboard/summary', '/tutor/periods', '/tutor/attendance-options', '/tutor/me/attendance', '/tutor/me/payroll']) {
+        const denied = await client.get(path).expect(403);
+        expect(errorCode(denied.body)).toBe('PASSWORD_CHANGE_REQUIRED');
+      }
+      await client.post('/tutor/attendance', {}).expect(403);
+      await client.patch('/tutor/me/password', { current_password: 'wrong', new_password: 'personal-password-123' }).expect(422);
+      expect((await client.get('/auth/me')).body.user.must_change_password).toBe(true);
+      const changed = await client.patch('/tutor/me/password', { current_password: temporary_password, new_password: 'personal-password-123' }).expect(200);
+      client.csrf = changed.body.csrf_token;
+      expect((await client.get('/auth/me')).body.user.must_change_password).toBe(false);
+      await client.get('/tutor/periods').expect(200);
+      await client.post('/auth/logout').expect(204);
+      await client.login('tutor.baru', 'personal-password-123');
+      expect((await client.get('/auth/me')).body.user.must_change_password).toBe(false);
+      const reset = await admin.post('/admin/tutors/' + tutor.id + '/reset-password').expect(200);
+      await client.get('/auth/me').expect(401);
+      await client.login('tutor.baru', reset.body.temporary_password);
+      expect((await client.get('/auth/me')).body.user.must_change_password).toBe(true);
+      await client.get('/tutor/periods').expect(403);
+      await client.post('/auth/logout').expect(204);
+    } finally { await isolated.close(); }
   });
 });

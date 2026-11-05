@@ -12,7 +12,7 @@ export const CSRF_HEADER = 'X-CSRF-Token';
 
 const MUTATING_METHODS = new Set(['post', 'put', 'patch', 'delete']);
 /** Endpoint yang 401-nya adalah hasil normal (bukan sesi kedaluwarsa). */
-const AUTH_PROBE_PATHS = ['/auth/me', '/auth/login', '/auth/parent-access', '/tutor/me/password'];
+const AUTH_PROBE_PATHS = ['/auth/me', '/auth/login', '/auth/parent-access'];
 
 let csrfToken: string | null = null;
 
@@ -34,6 +34,12 @@ export function attachCsrfHeader(config: InternalAxiosRequestConfig): InternalAx
 
 type UnauthenticatedListener = () => void;
 const unauthenticatedListeners = new Set<UnauthenticatedListener>();
+const passwordRequiredListeners = new Set<UnauthenticatedListener>();
+
+export function onPasswordChangeRequired(listener: UnauthenticatedListener): () => void {
+  passwordRequiredListeners.add(listener);
+  return () => passwordRequiredListeners.delete(listener);
+}
 
 export function onUnauthenticated(listener: UnauthenticatedListener): () => void {
   unauthenticatedListeners.add(listener);
@@ -70,6 +76,10 @@ apiClient.interceptors.response.use(undefined, async (error: unknown) => {
     config._csrfRetried = true;
     await refreshCsrfToken();
     return apiClient.request(config);
+  }
+
+  if (status === 403 && code === 'PASSWORD_CHANGE_REQUIRED') {
+    for (const listener of passwordRequiredListeners) listener();
   }
 
   if (status === 401 && !AUTH_PROBE_PATHS.some((path) => config.url?.startsWith(path))) {

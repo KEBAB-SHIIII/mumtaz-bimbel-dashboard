@@ -27,6 +27,7 @@ export function loadAuth(ctx: ServiceContext): RequestHandler {
         full_name: users.full_name,
         is_active: users.is_active,
         credential_version: users.credential_version,
+        must_change_password: users.must_change_password,
         tutor_id: tutors.id,
         tutor_active: tutors.is_active,
       })
@@ -47,6 +48,7 @@ export function loadAuth(ctx: ServiceContext): RequestHandler {
       fullName: row.full_name,
       tutorId: row.tutor_id,
       tutorActive: row.tutor_active ?? false,
+      mustChangePassword: row.must_change_password,
     };
     next();
   };

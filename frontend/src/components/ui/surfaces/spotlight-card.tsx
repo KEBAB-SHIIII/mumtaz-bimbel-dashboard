@@ -4,7 +4,7 @@
  * re-render React), cahaya `primary-subtle` hanya di perangkat ber-mouse. docs/design/04-components.md.
  */
 import type { HTMLAttributes, PointerEvent } from 'react';
-import { cn } from '../../lib/cn';
+import { cn } from '../../../lib/cn';
 
 /**
  * Cahaya dekoratif di bawah konten (z -1 dalam `isolate`); teks tetap di atas latar terang sehingga

@@ -76,12 +76,13 @@ function demoId(prefix: string, n: number) {
 }
 
 /** State in-memory; `createFakeBackend()` membuat salinan bersih (mis. per test). */
-export function createFakeBackend(options: { now?: () => Date } = {}) {
+export function createFakeBackend(options: { now?: () => Date; passwordRequired?: boolean } = {}) {
   const now = options.now ?? (() => new Date());
   let counter = 1000;
   const nextId = (prefix: string) => demoId(prefix, (counter += 1));
 
   const users = fixtureUsers.map((u) => ({ ...u }));
+  const passwordRequired = new Set<string>(options.passwordRequired ? users.filter((u) => u.role === 'tutor').map((u) => u.id) : []);
   const passwords = new Map<string, string>(
     users
       .filter((u) => u.role !== 'parent')
@@ -218,6 +219,7 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
       id: user.id,
       full_name: user.full_name,
       role: user.role,
+      must_change_password: passwordRequired.has(user.id),
       ...(user.username ? { username: user.username } : {}),
       ...(user.role === 'tutor' ? { phone: tutor?.phone ?? null } : {}),
     };
@@ -490,11 +492,11 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
       /^\/admin\/attendance$/,
       (req) => {
         requireRole('admin');
-        const { status, validity, anomaly_status, tutor_id, student_id, subject_id, search } = req.params;
+        const { status, validity, anomaly_status, has_anomaly, tutor_id, student_id, subject_id, search } = req.params;
         const validityMatches = (v: SessionValidity | null) => !validity || (validity === 'unvalidated' ? v === null : v === validity);
         const rows = inPeriod(req.params.period ?? '')
           .map(toListItem)
-          .filter((i) => (!status || i.status === status) && validityMatches(i.validity) && (!anomaly_status || i.anomaly_analysis_status === anomaly_status) && (!tutor_id || i.tutor_id === tutor_id) && (!student_id || i.student_id === student_id) && (!subject_id || i.subject_ids.includes(subject_id)))
+          .filter((i) => (has_anomaly !== 'true' || i.findings.some((f) => f.review_status !== 'superseded')) && (!status || i.status === status) && validityMatches(i.validity) && (!anomaly_status || i.anomaly_analysis_status === anomaly_status) && (!tutor_id || i.tutor_id === tutor_id) && (!student_id || i.student_id === student_id) && (!subject_id || i.subject_ids.includes(subject_id)))
           .filter((i) => !search || [i.tutor_name, i.student_name, i.subject_name].some((v) => matches(v, search)))
           .sort((a, b) => b.lesson_date.localeCompare(a.lesson_date) || b.submitted_at.localeCompare(a.submitted_at));
         return ok(paginate(rows, req.params));
@@ -841,8 +843,9 @@ export function createFakeBackend(options: { now?: () => Date } = {}) {
       /^\/tutor\/me\/password$/,
       (req) => {
         const user = requireRole('tutor');
-        if (passwords.get(user.id) !== req.body.current_password) throw new FakeError(401, 'UNAUTHENTICATED', 'Kredensial tidak valid');
+        if (passwords.get(user.id) !== req.body.current_password) throw new FakeError(422, 'VALIDATION_FAILED', 'Password saat ini tidak sesuai');
         passwords.set(user.id, String(req.body.new_password));
+        passwordRequired.delete(user.id);
         csrfToken = `demo-csrf-${user.id}-rotated`;
         return ok({ csrf_token: csrfToken });
       },

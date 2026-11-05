@@ -20,6 +20,7 @@ export interface AuthContext {
   /** Hanya untuk role tutor. */
   tutorId: string | null;
   tutorActive: boolean;
+  mustChangePassword: boolean;
 }
 
 declare global {

@@ -1,16 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, CalendarCheck, CircleCheck, Clock, NotebookPen, PencilLine, Wallet } from 'lucide-react';
 import { Link } from 'react-router';
-import { AnimatedList } from '../../components/ui/animated-list';
-import { StatusBadge } from '../../components/ui/badge';
-import { EmptyState, InlineAlert } from '../../components/ui/feedback';
-import { Card, PageHeader, StatCard } from '../../components/ui/layout-primitives';
-import { PeriodSelector } from '../../components/ui/period-selector';
-import { QueryView } from '../../components/ui/query-view';
-import { SkeletonCardList, SkeletonStatCards } from '../../components/ui/skeleton';
+import { AnimatedList } from '../../components/ui/motion/animated-list';
+import { StatusBadge } from '../../components/ui/data-display/status-badge';
+import { EmptyState, InlineAlert } from '../../components/ui/feedback/states';
+import { Card, PageHeader, StatCard } from '../../components/ui/surfaces/layout-primitives';
+import { PeriodSelector } from '../../components/ui/forms/period-selector';
+import { QueryView } from '../../components/ui/feedback/query-view';
+import { RecentSessionsSkeleton, SkeletonStatCards } from '../../components/ui/feedback/skeleton';
 import { useCurrentUser } from '../auth/session';
 import { formatDuration, formatLessonDate, formatPeriod, formatRupiah } from '../../lib/format';
-import { usePeriodParam } from '../../lib/period';
+import { usePeriodParam } from '../../hooks/use-period-param';
 import { queryKeys } from '../../lib/query-keys';
 import { fetchTutorAttendance, fetchTutorDashboard } from './api';
 
@@ -112,7 +112,7 @@ export function TutorDashboardPage() {
           </Link>
         }
       >
-        <QueryView query={recent} skeleton={<SkeletonCardList count={3} />} className="flex flex-col" framed={false}>
+        <QueryView query={recent} skeleton={<RecentSessionsSkeleton />} className="flex flex-col" framed={false}>
           {(data) =>
             data.items.length === 0 ? (
               <EmptyState

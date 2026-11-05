@@ -1,5 +1,5 @@
 import type { AnomalyFinding, FindingType } from '@mumtaz/contracts';
-import { Badge } from '../../../components/ui/badge';
+import { Chip } from '../../../components/ui/data-display/chip';
 
 /** Penjelasan jenis anomali (kolom "Temuan" di Data Absensi). */
 export const FINDING_LABEL: Record<FindingType, string> = {
@@ -33,7 +33,7 @@ export function FindingList({ findings }: { findings: AnomalyFinding[] }) {
           {active.map((finding) => (
             <li key={finding.id} className="rounded-md border border-border p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge tone="warning">{FINDING_LABEL[finding.finding_type]}</Badge>
+                <Chip variant="caption" color="yellow">{FINDING_LABEL[finding.finding_type]}</Chip>
                 <span className="text-meta text-muted">Prioritas {SEVERITY_LABEL[finding.severity]}</span>
               </div>
               <p className="mt-2 text-text">{finding.reason}</p>

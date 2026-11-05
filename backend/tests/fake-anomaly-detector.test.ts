@@ -19,7 +19,11 @@ const october: AnomalySessionSnapshot[] = fixtureSessions
     student_id: session.student_id,
     subject_ids: [...session.subject_ids].sort(),
     lesson_date: session.lesson_date,
-    start_time: session.start_time,
+    start_time: session.start_time ?? '16:00',
+    end_time: '17:00',
+    learning_material: 'Materi uji',
+    learning_notes: null,
+    next_focus: null,
     duration_minutes: session.duration_minutes,
     submitted_at: session.submitted_at,
   }));
@@ -58,12 +62,10 @@ describe('candidate generator (rule engine deterministik)', () => {
     ]);
   });
 
-  it('murid+mapel+tanggal sama dicatat tutor lain → kandidat duplikasi severity rendah', () => {
+  it('tutor berbeda tidak dianggap duplikat', () => {
     const base = sessionAt(0);
     const other = { ...base, id: '00000000-0000-4000-8000-0000000000ab', tutor_id: 'tutor-lain', submitted_at: '2026-12-01T00:00:00Z' };
-    expect(generateCandidates(other, [base, other], config)).toEqual([
-      { finding_type: 'suspected_duplicate', signal: 'same_student_subject_date', related_lesson_session_id: base.id, default_severity: 'low' },
-    ]);
+    expect(generateCandidates(other, [base, other], config)).toEqual([]);
   });
 
   it('durasi di atas ambang konfigurasi → kandidat duration_outlier', () => {
@@ -72,18 +74,19 @@ describe('candidate generator (rule engine deterministik)', () => {
     expect(generateCandidates({ ...long, duration_minutes: 180 }, [long], config)).toEqual([]);
   });
 
-  it('mapel beririsan dihitung sama untuk tutor lain; himpunan mapel berbeda bukan duplikat persis', () => {
+  it('mapel beririsan atau tutor berbeda bukan duplikat', () => {
     const base = { ...sessionAt(0), subject_ids: ['m-a', 'm-b'] };
     const otherTutor = { ...base, id: '00000000-0000-4000-8000-0000000000ac', tutor_id: 'tutor-lain', subject_ids: ['m-b'], submitted_at: '2026-12-01T00:00:00Z' };
-    expect(generateCandidates(otherTutor, [base, otherTutor], config).map((c) => c.signal)).toEqual(['same_student_subject_date']);
+    expect(generateCandidates(otherTutor, [base, otherTutor], config).map((c) => c.signal)).toEqual([]);
     const sameTutor = { ...base, id: '00000000-0000-4000-8000-0000000000ad', subject_ids: ['m-a'], submitted_at: '2026-12-01T00:00:00Z' };
     expect(generateCandidates(sameTutor, [base, sameTutor], config)).toEqual([]);
   });
 
-  it('jam mulai setelah 21.00 → kandidat late_start; sesi lama tanpa jam tidak', () => {
+  it('jam mulai pada atau setelah 21.00 → kandidat late_start; sesi lama tanpa jam tidak', () => {
     const late = { ...sessionAt(0), start_time: '21:01' };
     expect(generateCandidates(late, [late], config).map((c) => c.finding_type)).toEqual(['late_start']);
-    expect(generateCandidates({ ...late, start_time: '21:00' }, [late], config)).toEqual([]);
+    expect(generateCandidates({ ...late, start_time: '21:00' }, [late], config).map((c) => c.finding_type)).toEqual(['late_start']);
+    expect(generateCandidates({ ...late, start_time: '20:59' }, [late], config)).toEqual([]);
     expect(generateCandidates({ ...late, start_time: null }, [late], config)).toEqual([]);
   });
 
@@ -107,4 +110,29 @@ describe('candidate generator (rule engine deterministik)', () => {
     expect(comparisons[0]?.id).toBe(sessionAt(1).id);
     expect(comparisons.map((c) => c.id)).not.toContain(target.id);
   });
+});
+
+describe('duplikat memerlukan bukti jam sesi target', () => {
+  it('jam berbeda atau jam tidak diketahui tidak dianggap duplikat', () => {
+    const first = { ...sessionAt(0), start_time: '12:00', duration_minutes: 60 };
+    const second = { ...first, id: 'later', submitted_at: '2026-12-01T00:00:00Z' };
+    expect(generateCandidates({ ...second, start_time: '14:00' }, [first], config)).toEqual([]);
+    expect(generateCandidates({ ...second, start_time: null }, [first], config)).toEqual([]);
+    expect(generateCandidates({ ...second, tutor_id: 'other', start_time: '13:00' }, [first], config)).toEqual([]);
+    expect(generateCandidates({ ...second, tutor_id: 'other', start_time: '12:30' }, [first], config)).toEqual([]);
+  });
+});
+
+it('setiap field isi yang berbeda membatalkan duplikat', () => {
+  const first = sessionAt(0);
+  const second = { ...first, id: 'new', submitted_at: '2026-12-01T00:00:00Z' };
+  expect(generateCandidates(second, [first], config)[0]?.finding_type).toBe('suspected_duplicate');
+  for (const patch of [
+    { tutor_id: 'different' }, { student_id: 'different' }, { subject_ids: ['different'] },
+    { lesson_date: '2026-12-02' }, { start_time: '15:00' }, { end_time: '18:00' },
+    { duration_minutes: 61 }, { learning_material: 'Materi berbeda' },
+    { learning_notes: 'Catatan berbeda' }, { next_focus: 'Fokus berbeda' },
+  ]) {
+    expect(generateCandidates({ ...second, ...patch }, [first], config).filter(c => c.finding_type === 'suspected_duplicate')).toEqual([]);
+  }
 });

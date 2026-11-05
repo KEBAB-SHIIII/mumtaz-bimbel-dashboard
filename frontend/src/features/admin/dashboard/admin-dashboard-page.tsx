@@ -1,28 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { CalendarCheck, GraduationCap, UsersRound, Wallet } from 'lucide-react';
-import { Suspense, lazy } from 'react';
-import { PageHeader, StatCard } from '../../../components/ui/layout-primitives';
-import { PeriodSelector } from '../../../components/ui/period-selector';
-import { QueryView } from '../../../components/ui/query-view';
-import { SkeletonChart, SkeletonStatCards } from '../../../components/ui/skeleton';
+import { PageHeader, StatCard } from '../../../components/ui/surfaces/layout-primitives';
+import { PeriodSelector } from '../../../components/ui/forms/period-selector';
+import { QueryView } from '../../../components/ui/feedback/query-view';
+import { DashboardChartsSkeleton, SkeletonStatCards } from '../../../components/ui/feedback/skeleton';
 import { formatPeriod, formatRupiah } from '../../../lib/format';
-import { usePeriodParam } from '../../../lib/period';
+import { usePeriodParam } from '../../../hooks/use-period-param';
 import { queryKeys } from '../../../lib/query-keys';
 import { fetchAdminDashboard } from '../api';
 
-// Library grafik dimuat terpisah: judul & kartu metrik tampil tanpa menunggu chunk grafik.
-const DashboardCharts = lazy(() => import('./dashboard-charts').then((m) => ({ default: m.DashboardCharts })));
-
-function ChartsSkeleton() {
-  return (
-    <div className="grid gap-3 sm:gap-4 lg:grid-cols-3">
-      <div className="lg:col-span-2">
-        <SkeletonChart height={256} />
-      </div>
-      <SkeletonChart height={256} />
-    </div>
-  );
-}
+import { DashboardCharts } from './dashboard-charts';
 
 export function AdminDashboardPage() {
   const [period, setPeriod] = usePeriodParam();
@@ -48,8 +35,8 @@ export function AdminDashboardPage() {
         query={summary}
         skeleton={
           <>
-            <SkeletonStatCards />
-            <ChartsSkeleton />
+            <SkeletonStatCards dashboard />
+            <DashboardChartsSkeleton />
           </>
         }
       >
@@ -78,9 +65,7 @@ export function AdminDashboardPage() {
                 to={`/admin/penagihan?period=${period}`}
               />
             </dl>
-            <Suspense fallback={<ChartsSkeleton />}>
               <DashboardCharts revenue={data.revenue_by_month} />
-            </Suspense>
           </>
         )}
       </QueryView>

@@ -1,7 +1,7 @@
 import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOptions } from '@headlessui/react';
 import { Check, ChevronDown } from 'lucide-react';
-import { useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
-import { cn } from '../../lib/cn';
+import { useState, type ComponentPropsWithRef, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { cn } from '../../../lib/cn';
 
 /**
  * Kontrol form: 36px desktop, 44px + font 16px di perangkat sentuh/HP (iOS tidak auto-zoom).
@@ -17,7 +17,7 @@ const CONTROL =
 
 const CONTROL_HEIGHT = 'h-9 pointer-coarse:h-11';
 
-export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ className, ...props }: ComponentPropsWithRef<'input'>) {
   return <input className={cn(CONTROL, CONTROL_HEIGHT, className)} {...props} />;
 }
 

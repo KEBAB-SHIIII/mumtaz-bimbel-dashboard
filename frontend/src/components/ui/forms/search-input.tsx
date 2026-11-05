@@ -1,7 +1,7 @@
 import { Search, X } from 'lucide-react';
 import { AnimatePresence, m } from 'motion/react';
 import { useEffect, useRef, useState, type InputHTMLAttributes } from 'react';
-import { cn } from '../../lib/cn';
+import { cn } from '../../../lib/cn';
 
 const DEBOUNCE_MS = 250;
 

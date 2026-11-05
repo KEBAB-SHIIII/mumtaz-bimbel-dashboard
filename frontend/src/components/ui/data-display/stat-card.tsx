@@ -2,8 +2,8 @@ import { ChevronRight, type LucideIcon } from 'lucide-react';
 import { m } from 'motion/react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { cn } from '../../lib/cn';
-import { CountUp } from './count-up';
+import { cn } from '../../../lib/cn';
+import { CountUp } from '../motion/count-up';
 
 export type Accent = 'green' | 'blue' | 'violet' | 'orange' | 'coral';
 

@@ -1,6 +1,6 @@
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react';
 import { Check, ChevronDown } from 'lucide-react';
-import { cn } from '../../lib/cn';
+import { cn } from '../../../lib/cn';
 
 export interface FilterOption {
   value: string;

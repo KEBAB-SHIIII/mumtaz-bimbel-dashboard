@@ -135,7 +135,7 @@ Aturan response v1:
 | Nilai | Makna baseline |
 |---|---|
 | `valid` | Tidak ada masalah yang memerlukan tindakan |
-| `needs_revision` | Durasi melewati ambang, jam mulai melewati batas, atau kejanggalan yang perlu konfirmasi |
+| `needs_revision` | Durasi melewati ambang,g jam mulai melewati batas, atau kejanggalan yang perlu konfirmasi |
 | `rejected` | Sesi dinilai duplikat dari sesi yang sudah tercatat |
 
 Jika ada duplikat sekaligus masalah durasi/jam, gunakan `rejected` dan tetap sertakan temuan relevan. Hasil finding dan alasan validitas harus konsisten.

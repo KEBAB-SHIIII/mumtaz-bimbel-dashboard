@@ -492,3 +492,16 @@ describe('riwayat Tutor — filter siswa', () => {
     expect(other.body.total).toBe(0);
   });
 });
+
+describe('Filtrasi sesi dengan temuan anomali', () => {
+  it('menghitung total sesi lintas halaman, bukan jumlah findings', async () => {
+    const all = (await admin.get('/admin/attendance?period=2026-10&page_size=100').expect(200)).body;
+    const expected = all.items.filter((row: { findings: { review_status: string }[] }) => row.findings.some((finding) => finding.review_status !== 'superseded'));
+    const result = (await admin.get('/admin/attendance?period=2026-10&has_anomaly=true&page_size=1').expect(200)).body;
+    expect(result.total).toBe(expected.length);
+    expect(result.items).toHaveLength(Math.min(1, expected.length));
+    for (const row of result.items) expect(expected.map((item: { id: string }) => item.id)).toContain(row.id);
+    const empty = (await admin.get('/admin/attendance?period=2000-01&has_anomaly=true').expect(200)).body;
+    expect(empty.total).toBe(0);
+  });
+});

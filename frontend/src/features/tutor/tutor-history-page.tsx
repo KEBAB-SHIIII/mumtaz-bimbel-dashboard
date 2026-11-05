@@ -4,18 +4,18 @@ import { Eye, PencilLine, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { sessionStatusSchema, type TutorSession } from '@mumtaz/contracts';
-import { SESSION_STATUS_LABELS, ValidityBadge } from '../../components/ui/badge';
-import { Button } from '../../components/ui/button';
-import { DataTable } from '../../components/ui/data-table';
-import { EmptyState, ErrorState, NoResultsState } from '../../components/ui/feedback';
-import { FilterSelect } from '../../components/ui/filter-select';
-import { Card, PageHeader } from '../../components/ui/layout-primitives';
-import { PeriodSelector } from '../../components/ui/period-selector';
-import { LoadingSwitch, SkeletonDataTable } from '../../components/ui/skeleton';
+import { SESSION_STATUS_LABELS, ValidityBadge } from '../../components/ui/data-display/status-badge';
+import { Button } from '../../components/ui/actions/button';
+import { DataTable } from '../../components/ui/data-display/data-table';
+import { EmptyState, ErrorState, NoResultsState } from '../../components/ui/feedback/states';
+import { FilterSelect } from '../../components/ui/forms/filter-select';
+import { Card, PageHeader } from '../../components/ui/surfaces/layout-primitives';
+import { PeriodSelector } from '../../components/ui/forms/period-selector';
+import { LoadingSwitch, SkeletonDataTable } from '../../components/ui/feedback/skeleton';
 import { formatDuration, formatLessonDate, formatPeriod } from '../../lib/format';
-import { usePeriodParam } from '../../lib/period';
+import { usePeriodParam } from '../../hooks/use-period-param';
 import { queryKeys } from '../../lib/query-keys';
-import { useSearchState } from '../../lib/use-search-state';
+import { useSearchState } from '../../hooks/use-search-state';
 import { fetchAttendanceOptions, fetchTutorAttendance } from './api';
 import { TutorSessionDialog } from './tutor-session-dialog';
 
@@ -132,7 +132,7 @@ export function TutorHistoryPage() {
           </LoadingSwitch>
         )}
       </Card>
-      <TutorSessionDialog key={selected?.id ?? 'none'} session={selected} onClose={() => setSelected(null)} />
+      <TutorSessionDialog session={selected} onClose={() => setSelected(null)} />
     </>
   );
 }

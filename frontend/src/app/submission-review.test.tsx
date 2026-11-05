@@ -41,7 +41,7 @@ describe('Tutor: revisi sesi Perlu revisi → menunggu validasi ulang', () => {
     await user.click(within(form).getByRole('checkbox', { name: 'Matematika' }));
     await user.click(within(form).getByRole('button', { name: 'Kirim revisi' }));
 
-    expect(await within(await screen.findByRole('dialog', { name: 'Detail sesi' })).findByText('Revisi terkirim')).toBeInTheDocument();
+    expect(await screen.findByText('Revisi terkirim')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Tutup' }));
     // Daftar ikut diperbarui: tidak ada lagi sesi yang perlu revisi.
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Revisi sesi Citra 5 Okt 2026' })).not.toBeInTheDocument());
@@ -129,5 +129,59 @@ describe('Admin: status analisis tidak ditampilkan', () => {
     expect(screen.queryByLabelText(/analisis/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Analisis (gagal|selesai|menunggu)|Tidak dianalisis/)).not.toBeInTheDocument();
     expect(screen.getAllByText('Ditolak').length).toBeGreaterThan(0);
+  });
+});
+
+describe('Admin: tab detail dan permintaan revisi', () => {
+  it('mempertahankan draft antar-tab, menolak pesan kosong, dan mengirim permintaan revisi', async () => {
+    useFakeBackend();
+    renderApp('/login');
+    const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
+    await user.click(await screen.findByRole('link', { name: 'Data Absensi' }));
+    await choosePeriod('2026-10');
+    await user.click(await screen.findByRole('button', { name: /Detail sesi .*12 Okt 2026/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Detail sesi' });
+    const detailTab = await within(dialog).findByRole('tab', { name: 'Detail sesi' });
+    expect(detailTab).toHaveAttribute('aria-selected', 'true');
+    const findingsTab = within(dialog).getByRole('tab', { name: /Temuan anomali/ });
+    await user.click(findingsTab);
+    expect(within(dialog).queryByRole('button', { name: 'Hapus' })).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: /Minta revisi|Ubah pesan revisi/ }));
+    const message = within(dialog).getByLabelText(/^Pesan untuk tutor/);
+    await user.clear(message);
+    await user.click(within(dialog).getByRole('button', { name: 'Kirim permintaan revisi' }));
+    expect(await within(dialog).findByText('Tuliskan apa yang perlu diperbaiki tutor.')).toBeInTheDocument();
+    await user.type(message, 'Mohon koreksi jam selesai sesuai sesi sebenarnya.');
+    await user.click(detailTab);
+    await user.click(findingsTab);
+    expect(within(dialog).getByLabelText(/^Pesan untuk tutor/)).toHaveValue('Mohon koreksi jam selesai sesuai sesi sebenarnya.');
+    await user.click(within(dialog).getByRole('button', { name: 'Kirim permintaan revisi' }));
+    expect(await screen.findByText('Permintaan revisi tersimpan')).toBeInTheDocument();
+    expect(within(dialog).getByText('Mohon koreksi jam selesai sesuai sesi sebenarnya.')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Tutup' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: /Detail sesi .*12 Okt 2026/ }));
+    expect(await screen.findByRole('tab', { name: 'Detail sesi' })).toHaveAttribute('aria-selected', 'true');
+  });
+});
+
+describe('Admin: notifikasi hapus data', () => {
+  it('batal tidak menampilkan toast; hapus berhasil menampilkan satu toast', async () => {
+    useFakeBackend();
+    renderApp('/login');
+    const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
+    await user.click(await screen.findByRole('link', { name: 'Data Absensi' }));
+    await choosePeriod('2026-10');
+    const remove = (await screen.findAllByRole('button', { name: /^Hapus sesi / }))[0];
+    if (!remove) throw new Error('Fixture sesi ditolak tidak ditemukan');
+    const removeLabel = remove.getAttribute('aria-label') ?? '';
+    await user.click(remove);
+    await user.click(within(await screen.findByRole('dialog', { name: 'Hapus sesi?' })).getByRole('button', { name: 'Batal' }));
+    expect(screen.queryByText('Absensi berhasil dihapus')).not.toBeInTheDocument();
+    await user.click(remove);
+    await user.click(within(await screen.findByRole('dialog', { name: 'Hapus sesi?' })).getByRole('button', { name: 'Hapus' }));
+    expect(await screen.findByText('Absensi berhasil dihapus')).toBeInTheDocument();
+    expect(screen.getAllByText('Absensi berhasil dihapus')).toHaveLength(1);
+    await waitFor(() => expect(screen.queryByRole('button', { name: removeLabel })).not.toBeInTheDocument());
   });
 });

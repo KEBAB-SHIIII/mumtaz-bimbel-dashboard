@@ -1,50 +1,19 @@
-import { TriangleAlert, type LucideIcon } from 'lucide-react';
+import { TriangleAlert } from 'lucide-react';
 import { m } from 'motion/react';
 import type { ReactNode } from 'react';
 import type { ApprovalStatus, SessionStatus, SessionValidity } from '@mumtaz/contracts';
-import { cn } from '../../lib/cn';
+import { Chip, type ChipColor, type ChipVariant } from './chip';
 
 export type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info';
 
-/** Latar `-subtle`, teks `-strong` (≥ 7.5:1), garis tipis status 20%, titik warna jenuh (docs/design/02-tokens.md). */
-const TONES: Record<Tone, { pill: string; dot: string }> = {
-  neutral: { pill: 'bg-neutral-subtle text-muted ring-border', dot: 'bg-muted' },
-  success: { pill: 'bg-success-subtle text-success-strong ring-success/20', dot: 'bg-success' },
-  warning: { pill: 'bg-warning-subtle text-warning-strong ring-warning/20', dot: 'bg-warning' },
-  danger: { pill: 'bg-danger-subtle text-danger-strong ring-danger/20', dot: 'bg-danger' },
-  info: { pill: 'bg-info-subtle text-info-strong ring-info/20', dot: 'bg-info' },
+/** Status semantik → pasangan warna BoardUI Chip. */
+export const TONE_COLOR: Record<Tone, ChipColor> = {
+  neutral: 'neutral',
+  success: 'lime',
+  warning: 'yellow',
+  danger: 'rose',
+  info: 'cyan',
 };
-
-interface BadgeProps {
-  tone?: Tone;
-  /** Hanya untuk pengecualian (mis. jumlah temuan AI); badge status memakai titik, bukan ikon. */
-  icon?: LucideIcon | undefined;
-  /** `sm` (20px) untuk sel tabel padat. */
-  size?: 'sm' | 'md';
-  /** Titik berdenyut pelan untuk proses yang sedang berjalan (diam saat reduced motion). */
-  pulse?: boolean;
-  children: ReactNode;
-}
-
-export function Badge({ tone = 'neutral', icon: Icon, size = 'md', pulse = false, children }: BadgeProps) {
-  const config = TONES[tone];
-  return (
-    <span
-      className={cn(
-        'inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 text-meta font-medium whitespace-nowrap tabular-nums ring-1 ring-inset',
-        size === 'sm' ? 'h-5' : 'h-[1.375rem]',
-        config.pill,
-      )}
-    >
-      {Icon ? (
-        <Icon aria-hidden className="size-3 shrink-0" />
-      ) : (
-        <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', config.dot, pulse && 'animate-pulse-soft motion-reduce:animate-none')} />
-      )}
-      {children}
-    </span>
-  );
-}
 
 /**
  * Saat status berubah (mis. hasil AI masuk), badge baru memudar masuk 180ms. Badge lama langsung
@@ -64,7 +33,7 @@ interface StatusConfig {
   pulse?: boolean;
 }
 
-/** Status sesi selalu berupa teks + titik, tidak mengandalkan warna saja (docs/07 §6). */
+/** Status sesi selalu berupa teks, tidak mengandalkan warna saja (docs/07 §6). */
 const SESSION_STATUS: Record<SessionStatus, StatusConfig> = {
   pending: { label: 'Menunggu validasi', tone: 'warning' },
   approved: { label: 'Disetujui', tone: 'success' },
@@ -76,13 +45,13 @@ export const SESSION_STATUS_LABELS = Object.fromEntries(
   Object.entries(SESSION_STATUS).map(([key, value]) => [key, value.label]),
 ) as Record<SessionStatus, string>;
 
-export function StatusBadge({ status, size }: { status: SessionStatus; size?: 'sm' | 'md' }) {
+export function StatusBadge({ status, variant = 'bold' }: { status: SessionStatus; variant?: ChipVariant }) {
   const config = SESSION_STATUS[status];
   return (
     <StatusSwap statusKey={status}>
-      <Badge tone={config.tone} size={size ?? 'md'}>
+      <Chip variant={variant} color={TONE_COLOR[config.tone]}>
         {config.label}
-      </Badge>
+      </Chip>
     </StatusSwap>
   );
 }
@@ -90,15 +59,16 @@ export function StatusBadge({ status, size }: { status: SessionStatus; size?: 's
 export function FindingIndicator({ count }: { count: number }) {
   if (count === 0) return <span className="text-meta text-muted">—</span>;
   return (
-    <Badge tone="warning" icon={TriangleAlert}>
+    <Chip color="yellow">
+      <TriangleAlert aria-hidden className="size-3.5 shrink-0" />
       {count} temuan
-    </Badge>
+    </Chip>
   );
 }
 
 /**
  * Validitas data (D-25): Valid hijau, Perlu revisi kuning, Ditolak merah. Belum divalidasi = AI masih
- * menganalisis (biru, titik berdenyut). Selalu teks + titik, tidak mengandalkan warna saja.
+ * menganalisis (cyan, berdenyut pelan). Selalu berupa teks, tidak mengandalkan warna saja.
  */
 const VALIDITY: Record<SessionValidity | 'unvalidated', StatusConfig> = {
   valid: { label: 'Valid', tone: 'success' },
@@ -111,14 +81,14 @@ export const VALIDITY_LABELS = Object.fromEntries(
   Object.entries(VALIDITY).map(([key, value]) => [key, value.label]),
 ) as Record<SessionValidity | 'unvalidated', string>;
 
-export function ValidityBadge({ validity, size }: { validity: SessionValidity | null; size?: 'sm' | 'md' }) {
+export function ValidityBadge({ validity, variant = 'bold' }: { validity: SessionValidity | null; variant?: ChipVariant }) {
   const key = validity ?? 'unvalidated';
   const config = VALIDITY[key];
   return (
     <StatusSwap statusKey={key}>
-      <Badge tone={config.tone} pulse={config.pulse ?? false} size={size ?? 'md'}>
+      <Chip variant={variant} color={TONE_COLOR[config.tone]} className={config.pulse ? 'animate-pulse-soft motion-reduce:animate-none' : undefined}>
         {config.label}
-      </Badge>
+      </Chip>
     </StatusSwap>
   );
 }
@@ -134,14 +104,14 @@ export const APPROVAL_LABELS = Object.fromEntries(
   Object.entries(APPROVAL).map(([key, value]) => [key, value.label]),
 ) as Record<ApprovalStatus, string>;
 
-export function ApprovalBadge({ approval, size }: { approval: ApprovalStatus | null; size?: 'sm' | 'md' }) {
+export function ApprovalBadge({ approval, variant = 'bold' }: { approval: ApprovalStatus | null; variant?: ChipVariant }) {
   if (!approval) return <span className="text-meta text-muted">—</span>;
   const config = APPROVAL[approval];
   return (
     <StatusSwap statusKey={approval}>
-      <Badge tone={config.tone} size={size ?? 'md'}>
+      <Chip variant={variant} color={TONE_COLOR[config.tone]}>
         {config.label}
-      </Badge>
+      </Chip>
     </StatusSwap>
   );
 }

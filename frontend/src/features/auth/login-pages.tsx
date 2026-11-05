@@ -1,14 +1,15 @@
+import { PasswordInput } from '../../components/ui/forms/password-input';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, KeyRound, LogIn } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { KeyRound, LogIn } from 'lucide-react';
+import { useEffect, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { loginRequestSchema, parentAccessRequestSchema, type LoginRequest, type ParentAccessRequest, type Role } from '@mumtaz/contracts';
-import { Button } from '../../components/ui/button';
-import { InlineAlert } from '../../components/ui/feedback';
-import { Skeleton, SkeletonRegion } from '../../components/ui/skeleton';
-import { FormField, Input, describedBy } from '../../components/ui/field';
-import { SpotlightCard } from '../../components/ui/spotlight-card';
+import { Button } from '../../components/ui/actions/button';
+import { InlineAlert } from '../../components/ui/feedback/states';
+import { Skeleton, SkeletonRegion } from '../../components/ui/feedback/skeleton';
+import { FormField, Input, describedBy } from '../../components/ui/forms/field';
+import { SpotlightCard } from '../../components/ui/surfaces/spotlight-card';
 import { toApiError } from '../../lib/api-error';
 import { ROLE_HOME, useLoginMutation, useParentAccessMutation, useSession } from './session';
 
@@ -89,7 +90,6 @@ export function StaffLoginPage() {
   const session = useSession();
   const mutation = useLoginMutation();
   const afterLogin = useAfterLogin();
-  const [showPassword, setShowPassword] = useState(false);
   const form = useForm<LoginRequest>({ resolver: zodResolver(loginRequestSchema), defaultValues: { username: '', password: '' } });
   const { errors } = form.formState;
 
@@ -123,26 +123,13 @@ export function StaffLoginPage() {
           />
         </FormField>
         <FormField id="password" label="Password" required error={errors.password?.message}>
-          <div className="relative">
-            <Input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              className="pe-11"
-              aria-invalid={Boolean(errors.password)}
-              aria-describedby={describedBy('password', errors.password?.message)}
-              {...form.register('password')}
-            />
-            <button
-              type="button"
-              className="absolute inset-y-0 end-0 flex w-11 items-center justify-center rounded-e-md text-muted hover:text-text focus-visible:-outline-offset-2"
-              aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
-              aria-pressed={showPassword}
-              onClick={() => setShowPassword((value) => !value)}
-            >
-              {showPassword ? <EyeOff aria-hidden className="size-4" /> : <Eye aria-hidden className="size-4" />}
-            </button>
-          </div>
+          <PasswordInput
+            id="password"
+            autoComplete="current-password"
+            aria-invalid={Boolean(errors.password)}
+            aria-describedby={describedBy('password', errors.password?.message)}
+            {...form.register('password')}
+          />
         </FormField>
         <Button type="submit" loading={mutation.isPending} icon={<LogIn aria-hidden className="size-4" />} className="mt-1 w-full">
           Masuk

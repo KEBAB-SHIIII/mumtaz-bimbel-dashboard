@@ -2,7 +2,7 @@ import { Menu, MenuButton, MenuItem, MenuItems, MenuSeparator } from '@headlessu
 import { LogOut, UserRound } from 'lucide-react';
 import { Link } from 'react-router';
 import type { Role } from '@mumtaz/contracts';
-import { Avatar } from '../ui/avatar';
+import { Avatar } from '../../ui/data-display/avatar';
 
 const MENU_ITEM =
   'flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-sm text-text data-focus:bg-surface-muted pointer-coarse:h-11';
