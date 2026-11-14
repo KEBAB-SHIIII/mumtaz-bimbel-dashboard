@@ -1,12 +1,15 @@
 import { GRADE_OPTIONS } from '@mumtaz/contracts';
 
-/** Potongan Admin untuk keuntungan bimbel: flat per sesi (keputusan owner, hardcode sementara). */
-export const ADMIN_FEE_PER_SESSION = 10_000;
+/** Potongan per jam; sisa lebih dari 30 menit menambah satu potongan. */
+export const ADMIN_FEE_PER_HOUR = 10_000;
 
-/** Tarif les per jam (kotor) per jenjang, dari yang termurah. Mentok di SD kelas 6 (keputusan owner). */
+/** Tarif les per jam (kotor) yang dikonfirmasi owner. */
 export const HOURLY_RATE_BY_TIER = {
-  'SD 1-3': 50_000,
-  'SD 4-6': 70_000,
+  'PAUD-TK': 40_000,
+  'SD 1-3': 60_000,
+  'SD 4-6': 80_000,
+  SMP: 100_000,
+  SMA: 120_000,
 } as const;
 export type GradeTier = keyof typeof HOURLY_RATE_BY_TIER;
 
@@ -14,9 +17,12 @@ const BASE_MINUTES = 60;
 const EXTRA_BLOCK_MINUTES = 30;
 const EXTRA_BLOCK_RATIO = 0.5;
 
-/** Jenjang tarif dari kelas ("3 SD" → "SD 1-3"); `null` bila kelas tidak didukung (mis. data lama SMP/SMA). */
+/** Jenjang tarif dari kelas; `null` bila kelas tidak didukung. */
 export function gradeTier(grade: string): GradeTier | null {
   if (!(GRADE_OPTIONS as readonly string[]).includes(grade)) return null;
+  if (grade === 'PAUD' || grade === 'TK') return 'PAUD-TK';
+  if (grade.endsWith(' SMP')) return 'SMP';
+  if (grade.endsWith(' SMA')) return 'SMA';
   return Number.parseInt(grade, 10) <= 3 ? 'SD 1-3' : 'SD 4-6';
 }
 
@@ -43,7 +49,9 @@ export interface SessionFee {
 export function sessionFee(grade: string, durationMinutes: number): SessionFee | null {
   const gross = grossAmount(grade, durationMinutes);
   if (gross === null) return null;
-  return { gross, adminFee: ADMIN_FEE_PER_SESSION, tutorNet: gross - ADMIN_FEE_PER_SESSION };
+  // Tepat 90/150 menit belum menambah potongan; 91/151 menit sudah.
+  const adminFee = ADMIN_FEE_PER_HOUR * Math.max(1, Math.ceil((durationMinutes - 30) / 60));
+  return { gross, adminFee, tutorNet: gross - adminFee };
 }
 
 /**

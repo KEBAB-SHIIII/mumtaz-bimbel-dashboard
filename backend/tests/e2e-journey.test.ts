@@ -100,15 +100,15 @@ describe('perjalanan end-to-end lintas role', () => {
     expect((await budi.get(`/parent/students/${STUDENT_IDS.murid1}/progress?period=${PERIOD}`)).status).toBe(403);
   });
 
-  it('5. Honor bersih naik Rp40.000 (3 SD 60 menit Rp50.000 − potongan Rp10.000); Admin & Tutor konsisten', async () => {
+  it('5. Honor bersih naik Rp50.000 (3 SD 60 menit Rp60.000 − potongan Rp10.000); Admin & Tutor konsisten', async () => {
     const own = await ownPayroll();
-    expect(Number(own.net_amount) - honorBefore).toBe(40_000);
-    expect(own.sessions.find((s) => s.session_id === sessionId)).toMatchObject({ counted: true, net_amount: '40000' });
+    expect(Number(own.net_amount) - honorBefore).toBe(50_000);
+    expect(own.sessions.find((s) => s.session_id === sessionId)).toMatchObject({ counted: true, net_amount: '50000' });
 
     const all = await adminPayroll();
     const farhanRow = all.tutors.find((tutor) => tutor.sessions.some((s) => s.session_id === sessionId));
     expect(farhanRow?.net_amount).toBe(own.net_amount);
-    expect(farhanRow?.sessions.find((s) => s.session_id === sessionId)).toMatchObject({ gross_amount: '50000', admin_fee: '10000', net_amount: '40000' });
+    expect(farhanRow?.sessions.find((s) => s.session_id === sessionId)).toMatchObject({ gross_amount: '60000', admin_fee: '10000', net_amount: '50000' });
   });
 
   it('6. Penagihan memuat sesi Valid itu; total tagihan = omzet kotor dashboard (filter bulan sama)', async () => {

@@ -167,14 +167,16 @@ export function renderInvoicePdf(input: { period: Period; student: BillingStuden
   const rates = Object.entries(HOURLY_RATE_BY_TIER)
     .map(([tier, rate]) => `${tier} ${formatRupiah(rate)}/jam`)
     .join(', ');
+  const notes = `Tarif saat ini per jam: ${rates}. Sampai 60 menit dihitung satu jam; setiap 30 menit penuh berikutnya ditambah setengah tarif. ` +
+    'Nominal tagihan mengikuti tarif yang tersimpan pada setiap sesi. Hanya sesi yang tercatat valid yang ditagihkan.';
+  doc.font('Helvetica').fontSize(8.5);
+  const notesHeight = doc.heightOfString(notes, { width }) + 20;
+  if (y + notesHeight > pageBottom) {
+    doc.addPage();
+    y = MARGIN;
+  }
   doc.font('Helvetica-Bold').fontSize(8.5).fillColor(COLORS.text).text('Catatan', left, y);
-  doc.font('Helvetica').fontSize(8.5).fillColor(COLORS.muted).text(
-    `Tarif les per jenjang: ${rates}. Sampai 60 menit dihitung satu jam; setiap 30 menit penuh berikutnya ditambah setengah tarif. ` +
-      'Hanya sesi yang tercatat valid yang ditagihkan.',
-    left,
-    doc.y + 3,
-    { width },
-  );
+  doc.font('Helvetica').fontSize(8.5).fillColor(COLORS.muted).text(notes, left, doc.y + 3, { width });
 
   // --- Footer & nomor halaman ------------------------------------------------------
   const range = doc.bufferedPageRange();

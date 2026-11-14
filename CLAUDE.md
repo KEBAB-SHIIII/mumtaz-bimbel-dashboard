@@ -36,7 +36,7 @@ Membangun aplikasi full-stack TypeScript berbasis role (Admin, Tutor, Orang Tua)
    - Kegagalan AI/screening tidak boleh membatalkan penyimpanan sesi absensi; sesi tetap menunggu validasi dan Admin menetapkan manual.
    - Unit tests offline WAJIB menggunakan deterministic fake detector, bukan fake live.
 7. **Tarif & Honor (D-25)**:
-   - Tarif les per jenjang (`backend/src/services/billing/tariff.ts`): SD 1-3 Rp50.000/jam, SD 4-6 Rp70.000/jam; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×. Kelas mentok SD 6. Potongan Admin Rp10.000 flat per sesi; honor tutor = tarif kotor − potongan. Nilai ini hardcode sementara (tarif resmi UMKM O-01 terbuka).
+   - Tarif les per jenjang (`backend/src/services/billing/tariff.ts`): PAUD–TK Rp40.000/jam, SD 1–3 Rp60.000/jam, SD 4–6 Rp80.000/jam, SMP Rp100.000/jam, SMA Rp120.000/jam; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×. Jenjang mencakup PAUD sampai SMA. Potongan Admin Rp10.000 untuk jam pertama dan setiap jam berikutnya; sisa lebih dari 30 menit menambah Rp10.000 (tepat 30 menit belum); honor tutor = tarif kotor − potongan. Tarif telah dikonfirmasi owner (D-26); pembulatan tagihan durasi pecahan tetap mengikuti perilaku sebelumnya.
    - Tarif kotor & potongan dikunci ke `rate_amount_snapshot` / `admin_fee_snapshot` saat sesi dihitung. Tidak ada penugasan tutor maupun tabel tarif (D-24).
 8. **Satu Mode: Production** (keputusan owner D-23):
    - Aplikasi selalu berjalan dengan `NODE_ENV=production`, satu file env `backend/.env`, satu database Neon (branch production), Gemini, dan spreadsheet yang sama — termasuk saat development.

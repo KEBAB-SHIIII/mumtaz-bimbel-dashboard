@@ -18,7 +18,7 @@ Sistem harus mengurangi pekerjaan manual/repetitif: isi form sesingkat mungkin, 
 - Admin memicu ekspor laporan bulanan langsung ke Google Sheets API. Proses submit tutor tidak menulis ke Sheets.
 - Ekspor standar memakai delapan kolom mentah yang sudah dikenal UMKM. Tidak menambah status, materi, anomaly, honor, atau ID teknis pada report ini. Ekspor mencakup semua submission tanpa memfilter status review. Karena report delapan kolom tidak menampilkan status, UI harus menyatakan dengan jelas bahwa hasil ekspor berisi semua submission, termasuk yang belum direview.
 - Setiap submit baru berstatus `pending`; Admin perlu review sebelum sesi dihitung ke honor.
-- Tarif les per jenjang (SD 1-3 Rp50.000/jam, SD 4-6 Rp70.000/jam) dengan potongan Admin Rp10.000 per sesi (D-25, hardcode sementara) sampai UMKM mengonfirmasi tarif resmi (O-01). Orang tua ditagih tarif kotor; tutor menerima kotor − potongan.
+- Tarif les per jenjang (PAUD–TK Rp40.000/jam, SD 1–3 Rp60.000/jam, SD 4–6 Rp80.000/jam, SMP Rp100.000/jam, SMA Rp120.000/jam) dengan potongan Admin Rp10.000 untuk jam pertama dan setiap jam berikutnya; sisa lebih dari 30 menit menambah Rp10.000 (tepat 30 menit belum) sesuai konfirmasi owner (D-26). Orang tua ditagih tarif kotor; tutor menerima kotor − potongan.
 - Form menyertakan `learning_material` untuk pengembangan fitur Progress Anak; working default menjadikannya wajib, tetapi requiredness menunggu konfirmasi owner (O-09). Field ini tidak masuk delapan kolom ekspor standar.
 - Anomaly module mengklasifikasikan indikasi anomali termasuk dugaan duplikasi. Temuan ditinjau Admin dan bukan keputusan otomatis.
 - Admin dan Tutor login menggunakan username + password. Orang Tua login hanya dengan ID Akses Orang Tua acak/rahasia tanpa password; kode ini bukan ID publik atau berurutan.
@@ -110,7 +110,7 @@ Detail isi per tab ada di `15-DASHBOARD-TABS.md`.
 - Satu submit menghasilkan satu record UUID internal. `no` hanya urutan tabel/ekspor.
 - Status sesi: `pending`, `approved`, `revision_requested`, `rejected`; status awal `pending`.
 - Hanya sesi `approved` masuk estimasi honor dan tampilan Progress Anak.
-- Tarif: per jenjang + potongan Admin per sesi (`backend/src/services/billing/tariff.ts`, D-25). Tarif resmi UMKM belum dikonfirmasi (O-01).
+- Tarif: per jenjang + potongan Admin berdasarkan durasi (`backend/src/services/billing/tariff.ts`, D-26). Tarif resmi dikonfirmasi owner (D-26).
 - Laporan standar Sheets berisi delapan kolom mentah tanpa status/material/anomaly/honor/ID internal. Filter ekspor tidak membatasi status: semua submission pada periode terpilih harus diekspor.
 - AI menandai/mengklasifikasi indikasi seperti `suspected_duplicate`, `duration_outlier`, dan `unusual_pattern`. Admin yang memutuskan status sesi. Dua sesi mirip tidak otomatis duplikat yang tidak sah.
 - Validasi data dasar dilakukan deterministik; kegagalan layanan AI tidak menggagalkan submit, review, rekap atau ekspor.

@@ -14,7 +14,7 @@ describe('dashboard mengarahkan ke data di balik angka', () => {
 
     const omzet = (await screen.findByRole('link', { name: 'Total omzet kotor' })).closest('div');
     if (!omzet) throw new Error('kartu omzet tidak ada');
-    await waitFor(() => expect(omzet).toHaveTextContent(/Rp\s?200\.000/));
+    await waitFor(() => expect(omzet).toHaveTextContent(/Rp\s?340\.000/));
     expect(screen.queryByText('Menunggu verifikasi')).not.toBeInTheDocument();
     // Grafik dimuat lazy (chunk terpisah) setelah kartu metrik. Grafik pendapatan memakai data asli
     // (tanpa label), empat grafik lain masih data contoh.

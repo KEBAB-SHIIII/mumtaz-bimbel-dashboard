@@ -47,7 +47,7 @@ export interface FixtureSubject {
 
 /**
  * Nama FIKTIF (nama depan Indonesia, satu kata) agar data mudah dibaca seolah nyata.
- * Semua akun, sekolah, dan tarif tetap SINTETIS — bukan data UMKM.
+ * Akun dan sekolah tetap SINTETIS; tarif sesi mengikuti ketentuan owner D-26.
  */
 const tutorUser = (id: string, name: string): FixtureUser => ({
   id,
@@ -114,12 +114,12 @@ export const fixtureStudents: FixtureStudent[] = [
   student(STUDENT_IDS.murid1, 'Aisyah', '3 SD', SCHOOL.harapan),
   student(STUDENT_IDS.murid2, 'Bima', '5 SD', SCHOOL.pelita),
   student(STUDENT_IDS.murid3, 'Citra', '5 SD', SCHOOL.tunas),
-  student(STUDENT_IDS.dimas, 'Dimas', '4 SD', SCHOOL.harapan),
-  student(STUDENT_IDS.eka, 'Eka', '6 SD', SCHOOL.pelita),
-  student(STUDENT_IDS.fikri, 'Fikri', '4 SD', SCHOOL.tunas),
-  student(STUDENT_IDS.gita, 'Gita', '6 SD', SCHOOL.bina),
-  student(STUDENT_IDS.hana, 'Hana', '2 SD', SCHOOL.harapan),
-  student(STUDENT_IDS.intan, 'Intan', '1 SD', SCHOOL.cendekia),
+  student(STUDENT_IDS.dimas, 'Dimas', '1 SMP', 'SMP Harapan Bangsa'),
+  student(STUDENT_IDS.eka, 'Eka', '3 SMP', 'SMP Pelita Ilmu'),
+  student(STUDENT_IDS.fikri, 'Fikri', '1 SMA', 'SMA Tunas Mulia'),
+  student(STUDENT_IDS.gita, 'Gita', '3 SMA', 'SMA Bina Insani'),
+  student(STUDENT_IDS.hana, 'Hana', 'PAUD', 'PAUD Harapan Bangsa'),
+  student(STUDENT_IDS.intan, 'Intan', 'TK', 'TK Cendekia'),
   student(STUDENT_IDS.joko, 'Joko', '5 SD', SCHOOL.pelita),
   student(STUDENT_IDS.kirana, 'Kirana', '2 SD', SCHOOL.cendekia),
   student(STUDENT_IDS.lutfi, 'Lutfi', '4 SD', SCHOOL.harapan),

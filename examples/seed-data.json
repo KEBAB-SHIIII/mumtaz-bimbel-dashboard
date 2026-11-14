@@ -1,5 +1,5 @@
 {
-  "warning": "SYNTHETIC DEVELOPMENT FIXTURE ONLY. Nama (fiktif), sekolah, akun, kode akses, dan tarif dibuat-buat. Kode akses wali hanya untuk test/dev lokal. Honor memakai tarif tunggal per sesi dari konfigurasi (D-24), bukan dari file ini.",
+  "warning": "SYNTHETIC DEVELOPMENT FIXTURE ONLY. Nama, sekolah, akun, dan kode akses adalah fiktif. Kode akses wali hanya untuk test lokal. Snapshot sesi mengikuti tarif owner PAUD–SMA dan potongan Admin berdasarkan durasi (D-26); sesi ada di fixture TypeScript.",
   "schema_note": "Struktur mengikuti tabel docs/14 (users, tutors, students, parent_students, subjects). UUID stabil dan identik dengan packages/contracts/src/fixtures (dijaga test). Password tidak pernah disimpan di file ini.",
   "users": [
     {
@@ -201,43 +201,43 @@
     {
       "id": "00000000-0000-4000-8003-000000000004",
       "full_name": "Dimas",
-      "grade": "4 SD",
-      "school_name": "SD Harapan Bangsa",
+      "grade": "1 SMP",
+      "school_name": "SMP Harapan Bangsa",
       "is_active": true
     },
     {
       "id": "00000000-0000-4000-8003-000000000005",
       "full_name": "Eka",
-      "grade": "6 SD",
-      "school_name": "SD Pelita Ilmu",
+      "grade": "3 SMP",
+      "school_name": "SMP Pelita Ilmu",
       "is_active": true
     },
     {
       "id": "00000000-0000-4000-8003-000000000006",
       "full_name": "Fikri",
-      "grade": "4 SD",
-      "school_name": "SD Tunas Mulia",
+      "grade": "1 SMA",
+      "school_name": "SMA Tunas Mulia",
       "is_active": true
     },
     {
       "id": "00000000-0000-4000-8003-000000000007",
       "full_name": "Gita",
-      "grade": "6 SD",
-      "school_name": "SD Bina Insani",
+      "grade": "3 SMA",
+      "school_name": "SMA Bina Insani",
       "is_active": true
     },
     {
       "id": "00000000-0000-4000-8003-000000000008",
       "full_name": "Hana",
-      "grade": "2 SD",
-      "school_name": "SD Harapan Bangsa",
+      "grade": "PAUD",
+      "school_name": "PAUD Harapan Bangsa",
       "is_active": true
     },
     {
       "id": "00000000-0000-4000-8003-000000000009",
       "full_name": "Intan",
-      "grade": "1 SD",
-      "school_name": "SD Cendekia",
+      "grade": "TK",
+      "school_name": "TK Cendekia",
       "is_active": true
     },
     {

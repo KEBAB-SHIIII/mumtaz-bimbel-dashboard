@@ -31,6 +31,7 @@ function toSessionLine(row: SessionView): PayrollSessionLine {
     session_id: row.id,
     lesson_date: row.lesson_date,
     student_name: row.student_name,
+    student_grade: row.grade,
     subject_name: row.subject_name,
     duration_minutes: row.duration_minutes,
     status: row.status as SessionStatus,

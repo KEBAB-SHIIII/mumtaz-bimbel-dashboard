@@ -18,7 +18,8 @@ describe('Penagihan Orang Tua', () => {
   it('tagihan per murid: tarif per sesi, subtotal per murid, dan total keseluruhan', async () => {
     useFakeBackend();
     const user = await openBilling('2026-10');
-    const card = (await screen.findByRole('heading', { name: 'Aisyah', level: 2 })).closest('section')!;
+    const card = (await screen.findByRole('heading', { name: 'Aisyah', level: 2 })).closest('section');
+    if (!card) throw new Error('bagian tagihan Aisyah tidak ada');
     expect(within(card).queryByRole('table')).not.toBeInTheDocument();
     await user.click(within(card).getByRole('button', { name: /Rincian sesi/ }));
 
@@ -31,7 +32,7 @@ describe('Penagihan Orang Tua', () => {
     expect(within(table).getByText('2 sesi')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Bima', level: 2 })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Citra', level: 2 })).toBeInTheDocument();
-    expect(screen.getByText('Total tagihan').closest('div')).toHaveTextContent(/Rp\s?200\.000/);
+    expect(screen.getByText('Total tagihan').closest('div')).toHaveTextContent(/Rp\s?340\.000/);
   });
 
   it('filter murid hanya menampilkan tagihan murid itu', async () => {

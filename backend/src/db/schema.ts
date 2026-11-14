@@ -147,7 +147,7 @@ export const lessonSessions = pgTable(
     /** Label validitas data dari AI (atau koreksi Admin); `null` = belum divalidasi. */
     validity: varchar('validity', { length: 16 }),
     validity_reason: text('validity_reason'),
-    /** Snapshot saat sesi dihitung (approved): tarif les kotor dan potongan Admin per sesi. */
+    /** Snapshot saat sesi dihitung (approved): tarif les kotor dan total potongan Admin berdasarkan durasi. */
     rate_amount_snapshot: money('rate_amount_snapshot'),
     admin_fee_snapshot: money('admin_fee_snapshot'),
     reviewed_by_user_id: uuid('reviewed_by_user_id').references(() => users.id, { onDelete: 'restrict' }),

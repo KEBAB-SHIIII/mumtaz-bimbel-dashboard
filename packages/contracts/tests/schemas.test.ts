@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   PAGE_SIZE_MAX,
+  GRADE_OPTIONS,
+  createStudentRequestSchema,
+  updateStudentRequestSchema,
   SHEET_EXPORT_HEADERS,
   changePasswordRequestSchema,
   createParentRequestSchema,
@@ -207,5 +210,16 @@ describe('ekspor Google Sheets', () => {
 
   it('confirm_empty_replace default false', () => {
     expect(sheetExportRequestSchema.parse({ period: '2026-10' })).toEqual({ period: '2026-10', confirm_empty_replace: false });
+  });
+});
+
+
+describe('kelas siswa PAUD sampai SMA', () => {
+  it.each(GRADE_OPTIONS)('menerima %s untuk create dan update', (grade) => {
+    expect(createStudentRequestSchema.safeParse({ full_name: 'Siswa uji', grade, school_name: 'Sekolah uji' }).success).toBe(true);
+    expect(updateStudentRequestSchema.safeParse({ grade }).success).toBe(true);
+  });
+  it.each(['7 SD', '4 SMP', '4 SMA', 'SMP', 'SMA', ''])('menolak kelas di luar pilihan: %s', (grade) => {
+    expect(updateStudentRequestSchema.safeParse({ grade }).success).toBe(false);
   });
 });

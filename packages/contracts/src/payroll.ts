@@ -4,13 +4,15 @@ import { approvalStatusSchema, sessionStatusSchema, sessionValiditySchema } from
 import { periodSchema } from './period.js';
 
 /**
- * Honor (revisi PM, D-25): tarif les per sesi (kotor) dikurangi potongan Admin per sesi = pendapatan
+ * Honor (revisi PM, D-25): tarif les per sesi (kotor) dikurangi potongan Admin berdasarkan durasi = pendapatan
  * bersih tutor. Hanya sesi yang dihitung (`status=approved`) dengan snapshot tarif yang bernominal.
  */
 const sessionLineBase = {
   session_id: uuidSchema,
   lesson_date: isoDateSchema,
   student_name: z.string(),
+  /** Kelas siswa saat ini (mis. `2 SD`), untuk menampilkan jenjang di rincian honor. */
+  student_grade: z.string(),
   subject_name: z.string(),
   duration_minutes: z.number().int(),
   status: sessionStatusSchema,

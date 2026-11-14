@@ -42,7 +42,7 @@ Isi tab diverifikasi read-only: header tepat 8 kolom, `no` berurutan 1..N, semua
 
 ## 4. Risiko & keputusan terbuka
 
-Lihat `17-DECISIONS-AND-OPEN-QUESTIONS.md` §2 (O-01…O-16) dan §3. Ringkas: tarif resmi UMKM (O-01), spreadsheet UMKM production + izin (O-02), kriteria/threshold anomali (O-03), migrasi data historis (O-04), referensi desain final (O-05), SOP distribusi ID Akses Orang Tua (O-06), payment tracking (O-07); operasional: satu instance, kuota Gemini 429, host/domain/branch Neon production belum ditentukan.
+Lihat `17-DECISIONS-AND-OPEN-QUESTIONS.md` §2 (O-01…O-16) dan §3. Tarif resmi UMKM telah dikonfirmasi (O-01 ditutup oleh D-26). Ringkas pertanyaan tersisa: spreadsheet UMKM production + izin (O-02), kriteria/threshold anomali (O-03), migrasi data historis (O-04), referensi desain final (O-05), SOP distribusi ID Akses Orang Tua (O-06), payment tracking (O-07); operasional: satu instance, kuota Gemini 429, host/domain/branch Neon production belum ditentukan.
 
 ## 5. Addendum D-24 (30 Okt 2026) — tanpa penugasan & tarif, password tutor acak
 

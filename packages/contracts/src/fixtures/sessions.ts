@@ -42,11 +42,9 @@ const A1 = { tutor_id: TUTOR_IDS.tutorA, student_id: STUDENT_IDS.murid1, subject
 const A2 = { tutor_id: TUTOR_IDS.tutorA, student_id: STUDENT_IDS.murid2, subject_ids: [SUBJECT_IDS.bahasaInggris] };
 const B3 = { tutor_id: TUTOR_IDS.tutorB, student_id: STUDENT_IDS.murid3, subject_ids: [SUBJECT_IDS.ipa] };
 
-/**
- * Snapshot historis yang terkunci saat sesi dihitung: tarif les Rp50.000 (kotor) dan potongan Admin
- * Rp10.000 per sesi. Snapshot tidak dihitung ulang setelah terkunci.
- */
-const rateSnapshot = { rate_amount_snapshot: '50000', admin_fee_snapshot: '10000' } as const;
+/** Snapshot data contoh mengikuti tarif owner D-26 sesuai kelas dan durasi sesi. */
+const sdLower90 = { rate_amount_snapshot: '90000', admin_fee_snapshot: '10000' } as const;
+const sdUpper60 = { rate_amount_snapshot: '80000', admin_fee_snapshot: '10000' } as const;
 
 const noSnapshot = { rate_amount_snapshot: null, admin_fee_snapshot: null } as const;
 
@@ -76,7 +74,7 @@ export const fixtureSessions: FixtureLessonSession[] = [
     learning_material: 'Penjumlahan dan pengurangan bilangan dua digit',
     learning_notes: 'Siswa lancar penjumlahan, pengurangan dengan meminjam masih perlu latihan.',
     next_focus: 'Latihan pengurangan dengan meminjam.',
-    ...legacy('approved'), status: 'approved', anomaly_analysis_status: 'completed', ...rateSnapshot,
+    ...legacy('approved'), status: 'approved', anomaly_analysis_status: 'completed', ...sdLower90,
     reviewed_by_user_id: USER_IDS.admin, reviewed_at: '2026-10-02T02:00:00Z', admin_note: null,
     submitted_at: '2026-10-01T12:00:00Z', updated_at: '2026-10-02T02:00:00Z',
   },
@@ -113,7 +111,7 @@ export const fixtureSessions: FixtureLessonSession[] = [
     lesson_date: '2026-10-31', duration_minutes: 90,
     learning_material: 'Perkalian dasar 1–5',
     learning_notes: null, next_focus: 'Perkalian 6–10.',
-    ...legacy('approved'), status: 'approved', anomaly_analysis_status: 'completed', ...rateSnapshot,
+    ...legacy('approved'), status: 'approved', anomaly_analysis_status: 'completed', ...sdLower90,
     reviewed_by_user_id: USER_IDS.admin, reviewed_at: '2026-11-03T02:00:00Z', admin_note: null,
     submitted_at: '2026-11-02T03:00:00Z', updated_at: '2026-11-03T02:00:00Z',
   },
@@ -122,7 +120,7 @@ export const fixtureSessions: FixtureLessonSession[] = [
     lesson_date: '2026-11-01', duration_minutes: 90,
     learning_material: 'Perkalian 6–10',
     learning_notes: null, next_focus: null,
-    ...legacy('approved'), status: 'approved', anomaly_analysis_status: 'completed', ...rateSnapshot,
+    ...legacy('approved'), status: 'approved', anomaly_analysis_status: 'completed', ...sdLower90,
     reviewed_by_user_id: USER_IDS.admin, reviewed_at: '2026-11-03T02:05:00Z', admin_note: null,
     submitted_at: '2026-11-01T10:00:00Z', updated_at: '2026-11-03T02:05:00Z',
   },
@@ -131,7 +129,7 @@ export const fixtureSessions: FixtureLessonSession[] = [
     lesson_date: '2026-09-30', duration_minutes: 60,
     learning_material: 'Ciri-ciri makhluk hidup',
     learning_notes: null, next_focus: null,
-    ...legacy('approved'), status: 'approved', anomaly_analysis_status: 'completed', ...rateSnapshot,
+    ...legacy('approved'), status: 'approved', anomaly_analysis_status: 'completed', ...sdUpper60,
     reviewed_by_user_id: USER_IDS.admin, reviewed_at: '2026-10-01T02:00:00Z', admin_note: null,
     submitted_at: '2026-09-30T10:00:00Z', updated_at: '2026-10-01T02:00:00Z',
   },
@@ -140,7 +138,7 @@ export const fixtureSessions: FixtureLessonSession[] = [
     lesson_date: '2026-10-10', duration_minutes: 60,
     learning_material: 'Numbers 1–100',
     learning_notes: null, next_focus: null,
-    ...legacy('approved'), status: 'approved', anomaly_analysis_status: 'completed', ...rateSnapshot,
+    ...legacy('approved'), status: 'approved', anomaly_analysis_status: 'completed', ...sdUpper60,
     reviewed_by_user_id: USER_IDS.admin, reviewed_at: '2026-10-11T02:00:00Z', admin_note: null,
     submitted_at: '2026-10-10T10:00:00Z', updated_at: '2026-10-11T02:00:00Z',
   },
@@ -165,7 +163,7 @@ export const fixtureSessions: FixtureLessonSession[] = [
     lesson_date: '2026-10-10', duration_minutes: 60,
     learning_material: 'Gaya dan gerak',
     learning_notes: null, next_focus: null,
-    ...legacy('approved'), status: 'approved', anomaly_analysis_status: 'completed', ...rateSnapshot,
+    ...legacy('approved'), status: 'approved', anomaly_analysis_status: 'completed', ...sdUpper60,
     reviewed_by_user_id: USER_IDS.admin, reviewed_at: '2026-10-11T02:10:00Z', admin_note: null,
     submitted_at: '2026-10-10T12:00:00Z', updated_at: '2026-10-11T02:10:00Z',
   },

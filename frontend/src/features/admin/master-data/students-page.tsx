@@ -81,12 +81,12 @@ function StudentFormDialog({ student, open, onClose }: { student: Student | null
         <FormField id="student-full_name" label="Nama lengkap" required error={errors.full_name?.message}>
           <Input {...field('full_name')} {...form.register('full_name')} />
         </FormField>
-        <FormField id="student-grade" label="Kelas" required hint="Tarif les: kelas 1–3 SD dan 4–6 SD berbeda." error={errors.grade?.message}>
+        <FormField id="student-grade" label="Kelas" required hint="Tarif les mengikuti jenjang PAUD–TK, SD 1–3, SD 4–6, SMP, atau SMA." error={errors.grade?.message}>
           <Select {...field('grade')} {...form.register('grade')}>
             <option value="">Pilih kelas</option>
             {GRADE_OPTIONS.map((grade) => (
               <option key={grade} value={grade}>
-                Kelas {grade}
+                {grade === 'PAUD' || grade === 'TK' ? grade : `Kelas ${grade}`}
               </option>
             ))}
           </Select>

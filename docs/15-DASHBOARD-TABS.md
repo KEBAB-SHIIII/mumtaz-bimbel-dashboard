@@ -92,7 +92,7 @@ Konten:
 - daftar sesi pending/revisi/ditolak yang belum masuk nominal;
 - detail sesi sumber kalkulasi;
 
-**Aturan honor (D-25):** tarif les per jenjang (SD 1-3 Rp50.000/jam, SD 4-6 Rp70.000/jam; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×) dikurangi potongan Admin Rp10.000 per sesi, dikunci ke `rate_amount_snapshot`/`admin_fee_snapshot` saat sesi dihitung (D-25). Honor Tutor (Admin) menampilkan per tutor: sesi valid, subtotal kotor, potongan admin, dan total bersih, plus metrik total kotor, total bersih bimbel (Σ potongan), dan total gaji dibayarkan. Honor Saya (Tutor) hanya menampilkan nominal bersih.
+**Aturan honor (D-25):** tarif les per jenjang (PAUD–TK Rp40.000/jam, SD 1–3 Rp60.000/jam, SD 4–6 Rp80.000/jam, SMP Rp100.000/jam, SMA Rp120.000/jam; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×) dikurangi potongan Admin Rp10.000 untuk jam pertama dan setiap jam berikutnya; sisa lebih dari 30 menit menambah Rp10.000 (tepat 30 menit belum), dikunci ke `rate_amount_snapshot`/`admin_fee_snapshot` saat sesi dihitung (D-25). Honor Tutor (Admin) menampilkan per tutor: sesi valid, subtotal kotor, potongan admin, dan total bersih, plus metrik total kotor, total bersih bimbel (Σ potongan), dan total gaji dibayarkan. Honor Saya (Tutor) hanya menampilkan nominal bersih.
 
 ### 2.5 Master Data
 

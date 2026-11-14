@@ -68,9 +68,14 @@ export type TutorCredentialIssued = z.infer<typeof tutorCredentialIssuedSchema>;
 
 // --- Student -------------------------------------------------------------
 
-/** Kelas yang didukung: mentok di SD kelas 6 (keputusan owner); tarif per jenjang SD 1-3 dan SD 4-6. */
-export const GRADE_OPTIONS = ['1 SD', '2 SD', '3 SD', '4 SD', '5 SD', '6 SD'] as const;
-export const gradeSchema = z.enum(GRADE_OPTIONS, { error: 'Pilih kelas 1–6 SD' });
+/** Jenjang PAUD sampai SMA; format kelas SD lama tetap kompatibel. */
+export const GRADE_OPTIONS = [
+  'PAUD', 'TK',
+  '1 SD', '2 SD', '3 SD', '4 SD', '5 SD', '6 SD',
+  '1 SMP', '2 SMP', '3 SMP',
+  '1 SMA', '2 SMA', '3 SMA',
+] as const;
+export const gradeSchema = z.enum(GRADE_OPTIONS, { error: 'Pilih jenjang atau kelas PAUD sampai SMA' });
 
 export const studentSchema = z.object({
   id: uuidSchema,

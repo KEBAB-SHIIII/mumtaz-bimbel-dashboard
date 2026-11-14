@@ -6,7 +6,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Legend,
   Line,
   ComposedChart,
   Pie,
@@ -36,6 +35,40 @@ const CHART_PALETTE = {
   students: '#B7A4DE',
   revenue: '#E7B68E',
 };
+
+/**
+ * Warna per jenjang: pastel yang sama dengan grafik lain (+ satu merah muda untuk jenjang kelima),
+ * terikat ke jenjang, bukan urutan irisan. Urutan dipilih agar irisan bersebelahan (termasuk SMA↔PAUD–TK)
+ * paling mudah dibedakan; karena pastel saling berdekatan, celah antar-irisan dan label legenda tetap wajib
+ * sebagai penanda kedua. Jumlah murid tampil di tooltip saat irisan disorot.
+ */
+const GRADE_COLORS: Record<string, string> = {
+  'PAUD–TK': CHART_PALETTE.revenue,
+  'SD 1–3': CHART_PALETTE.students,
+  'SD 4–6': CHART_PALETTE.sessions,
+  SMP: CHART_PALETTE.tutor,
+  SMA: '#E89AB0',
+};
+
+/** Legenda ringkas di bawah grafik: titik kecil dan label pendek dalam satu-dua baris (teks netral, bukan warna seri). */
+function ChartLegend({ items }: { items: { label: string; color: string }[] }) {
+  return (
+    <ul className="m-0 flex list-none flex-wrap justify-center gap-x-3 gap-y-1 p-0 text-meta text-muted">
+      {items.map((item) => (
+        <li key={item.label} className="flex items-center gap-1.5 whitespace-nowrap">
+          <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: item.color }} />
+          {item.label}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const REVENUE_LEGEND = [
+  { label: 'Omzet kotor', color: CHART_PALETTE.revenue },
+  { label: 'Gaji tutor', color: CHART_PALETTE.tutor },
+  { label: 'Pendapatan bersih bimbel', color: CHART_PALETTE.sessions },
+];
 
 const compactRupiah = new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 });
 const formatCompactRupiah = (value: number) => `Rp${compactRupiah.format(value)}`;
@@ -69,12 +102,6 @@ function chartStyle(colors: ThemeColors, animate: boolean) {
     /** Titik aktif grafik area: cincin putih + keyframe `dot-in`. */
     activeDot: (fill: string) => ({ r: 5, strokeWidth: 2, stroke: colors.surface, fill, className: 'chart-dot' }),
     barCursor: { fill: colors.surfaceMuted },
-    // Teks legenda netral: warna seri (mis. coral 4.27:1) tidak cukup kontras untuk teks.
-    legend: {
-      iconType: 'circle',
-      wrapperStyle: { fontSize: 12 },
-      formatter: (value: string) => <span style={{ color: colors.muted }}>{value}</span>,
-    } as const,
   };
 }
 
@@ -162,7 +189,6 @@ export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['r
   const colors = useThemeColors();
   const style = chartStyle(colors, animate);
   const revenueData = toRevenueChart(revenue);
-  const pieColors = [CHART_PALETTE.tutor, CHART_PALETTE.revenue];
 
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
@@ -174,51 +200,59 @@ export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['r
           summary="pendapatan bersih bimbel, gaji tutor, dan omzet kotor enam bulan terakhir"
           sample={false}
         >
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={revenueData} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
-              <defs>
-                <linearGradient id="revenueNetFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={CHART_PALETTE.sessions} stopOpacity={0.5} />
-                  <stop offset="100%" stopColor={CHART_PALETTE.sessions} stopOpacity={0.1} />
-                </linearGradient>
-                <linearGradient id="revenueSalaryFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={CHART_PALETTE.tutor} stopOpacity={0.45} />
-                  <stop offset="100%" stopColor={CHART_PALETTE.tutor} stopOpacity={0.1} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke={colors.border} vertical={false} />
-              <XAxis dataKey="month" {...style.axis} />
-              <YAxis {...style.axis} width={72} tickFormatter={formatCompactRupiah} />
-              <Tooltip {...style.tooltip} content={<RevenueTooltip />} />
-              <Legend {...style.legend} itemSorter={(item) => ['Omzet kotor', 'Gaji tutor', 'Pendapatan bersih bimbel'].indexOf(String(item.value))} />
-              <Area type="monotone" dataKey="net" name="Pendapatan bersih bimbel" stroke={CHART_PALETTE.sessions} strokeWidth={3} fill="url(#revenueNetFill)" activeDot={style.activeDot(CHART_PALETTE.sessions)} isAnimationActive={animate} />
-              <Area type="monotone" dataKey="salary" name="Gaji tutor" stroke={CHART_PALETTE.tutor} strokeWidth={3} fill="url(#revenueSalaryFill)" activeDot={style.activeDot(CHART_PALETTE.tutor)} isAnimationActive={animate} />
-              <Line type="monotone" dataKey="gross" name="Omzet kotor" stroke={CHART_PALETTE.revenue} strokeWidth={3} dot={false} activeDot={style.activeDot(CHART_PALETTE.revenue)} isAnimationActive={animate} />
-            </ComposedChart>
-          </ResponsiveContainer>
+          <div className="flex h-full flex-col gap-2">
+            <div className="min-h-0 flex-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={revenueData} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
+                  <defs>
+                    <linearGradient id="revenueNetFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART_PALETTE.sessions} stopOpacity={0.5} />
+                      <stop offset="100%" stopColor={CHART_PALETTE.sessions} stopOpacity={0.1} />
+                    </linearGradient>
+                    <linearGradient id="revenueSalaryFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART_PALETTE.tutor} stopOpacity={0.45} />
+                      <stop offset="100%" stopColor={CHART_PALETTE.tutor} stopOpacity={0.1} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke={colors.border} vertical={false} />
+                  <XAxis dataKey="month" {...style.axis} />
+                  <YAxis {...style.axis} width={72} tickFormatter={formatCompactRupiah} />
+                  <Tooltip {...style.tooltip} content={<RevenueTooltip />} />
+                  <Area type="monotone" dataKey="net" name="Pendapatan bersih bimbel" stroke={CHART_PALETTE.sessions} strokeWidth={3} fill="url(#revenueNetFill)" activeDot={style.activeDot(CHART_PALETTE.sessions)} isAnimationActive={animate} />
+                  <Area type="monotone" dataKey="salary" name="Gaji tutor" stroke={CHART_PALETTE.tutor} strokeWidth={3} fill="url(#revenueSalaryFill)" activeDot={style.activeDot(CHART_PALETTE.tutor)} isAnimationActive={animate} />
+                  <Line type="monotone" dataKey="gross" name="Omzet kotor" stroke={CHART_PALETTE.revenue} strokeWidth={3} dot={false} activeDot={style.activeDot(CHART_PALETTE.revenue)} isAnimationActive={animate} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+            <ChartLegend items={REVENUE_LEGEND} />
+          </div>
         </ChartCard>
 
-        <ChartCard title="Komposisi murid per jenjang" subtitle="SD 1–3 dan SD 4–6" summary="jumlah murid SD kelas 1–3 dan SD kelas 4–6">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Tooltip {...style.tooltip} />
-              <Legend {...style.legend} />
-              <Pie
-                data={SAMPLE_GRADE_COMPOSITION}
-                dataKey="students"
-                nameKey="tier"
-                innerRadius="58%"
-                outerRadius="80%"
-                paddingAngle={3}
-                stroke="none"
-                isAnimationActive={animate}
-              >
-                {SAMPLE_GRADE_COMPOSITION.map((entry, index) => (
-                  <Cell key={entry.tier} fill={pieColors[index % pieColors.length] ?? CHART_PALETTE.tutor} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
+        <ChartCard title="Komposisi murid per jenjang" subtitle="PAUD sampai SMA" summary="jumlah murid per jenjang PAUD–TK, SD 1–3, SD 4–6, SMP, dan SMA">
+          <div className="flex h-full flex-col gap-2">
+            <div className="min-h-0 flex-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Tooltip {...style.tooltip} />
+                  <Pie
+                    data={SAMPLE_GRADE_COMPOSITION}
+                    dataKey="students"
+                    nameKey="tier"
+                    innerRadius="58%"
+                    outerRadius="80%"
+                    paddingAngle={3}
+                    stroke="none"
+                    isAnimationActive={animate}
+                  >
+                    {SAMPLE_GRADE_COMPOSITION.map((entry) => (
+                      <Cell key={entry.tier} fill={GRADE_COLORS[entry.tier] ?? colors.muted} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <ChartLegend items={SAMPLE_GRADE_COMPOSITION.map((entry) => ({ label: entry.tier, color: GRADE_COLORS[entry.tier] ?? colors.muted }))} />
+          </div>
         </ChartCard>
       </div>
 
