@@ -57,6 +57,13 @@
       "when": 1793803348380,
       "tag": "0007_redundant_dreadnoughts",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794787200000,
+      "tag": "0008_admin_fee_inclusive",
+      "breakpoints": true
     }
   ]
 }

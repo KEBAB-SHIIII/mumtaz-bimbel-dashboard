@@ -21,7 +21,7 @@ function FillAttendanceCta() {
   return (
     <section
       aria-labelledby="cta-attendance"
-      className="flex flex-col gap-3 rounded-lg border border-[#A9D39F]/60 bg-linear-to-r from-[#B9DDB5]/50 via-[#C7E7AC]/35 to-[#D9ED98]/30 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+      className="flex flex-col gap-3 rounded-lg border border-brand-border/60 bg-linear-to-r from-brand-gradient-from/50 via-brand-gradient-via/35 to-brand-gradient-to/30 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
     >
       <div className="flex items-center gap-3">
         <NotebookPen aria-hidden className="size-5 shrink-0 text-muted" />
@@ -32,7 +32,7 @@ function FillAttendanceCta() {
       </div>
       <Link
         to="/tutor/absensi"
-        className="group inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-linear-to-r from-[#B9DDB5]/65 via-[#C7E7AC]/50 to-[#D9ED98]/45 px-4 text-sm font-medium text-[#193923] ring-1 ring-inset ring-[#A9D39F]/60 transition-[filter] duration-150 hover:brightness-95 sm:h-9 motion-reduce:transition-none"
+        className="group inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-linear-to-r from-brand-gradient-from/65 via-brand-gradient-via/50 to-brand-gradient-to/45 px-4 text-sm font-medium text-brand-ink ring-1 ring-inset ring-brand-border/60 transition-[filter] duration-150 hover:brightness-95 sm:h-9 motion-reduce:transition-none"
       >
         Isi absensi <ArrowRight aria-hidden className="size-4" />
       </Link>

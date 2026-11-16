@@ -418,7 +418,7 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
       return { rate_amount_snapshot: null, admin_fee_snapshot: null };
     }
     const gross = hourly + Math.max(0, Math.floor((s.duration_minutes - 60) / 30)) * hourly * 0.5;
-    const fee = 10_000 * Math.max(1, Math.ceil((s.duration_minutes - 30) / 60));
+    const fee = 10_000 * Math.max(1, Math.floor((s.duration_minutes + 30) / 60));
     return { rate_amount_snapshot: String(gross), admin_fee_snapshot: String(fee) };
   };
 

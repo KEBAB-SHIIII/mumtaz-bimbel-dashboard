@@ -38,10 +38,10 @@ Bagian ini mendeskripsikan arti fixture CSV untuk pengujian mapping/normalisasi 
 ## Expected payroll
 
 - Tarif kotor per jam: **PAUD–TK Rp40.000, SD 1–3 Rp60.000, SD 4–6 Rp80.000, SMP Rp100.000, SMA Rp120.000** (D-26).
-- Tagihan sampai 60 menit = 1× tarif; setiap 30 menit penuh setelah itu menambah 0,5× tarif. Potongan Admin Rp10.000 pada jam pertama dan setiap jam berikutnya; sisa lebih dari 30 menit menambah Rp10.000. Tepat 90 menit potongan Rp10.000; 91–150 menit Rp20.000.
+- Tagihan sampai 60 menit = 1× tarif; setiap 30 menit penuh setelah itu menambah 0,5× tarif. Potongan Admin Rp10.000 pada jam pertama dan setiap jam berikutnya; sisa lebih dari atau sama dengan 30 menit menambah Rp10.000. 90–149 menit potongan Rp20.000; 150–209 menit Rp30.000.
 - Honor bersih = snapshot kotor − snapshot potongan. Semua snapshot fixture utama menggunakan aturan baru; nominal aturan lama hanya dibuat khusus oleh tes kompatibilitas/migrasi.
-- Oktober: Aisyah 2 × Rp90.000, Bima Rp80.000, Citra Rp80.000. Total kotor **Rp340.000**, potongan **Rp40.000**, honor bersih **Rp300.000** (Farhan Rp230.000; Noreen Rp70.000).
-- September: Citra 60 menit → kotor Rp80.000, potongan Rp10.000, bersih Rp70.000. November: Aisyah 90 menit → kotor Rp90.000, potongan Rp10.000, bersih Rp80.000.
+- Oktober: Aisyah 2 × Rp90.000, Bima Rp80.000, Citra Rp80.000. Total kotor **Rp340.000**, potongan **Rp60.000**, honor bersih **Rp280.000** (Farhan Rp210.000; Noreen Rp70.000).
+- September: Citra 60 menit → kotor Rp80.000, potongan Rp10.000, bersih Rp70.000. November: Aisyah 90 menit → kotor Rp90.000, potongan Rp20.000, bersih Rp70.000.
 
 - Hanya sesi `approved` yang dihitung; pending/revisi/ditolak tidak masuk nominal.
 - Honor adalah estimasi, bukan bukti pembayaran aktual.

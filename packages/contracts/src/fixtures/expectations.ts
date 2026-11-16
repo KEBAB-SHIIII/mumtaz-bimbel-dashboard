@@ -45,7 +45,7 @@ export const EXPECTED_EXPORT_SESSION_ORDER_2026_10 = [
 export const EXPECTED_PAYROLL_2026_10 = {
   period: '2026-10',
   /** Total kotor, potongan Admin (pendapatan bersih bimbel), dan gaji yang dibayarkan. */
-  totals: { gross_amount: '340000', admin_fee_amount: '40000', net_amount: '300000' },
+  totals: { gross_amount: '340000', admin_fee_amount: '60000', net_amount: '280000' },
   tutors: [
     {
       tutor_id: TUTOR_IDS.tutorA,
@@ -53,8 +53,8 @@ export const EXPECTED_PAYROLL_2026_10 = {
       counted_sessions: 3,
       not_counted_sessions: 2,
       gross_amount: '260000',
-      admin_fee_amount: '30000',
-      net_amount: '230000',
+      admin_fee_amount: '50000',
+      net_amount: '210000',
       approved_session_ids: [SESSION_IDS.s01, SESSION_IDS.s05, SESSION_IDS.s08],
     },
     {

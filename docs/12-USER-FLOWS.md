@@ -97,7 +97,7 @@ Jika model belum dikonfigurasi, gunakan fake detector hanya pada development/tes
 1. Admin memilih periode `YYYY-MM` di `Rekap` atau `Honor Tutor`.
 2. Backend memfilter sesi memakai `lesson_date`, bukan `submitted_at`/`reviewed_at`.
 3. Rekap menampilkan jumlah sesi per status, serta durasi approved; drill-down mengarah ke sesi sumber.
-4. Honor hanya dari sesi yang dihitung: tarif les per jenjang dikurangi potongan Admin Rp10.000 untuk jam pertama dan setiap jam berikutnya; sisa lebih dari 30 menit menambah Rp10.000 (tepat 30 menit belum), dikunci saat sesi divalidasi (D-25).
+4. Honor hanya dari sesi yang dihitung: tarif les per jenjang dikurangi potongan Admin Rp10.000 untuk jam pertama dan setiap jam berikutnya; sisa lebih dari atau sama dengan 30 menit menambah Rp10.000 (termasuk tepat 30 menit), dikunci saat sesi divalidasi (D-25).
 5. Tutor melihat hasil yang sama dari endpoint terpisah dengan scope dirinya sendiri.
 6. Status pembayaran aktual bukan scope MVP.
 

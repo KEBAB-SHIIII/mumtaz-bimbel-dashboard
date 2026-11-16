@@ -42,7 +42,7 @@ describe('Payroll preview (estimasi honor)', () => {
       expect(counted.map((line) => line.session_id).sort()).toEqual([...expected.approved_session_ids].sort());
       expect(counted.map((line) => [line.gross_amount, line.admin_fee, line.net_amount])).toEqual(
         expected.tutor_id === TUTOR_IDS.tutorA
-          ? [['90000', '10000', '80000'], ['80000', '10000', '70000'], ['90000', '10000', '80000']]
+          ? [['90000', '20000', '70000'], ['80000', '10000', '70000'], ['90000', '20000', '70000']]
           : [['80000', '10000', '70000']],
       );
     }
@@ -206,7 +206,7 @@ describe('Ringkasan dashboard', () => {
     });
     // Grafik pendapatan: 6 bulan s.d. Oktober dari snapshot sesi yang dihitung.
     expect(body.revenue_by_month.map((month) => month.period)).toEqual(['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10']);
-    expect(body.revenue_by_month.at(-1)).toEqual({ period: '2026-10', gross_revenue: '340000', tutor_salary: '300000', net_revenue: '40000' });
+    expect(body.revenue_by_month.at(-1)).toEqual({ period: '2026-10', gross_revenue: '340000', tutor_salary: '280000', net_revenue: '60000' });
     expect(body.revenue_by_month[0]).toEqual({ period: '2026-05', gross_revenue: '0', tutor_salary: '0', net_revenue: '0' });
   });
 
@@ -214,8 +214,8 @@ describe('Ringkasan dashboard', () => {
     const tutorA = await as.tutorA(t.app);
     const body = tutorDashboardSummarySchema.parse((await tutorA.get('/tutor/dashboard/summary?period=2026-10').expect(200)).body);
     expect(body.status_counts).toEqual({ pending: 2, approved: 3, revision_requested: 0, rejected: 0 });
-    // Bersih Farhan: 2 × (Rp90.000 − Rp10.000) + (Rp80.000 − Rp10.000).
-    expect(body.honor.estimated_amount).toBe('230000');
+    // Bersih Farhan: 2 × (Rp90.000 − Rp20.000) + (Rp80.000 − Rp10.000).
+    expect(body.honor.estimated_amount).toBe('210000');
   });
 
   it('Orang Tua: hanya approved anak terhubung, tanpa honor', async () => {

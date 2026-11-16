@@ -1,6 +1,6 @@
 import { GRADE_OPTIONS } from '@mumtaz/contracts';
 
-/** Potongan per jam; sisa lebih dari 30 menit menambah satu potongan. */
+/** Potongan per jam; sisa lebih dari atau sama dengan 30 menit menambah satu potongan. */
 export const ADMIN_FEE_PER_HOUR = 10_000;
 
 /** Tarif les per jam (kotor) yang dikonfirmasi owner. */
@@ -49,8 +49,8 @@ export interface SessionFee {
 export function sessionFee(grade: string, durationMinutes: number): SessionFee | null {
   const gross = grossAmount(grade, durationMinutes);
   if (gross === null) return null;
-  // Tepat 90/150 menit belum menambah potongan; 91/151 menit sudah.
-  const adminFee = ADMIN_FEE_PER_HOUR * Math.max(1, Math.ceil((durationMinutes - 30) / 60));
+  // Sisa >= 30 menit menambah potongan: 90/150 menit menjadi 2/3 potongan.
+  const adminFee = ADMIN_FEE_PER_HOUR * Math.max(1, Math.floor((durationMinutes + 30) / 60));
   return { gross, adminFee, tutorNet: gross - adminFee };
 }
 
