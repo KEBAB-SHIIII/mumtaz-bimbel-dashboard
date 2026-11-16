@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { BUSINESS_TIME_ZONE, type BillingStudent, type Period } from '@mumtaz/contracts';
-import { HOURLY_RATE_BY_TIER } from './tariff.js';
+import { fileURLToPath } from 'node:url';
 
 const LOCALE = 'id-ID';
 const rupiah = new Intl.NumberFormat(LOCALE, { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
@@ -24,172 +24,132 @@ export function invoiceNumber(period: Period, studentId: string): string {
   return `INV-${period.replace('-', '')}-${studentId.replace(/-/g, '').slice(-6).toUpperCase()}`;
 }
 
-/** Nama file unduhan aman (ASCII): tagihan-2026-10-aisyah.pdf. */
+/** Nama file unduhan aman (ASCII): Tagihan Aisyah - Oktober 2026.pdf. */
 export function invoiceFileName(period: Period, studentName: string): string {
-  const slug = studentName.normalize('NFKD').replace(/[^\w\s-]/g, '').trim().toLowerCase().replace(/\s+/g, '-') || 'murid';
-  return `tagihan-${period}-${slug}.pdf`;
+  const name = studentName.normalize('NFKD').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, ' ') || 'Siswa';
+  return `Tagihan ${name} - ${formatPeriod(period)}.pdf`;
 }
 
-const COLORS = { text: '#1f1f1f', muted: '#6b6b6b', border: '#d9d9d9', band: '#f3f3f3', accent: '#1f1f1f' };
-const MARGIN = 48;
-
-/** Kolom tabel rincian sesi (lebar total = lebar halaman A4 − margin). */
+// Brand palette from the supplied Mumtaz logo; cyan is reserved for quiet emphasis.
+const COLORS = { blue: '#26468F', cyan: '#6DCFE3', pale: '#E3F5FA', ink: '#172B4D', muted: '#62758B', line: '#DFE7EF', white: '#FFFFFF' };
+const MARGIN = 44;
+const LOGO = fileURLToPath(new URL('../../../assets/mumtaz-logo.jpg', import.meta.url));
 const COLUMNS = [
-  { key: 'no', label: 'No', width: 26, align: 'left' },
-  { key: 'date', label: 'Tanggal', width: 70, align: 'left' },
-  { key: 'time', label: 'Jam', width: 72, align: 'left' },
-  { key: 'subject', label: 'Mata pelajaran', width: 110, align: 'left' },
-  { key: 'tutor', label: 'Tutor', width: 76, align: 'left' },
-  { key: 'duration', label: 'Durasi', width: 54, align: 'right' },
-  { key: 'amount', label: 'Tarif', width: 91, align: 'right' },
+  { key: 'no', label: 'NO.', width: 26, align: 'left' },
+  { key: 'date', label: 'TANGGAL / JAM', width: 95, align: 'left' },
+  { key: 'description', label: 'RINCIAN LES', width: 205, align: 'left' },
+  { key: 'duration', label: 'DURASI', width: 65, align: 'right' },
+  { key: 'amount', label: 'JUMLAH', width: 116.28, align: 'right' },
 ] as const;
 type ColumnKey = (typeof COLUMNS)[number]['key'];
 
-/**
- * Invoice PDF tagihan les satu murid untuk satu periode (A4). Isi hanya sesi yang dihitung,
- * dengan tarif per sesi = snapshot tarif kotor. Font standar PDF (Helvetica), tanpa aset eksternal.
- */
+/** A4 invoice with an embedded local logo, dated session prices and repeating page headers. */
 export function renderInvoicePdf(input: { period: Period; student: BillingStudent; now: Date }): Promise<Buffer> {
   const { period, student, now } = input;
-  const doc = new PDFDocument({
-    size: 'A4',
-    margin: MARGIN,
-    bufferPages: true,
-    info: { Title: `Tagihan Les ${student.student_name} — ${formatPeriod(period)}`, Author: 'Bimbel Mumtaz Sampit' },
-  });
+  const doc = new PDFDocument({ size: 'A4', margin: MARGIN, bufferPages: true,
+    info: { Title: `Tagihan ${student.student_name} - ${formatPeriod(period)}`, Author: 'Bimbel Mumtaz Sampit' } });
   const chunks: Buffer[] = [];
   doc.on('data', (chunk: Buffer) => chunks.push(chunk));
   const done = new Promise<Buffer>((resolve, reject) => {
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
   });
-
-  const left = MARGIN;
   const right = doc.page.width - MARGIN;
-  const width = right - left;
-
-  // --- Kop -----------------------------------------------------------------
-  doc.fillColor(COLORS.accent).font('Helvetica-Bold').fontSize(16).text('BIMBEL MUMTAZ SAMPIT', left, MARGIN);
-  doc.fillColor(COLORS.muted).font('Helvetica').fontSize(9).text('Tagihan les bulanan', left, doc.y + 2);
-  doc.fillColor(COLORS.accent).font('Helvetica-Bold').fontSize(20).text('INVOICE', left, MARGIN, { width, align: 'right' });
-  const metaTop = MARGIN + 26;
-  const meta: [string, string][] = [
-    ['No. invoice', invoiceNumber(period, student.student_id)],
-    ['Tanggal terbit', formatIssued(now)],
-    ['Periode', formatPeriod(period)],
-  ];
-  meta.forEach(([label, value], index) => {
-    const y = metaTop + index * 14;
-    doc.font('Helvetica').fontSize(9).fillColor(COLORS.muted).text(label, right - 210, y, { width: 90 });
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(COLORS.text).text(value, right - 120, y, { width: 120, align: 'right' });
-  });
-
-  let y = metaTop + meta.length * 14 + 14;
-  doc.moveTo(left, y).lineTo(right, y).lineWidth(1).strokeColor(COLORS.border).stroke();
-  y += 16;
-
-  // --- Ditagihkan kepada ------------------------------------------------------
-  doc.font('Helvetica').fontSize(8).fillColor(COLORS.muted).text('DITAGIHKAN KEPADA', left, y, { characterSpacing: 0.5 });
-  doc.font('Helvetica-Bold').fontSize(11).fillColor(COLORS.text)
-    .text(student.parent_names.length > 0 ? `Orang tua/wali: ${student.parent_names.join(', ')}` : 'Orang tua/wali', left, y + 13, { width: width / 2 });
-  doc.font('Helvetica').fontSize(9).fillColor(COLORS.text).text(`Murid: ${student.student_name}`, left, doc.y + 3, { width: width / 2 });
-  doc.fillColor(COLORS.muted).text(`${student.grade} · ${student.school_name}`, left, doc.y + 1, { width: width / 2 });
-  const billedBottom = doc.y;
-
-  doc.font('Helvetica').fontSize(8).fillColor(COLORS.muted).text('TOTAL TAGIHAN', left + width / 2, y, { width: width / 2, align: 'right', characterSpacing: 0.5 });
-  doc.font('Helvetica-Bold').fontSize(18).fillColor(COLORS.accent).text(formatRupiah(student.total_amount), left + width / 2, y + 12, { width: width / 2, align: 'right' });
-  doc.font('Helvetica').fontSize(9).fillColor(COLORS.muted).text(`${student.sessions} sesi les`, left + width / 2, doc.y + 2, { width: width / 2, align: 'right' });
-
-  y = Math.max(billedBottom, doc.y) + 22;
-
-  // --- Tabel rincian sesi --------------------------------------------------------
-  const ROW_PADDING = 6;
-  const drawHeader = (top: number): number => {
-    doc.rect(left, top, width, 22).fill(COLORS.band);
-    let x = left;
-    for (const column of COLUMNS) {
-      doc.font('Helvetica-Bold').fontSize(8.5).fillColor(COLORS.text)
-        .text(column.label, x + 4, top + 7, { width: column.width - 8, align: column.align });
-      x += column.width;
-    }
-    return top + 22;
+  const width = right - MARGIN;
+  const bottom = doc.page.height - 76;
+  const text = (value: string, x: number, y: number, w: number, size = 9, color = COLORS.ink, bold = false, align: 'left' | 'right' = 'left') => {
+    doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(size).fillColor(color).text(value, x, y, {width:w,align,lineGap:3});
+    return doc.y;
   };
-  const cells = (index: number, line: BillingStudent['lines'][number]): Record<ColumnKey, string> => ({
-    no: String(index + 1),
-    date: formatDate(line.lesson_date),
-    time: line.start_time && line.end_time ? `${line.start_time.replace(':', '.')}–${line.end_time.replace(':', '.')}` : '—',
-    subject: `${line.subject_name}${line.grade ? `\n${line.grade}` : ''}`,
-    tutor: line.tutor_name,
-    duration: `${line.duration_minutes} mnt`,
-    amount: `${formatRupiah(line.amount)}${line.hourly_rate ? `\n${formatRupiah(line.hourly_rate)}/jam` : ''}`,
-  });
-
-  y = drawHeader(y);
-  const pageBottom = doc.page.height - MARGIN - 40;
-  student.lines.forEach((line, index) => {
-    const values = cells(index, line);
-    doc.font('Helvetica').fontSize(8.5);
-    const height = Math.max(...COLUMNS.map((column) => doc.heightOfString(values[column.key], { width: column.width - 8 }))) + ROW_PADDING * 2;
-    if (y + height > pageBottom) {
-      doc.addPage();
-      y = drawHeader(MARGIN);
+  const logo = () => {
+    // Clip the original JPEG at its white roundel; keep the source image intact.
+    doc.save().circle(MARGIN + 35, 61, 35).fill(COLORS.white).restore();
+    doc.save().circle(MARGIN + 35, 61, 33).clip();
+    doc.image(LOGO, MARGIN - 2, 25.48, {width:74,height:74});
+    doc.restore();
+  };
+  const header = (continuation = false) => {
+    const height = continuation ? 74 : 166;
+    doc.rect(0, 0, doc.page.width, height).fill(COLORS.blue);
+    doc.rect(0, height, doc.page.width, 4).fill(COLORS.cyan);
+    if (!continuation) {
+      logo();
+      text('Invoice', MARGIN, 110, width / 2, 30, COLORS.white);
+      text('MUMTAZ BIMBEL', right - 250, 42, 250, 17, COLORS.white, true, 'right');
+      text('Bimbingan belajar · Sampit', right - 250, 68, 250, 10, COLORS.white, false, 'right');
+      text(`Tagihan les bulanan\n${formatPeriod(period)}`, right - 250, 113, 250, 10, COLORS.white, false, 'right');
+    } else {
+      text('MUMTAZ BIMBEL', MARGIN, 25, 240, 14, COLORS.white, true);
+      text(`${invoiceNumber(period,student.student_id)}\n${student.student_name}`, right - 240, 24, 240, 9, COLORS.white, false, 'right');
     }
-    let x = left;
-    for (const column of COLUMNS) {
-      doc.font('Helvetica').fontSize(8.5).fillColor(COLORS.text)
-        .text(values[column.key], x + 4, y + ROW_PADDING, { width: column.width - 8, align: column.align });
-      x += column.width;
+    return height + 27;
+  };
+  let y = header();
+  const start = y;
+  text('DITAGIHKAN KEPADA', MARGIN, y, 260, 8, COLORS.muted, true);
+  y = text(student.parent_names.length ? student.parent_names.join(', ') : 'Orang tua / wali', MARGIN, y + 19, 270, 12, COLORS.ink, true);
+  // Helvetica's PDF encoding does not support the grade-transition arrow.
+  const gradeLabel = student.grade.replace(/\s*→\s*/g, ' ke ');
+  y = text(`${student.student_name} (${gradeLabel})`, MARGIN, y + 5, 270, 10);
+  y = text(student.school_name, MARGIN, y + 3, 270, 9, COLORS.muted);
+  let metaY = start;
+  for (const [label,value] of [
+    ['NO. INVOICE',invoiceNumber(period,student.student_id)],
+    ['TANGGAL TERBIT',formatIssued(now)],
+  ]) {
+    text(label ?? '',right-200,metaY,200,7.5,COLORS.muted,true,'right');
+    metaY=text(value ?? '',right-200,metaY+13,200,9,COLORS.ink,false,'right')+10;
+  }
+  y=Math.max(y,metaY)+22;
+  const tableHeader = (top:number) => {
+    doc.moveTo(MARGIN,top).lineTo(right,top).lineWidth(0.7).strokeColor(COLORS.line).stroke();
+    let x=MARGIN;
+    for (const col of COLUMNS) {
+      text(col.label,x+4,top+13,col.width-8,7.5,COLORS.blue,true,col.align);
+      x+=col.width;
     }
-    y += height;
-    doc.moveTo(left, y).lineTo(right, y).lineWidth(0.5).strokeColor(COLORS.border).stroke();
+    return top+37;
+  };
+  const newTablePage = () => {doc.addPage();return tableHeader(header(true));};
+  if(y>bottom-90) y=newTablePage(); else y=tableHeader(y);
+  student.lines.forEach((line,index)=>{
+    const values:Record<ColumnKey,string>={
+      no:String(index+1),
+      date:`${formatDate(line.lesson_date)}\n${line.start_time && line.end_time ? `${line.start_time.replace(':','.')}–${line.end_time.replace(':','.')} WIB` : 'Jam belum tercatat'}`,
+      description:`${line.subject_name}${line.grade ? ` · ${line.grade}` : ''}\nTutor: ${line.tutor_name}`,
+      duration:`${line.duration_minutes} menit`,
+      amount:`${formatRupiah(line.amount)}${line.hourly_rate ? `\n${formatRupiah(line.hourly_rate)}/jam` : ''}`,
+    };
+    doc.font('Helvetica').fontSize(9);
+    const height=Math.max(48,...COLUMNS.map(c=>doc.heightOfString(values[c.key],{width:c.width-8,lineGap:3})+24));
+    if(y+height+(index===student.lines.length-1?133:0)>bottom) y=newTablePage();
+    let x=MARGIN;
+    for(const col of COLUMNS) {
+      text(values[col.key],x+4,y+12,col.width-8,9,col.key==='no'?COLORS.muted:COLORS.ink,false,col.align);
+      x+=col.width;
+    }
+    y+=height;
+    doc.moveTo(MARGIN,y).lineTo(right,y).lineWidth(0.5).strokeColor(COLORS.line).stroke();
   });
-
-  // --- Ringkasan --------------------------------------------------------------
-  if (y + 90 > pageBottom) {
-    doc.addPage();
-    y = MARGIN;
-  }
-  y += 12;
-  const summaryLeft = right - 220;
-  const summary: [string, string, boolean][] = [
-    ['Jumlah sesi', `${student.sessions} sesi`, false],
-    ['Total tagihan', formatRupiah(student.total_amount), true],
-  ];
-  for (const [label, value, strong] of summary) {
-    doc.font(strong ? 'Helvetica-Bold' : 'Helvetica').fontSize(strong ? 11 : 9).fillColor(COLORS.text)
-      .text(label, summaryLeft, y, { width: 110 })
-      .text(value, summaryLeft + 110, y, { width: 110, align: 'right' });
-    y += strong ? 18 : 15;
-  }
-
-  // --- Catatan -----------------------------------------------------------------
-  y += 16;
-  const rates = Object.entries(HOURLY_RATE_BY_TIER)
-    .map(([tier, rate]) => `${tier} ${formatRupiah(rate)}/jam`)
-    .join(', ');
-  const notes = `Tarif saat ini per jam: ${rates}. Sampai 60 menit dihitung satu jam; setiap 30 menit penuh berikutnya ditambah setengah tarif. ` +
-    'Nominal tagihan mengikuti tarif yang tersimpan pada setiap sesi. Hanya sesi yang tercatat valid yang ditagihkan.';
-  doc.font('Helvetica').fontSize(8.5);
-  const notesHeight = doc.heightOfString(notes, { width }) + 20;
-  if (y + notesHeight > pageBottom) {
-    doc.addPage();
-    y = MARGIN;
-  }
-  doc.font('Helvetica-Bold').fontSize(8.5).fillColor(COLORS.text).text('Catatan', left, y);
-  doc.font('Helvetica').fontSize(8.5).fillColor(COLORS.muted).text(notes, left, doc.y + 3, { width });
-
-  // --- Footer & nomor halaman ------------------------------------------------------
-  const range = doc.bufferedPageRange();
-  for (let page = range.start; page < range.start + range.count; page += 1) {
+  const bandHeight=105;
+  if(y+bandHeight+28>bottom) {doc.addPage();y=header(true);}
+  // Match the reference: a light notes panel adjoining a solid blue total panel.
+  y=Math.max(y+26,bottom-bandHeight);
+  const notesWidth=width*0.59;
+  doc.rect(MARGIN,y,notesWidth,bandHeight).fill(COLORS.pale);
+  doc.rect(MARGIN+notesWidth,y,width-notesWidth,bandHeight).fill(COLORS.blue);
+  text('CATATAN',MARGIN+16,y+17,notesWidth-32,8,COLORS.blue,true);
+  text('Tagihan mengikuti kelas dan durasi pada setiap sesi les. Hubungi admin jika ada rincian yang perlu diperiksa.',MARGIN+16,y+35,notesWidth-32,9,COLORS.ink);
+  text('TOTAL TAGIHAN',MARGIN+notesWidth+16,y+18,width-notesWidth-32,8,COLORS.white,true,'right');
+  text(formatRupiah(student.total_amount),MARGIN+notesWidth+16,y+39,width-notesWidth-32,formatRupiah(student.total_amount).length>14?16:20,COLORS.white,true,'right');
+  text(`${student.sessions} sesi les`,MARGIN+notesWidth+16,y+73,width-notesWidth-32,9,COLORS.white,false,'right');
+  const range=doc.bufferedPageRange();
+  for(let page=range.start;page<range.start+range.count;page++) {
     doc.switchToPage(page);
-    // Footer ada di area margin bawah: tanpa ini pdfkit menganggapnya meluap dan menambah halaman kosong.
-    doc.page.margins.bottom = 0;
-    const footerY = doc.page.height - MARGIN + 10;
-    doc.font('Helvetica').fontSize(7.5).fillColor(COLORS.muted)
-      .text('Dokumen ini dibuat otomatis oleh sistem Bimbel Mumtaz Sampit.', left, footerY, { width: width / 2, lineBreak: false })
-      .text(`Halaman ${page - range.start + 1} dari ${range.count}`, left + width / 2, footerY, { width: width / 2, align: 'right', lineBreak: false });
+    doc.page.margins.bottom=0;
+    text('Terima kasih telah belajar bersama Mumtaz.',MARGIN,doc.page.height-47,width-95,8,COLORS.muted);
+    text(`${page-range.start+1} / ${range.count}`,right-80,doc.page.height-47,80,8,COLORS.muted,false,'right');
   }
-
   doc.end();
   return done;
 }

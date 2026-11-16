@@ -181,7 +181,7 @@ describe('Penagihan Orang Tua', () => {
     });
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe('application/pdf');
-    expect(res.headers['content-disposition']).toBe('attachment; filename="tagihan-2026-10-aisyah.pdf"');
+    expect(res.headers['content-disposition']).toBe('attachment; filename="Tagihan Aisyah - Oktober 2026.pdf"');
     expect(res.headers['cache-control']).toBe('no-store');
     const pdf = res.body as Buffer;
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
@@ -193,7 +193,7 @@ describe('Penagihan Orang Tua', () => {
 
   it('nomor invoice & nama file deterministik', () => {
     expect(invoiceNumber('2026-10', '00000000-0000-4000-8003-00000000ab12')).toBe('INV-202610-00AB12');
-    expect(invoiceFileName('2026-10', 'Siti Nur Aisyah')).toBe('tagihan-2026-10-siti-nur-aisyah.pdf');
+    expect(invoiceFileName('2026-10', 'Siti Nur Aisyah')).toBe('Tagihan Siti Nur Aisyah - Oktober 2026.pdf');
   });
 });
 

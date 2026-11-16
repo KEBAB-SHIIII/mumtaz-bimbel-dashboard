@@ -3,6 +3,7 @@
  * KHUSUS TEST UI (tidak ikut build aplikasi). Bentuk respons mengikuti
  * docs/04 (diverifikasi test terhadap schema kontrak). Bukan data Neon.
  */
+import { formatPeriod } from '../../lib/format';
 import {
   approvalStatusOf,
   durationBetween,
@@ -605,7 +606,7 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
         requireRole('admin');
         const student = billing(req.params.period ?? '', id).students[0];
         if (!student) throw new FakeError(404, 'NOT_FOUND', 'Tagihan murid pada periode ini tidak ditemukan');
-        const fileName = `tagihan-${req.params.period}-${student.student_name.toLowerCase()}.pdf`;
+        const fileName = `Tagihan ${student.student_name} - ${formatPeriod(req.params.period ?? '')}.pdf`;
         return { status: 200, data: new Blob(['%PDF-fake'], { type: 'application/pdf' }), headers: { 'content-disposition': `attachment; filename="${fileName}"` } };
       },
     ],

@@ -49,7 +49,7 @@ describe('Penagihan Orang Tua', () => {
     const createUrl = vi.fn(() => 'blob:invoice');
     Object.assign(URL, { createObjectURL: createUrl, revokeObjectURL: vi.fn() });
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
-      expect(this.download).toBe('tagihan-2026-10-aisyah.pdf');
+      expect(this.download).toBe('Tagihan Aisyah - Oktober 2026.pdf');
     });
     const user = await openBilling('2026-10');
     await screen.findByRole('heading', { name: 'Aisyah', level: 2 });
