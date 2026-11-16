@@ -1,3 +1,4 @@
+import { lessonBasis, currentGrade, gradeAtDate } from '../master-data/grade-history.js';
 import { randomUUID } from 'node:crypto';
 import { and, asc, count, desc, eq, ilike, inArray, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
 import {
@@ -39,7 +40,7 @@ import {
   type ErrorDetail,
 } from '../../lib/http-error.js';
 import { likePattern, pageOffset, paginated } from '../../lib/pagination.js';
-import { NO_SNAPSHOT, countedSnapshot } from '../billing/tariff.js';
+import { NO_SNAPSHOT, snapshotFromBasis } from '../billing/tariff.js';
 import { toFinding } from '../anomaly/finding-mapper.js';
 import type { ServiceContext } from '../context.js';
 import {
@@ -63,6 +64,7 @@ function coreFields(row: SessionView) {
     student_id: row.student_id,
     student_name: row.student_name,
     grade: row.grade,
+    grade_source: row.grade_source,
     school_name: row.school_name,
     subject_ids: row.subject_ids,
     subject_name: row.subject_name,
@@ -116,7 +118,7 @@ async function findingsFor(db: DbOrTx, sessionIds: string[]): Promise<FlagRow[]>
  * validitas + approval; snapshot tarif & potongan Admin dikunci hanya bila sesi dihitung (approved).
  */
 export function validityUpdate(
-  session: { grade: string; duration_minutes: number },
+  session: Parameters<typeof snapshotFromBasis>[0],
   validity: SessionValidity,
   approval: ApprovalStatus = 'pending',
 ) {
@@ -124,7 +126,7 @@ export function validityUpdate(
   return {
     validity,
     status,
-    ...(status === 'approved' ? countedSnapshot(session.grade, session.duration_minutes) : NO_SNAPSHOT),
+    ...(status === 'approved' ? snapshotFromBasis(session) : NO_SNAPSHOT),
   };
 }
 
@@ -231,10 +233,10 @@ const resetToPendingValidation = (now: Date) => ({
 // ---------------------------------------------------------------------------
 
 /** `GET /tutor/attendance-options`: murid & mata pelajaran aktif yang dapat dipilih Tutor. */
-export async function listAttendanceOptions(ctx: ServiceContext): Promise<AttendanceOptions> {
+export async function listAttendanceOptions(ctx: ServiceContext, lessonDate?: string): Promise<AttendanceOptions> {
   const [studentRows, subjectRows] = await Promise.all([
     ctx.db
-      .select({ id: students.id, full_name: students.full_name, grade: students.grade, school_name: students.school_name })
+      .select({ id: students.id, full_name: students.full_name, grade: lessonDate ? gradeAtDate(lessonDate) : currentGrade(ctx.now()), school_name: students.school_name })
       .from(students)
       .where(eq(students.is_active, true))
       .orderBy(asc(students.full_name), asc(students.id)),
@@ -248,9 +250,9 @@ export async function listAttendanceOptions(ctx: ServiceContext): Promise<Attend
 }
 
 /** `GET /admin/attendance-options`: pilihan form sesi Admin = opsi Tutor + tutor aktif. */
-export async function listAdminAttendanceOptions(ctx: ServiceContext): Promise<AdminAttendanceOptions> {
+export async function listAdminAttendanceOptions(ctx: ServiceContext, lessonDate?: string): Promise<AdminAttendanceOptions> {
   const [options, tutorRows] = await Promise.all([
-    listAttendanceOptions(ctx),
+    listAttendanceOptions(ctx, lessonDate),
     ctx.db
       .select({ id: tutors.id, full_name: users.full_name })
       .from(tutors)
@@ -296,12 +298,14 @@ async function insertSession(
 ): Promise<string> {
   const now = ctx.now();
   return ctx.db.transaction(async (tx) => {
+    const basis = await lessonBasis(tx, values.input.student_id, values.input.lesson_date);
     const [inserted] = await tx
       .insert(lessonSessions)
       .values({
         client_submission_id: values.client_submission_id,
         tutor_id: values.tutor_id,
         ...normalizeEditable(values.input, values.duration),
+        ...basis,
         status: 'pending',
         anomaly_analysis_status: 'pending',
         submitted_at: now,
@@ -386,6 +390,7 @@ export async function reviseAttendance(
   input: ReviseAttendanceRequest,
 ): Promise<TutorSession> {
   return ctx.db.transaction(async (tx) => {
+    const basis = await lessonBasis(tx, input.student_id, input.lesson_date);
     const current = await sessionViewById(tx, sessionId);
     if (!current || current.tutor_id !== tutorId) throw notFound('Sesi');
 
@@ -399,7 +404,8 @@ export async function reviseAttendance(
     const duration = await assertPayloadValid(ctx, tx, input);
     const updated = await tx
       .update(lessonSessions)
-      .set({ ...normalizeEditable(input, duration), ...resetToPendingValidation(ctx.now()) })
+      .set({ ...normalizeEditable(input, duration), ...resetToPendingValidation(ctx.now()),
+        ...(current.student_id !== input.student_id || current.lesson_date !== input.lesson_date ? basis : {}), })
       // Conditional update: aman terhadap keputusan/revisi paralel.
       .where(and(eq(lessonSessions.id, sessionId), eq(lessonSessions.status, 'revision_requested')))
       .returning({ id: lessonSessions.id });
@@ -493,6 +499,9 @@ async function toAdminDetail(db: DbOrTx, row: SessionView): Promise<AdminAttenda
   const flags = await findingsFor(db, [row.id]);
   return {
     ...coreFields(row),
+    hourly_rate: row.hourly_rate_snapshot,
+    gross_amount: row.rate_amount_snapshot,
+    admin_fee: row.admin_fee_snapshot,
     client_submission_id: row.client_submission_id,
     learning_material: row.learning_material,
     learning_notes: row.learning_notes,
@@ -551,8 +560,9 @@ export async function adminUpdateAttendance(
   input: AdminUpdateAttendanceRequest,
 ): Promise<AdminAttendanceDetail> {
   return ctx.db.transaction(async (tx) => {
+    const basis = await lessonBasis(tx, input.student_id, input.lesson_date);
     const [locked] = await tx
-      .select({ status: lessonSessions.status })
+      .select()
       .from(lessonSessions)
       .where(eq(lessonSessions.id, sessionId))
       .for('update')
@@ -560,13 +570,21 @@ export async function adminUpdateAttendance(
     if (!locked) throw notFound('Sesi');
     await assertTutorExists(tx, input.tutor_id);
     const duration = await assertPayloadValid(ctx, tx, input);
-    const [student] = await tx.select({ grade: students.grade }).from(students).where(eq(students.id, input.student_id)).limit(1);
-    const snapshot =
-      locked.status === 'approved' && student ? countedSnapshot(student.grade, duration) : NO_SNAPSHOT;
+    const basisChanged = locked.student_id !== input.student_id || locked.lesson_date !== input.lesson_date;
+    const selectedBasis = basisChanged ? basis : {
+      grade_snapshot:locked.grade_snapshot ?? basis.grade_snapshot,
+      grade_source:locked.grade_source,
+      hourly_rate_snapshot:locked.hourly_rate_snapshot ?? basis.hourly_rate_snapshot,
+    };
+    const moneyChanged = basisChanged || locked.duration_minutes !== duration;
+    const snapshot = locked.status === 'approved'
+      ? (moneyChanged ? snapshotFromBasis({grade:selectedBasis.grade_snapshot, duration_minutes:duration, hourly_rate_snapshot:selectedBasis.hourly_rate_snapshot})
+        : {rate_amount_snapshot:locked.rate_amount_snapshot,admin_fee_snapshot:locked.admin_fee_snapshot})
+      : NO_SNAPSHOT;
 
     await tx
       .update(lessonSessions)
-      .set({ tutor_id: input.tutor_id, ...normalizeEditable(input, duration), ...snapshot, updated_at: ctx.now() })
+      .set({ tutor_id: input.tutor_id, ...normalizeEditable(input, duration), ...selectedBasis, ...snapshot, updated_at: ctx.now() })
       .where(eq(lessonSessions.id, sessionId));
     await replaceSubjects(tx, sessionId, input.subject_ids);
     return adminDetailById(tx, sessionId);
@@ -600,9 +618,8 @@ export async function setAttendanceValidity(
 ): Promise<AdminAttendanceDetail> {
   return ctx.db.transaction(async (tx) => {
     const [locked] = await tx
-      .select({ grade: students.grade, duration_minutes: lessonSessions.duration_minutes })
+      .select()
       .from(lessonSessions)
-      .innerJoin(students, eq(students.id, lessonSessions.student_id))
       .where(eq(lessonSessions.id, sessionId))
       .for('update', { of: lessonSessions })
       .limit(1);
@@ -613,7 +630,7 @@ export async function setAttendanceValidity(
     await tx
       .update(lessonSessions)
       .set({
-        ...validityUpdate(locked, input.validity, approval),
+        ...validityUpdate({ ...locked, grade:locked.grade_snapshot ?? (await sessionViewById(tx, sessionId))?.grade ?? '' }, input.validity, approval),
         ...(input.admin_note !== undefined ? { admin_note: input.admin_note } : {}),
         reviewed_by_user_id: adminUserId,
         reviewed_at: now,

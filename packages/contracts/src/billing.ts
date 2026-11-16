@@ -22,6 +22,9 @@ export const billingLineSchema = z.object({
   subject_name: z.string(),
   duration_minutes: z.number().int(),
   /** Tarif les sesi ini (subtotal per sesi). */
+  grade: z.string().optional(),
+  grade_source: z.string().optional(),
+  hourly_rate: moneyStringSchema.nullable().optional(),
   amount: moneyStringSchema,
 });
 export type BillingLine = z.infer<typeof billingLineSchema>;

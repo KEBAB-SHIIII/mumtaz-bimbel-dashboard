@@ -1,3 +1,6 @@
+import { isoDateSchema } from '@mumtaz/contracts';
+import { gradeChangeRequestSchema, applyGradeChangeRequestSchema } from '@mumtaz/contracts';
+import { getGradeHistory, changeGrade } from '../services/master-data/grade-history.js';
 import { listAvailablePeriods } from '../services/period-service.js';
 import { Router } from 'express';
 import {
@@ -105,8 +108,9 @@ export function adminRouter(ctx: ServiceContext, exportDeps: ExportDeps, anomaly
     res.json(await getAdminAttendanceDetail(ctx, idOf(req.params)));
   });
 
-  router.get('/admin/attendance-options', async (_req, res) => {
-    res.json(await listAdminAttendanceOptions(ctx));
+  router.get('/admin/attendance-options', async (req, res) => {
+    const date = parseInput(isoDateSchema.optional(), req.query.lesson_date);
+    res.json(await listAdminAttendanceOptions(ctx, date));
   });
 
   /** CRUD penuh Admin (revisi PM): koreksi bila AI salah label atau data keliru. */
@@ -161,6 +165,16 @@ export function adminRouter(ctx: ServiceContext, exportDeps: ExportDeps, anomaly
   });
   router.get('/admin/students/:id', async (req, res) => {
     res.json(await students.getStudent(ctx, idOf(req.params)));
+  });
+  router.get('/admin/students/:id/grade-history', async (req, res) => {
+    res.json(await getGradeHistory(ctx, idOf(req.params)));
+  });
+  router.post('/admin/students/:id/grade-history/preview', async (req, res) => {
+    res.json(await changeGrade(ctx, idOf(req.params), parseInput(gradeChangeRequestSchema, req.body)));
+  });
+  router.post('/admin/students/:id/grade-history', async (req, res) => {
+    const { preview_token, ...input } = parseInput(applyGradeChangeRequestSchema, req.body);
+    res.json(await changeGrade(ctx, idOf(req.params), input, { token:preview_token, userId:authOf(req).userId }));
   });
   router.patch('/admin/students/:id', async (req, res) => {
     res.json(await students.updateStudent(ctx, idOf(req.params), parseInput(updateStudentRequestSchema, req.body)));

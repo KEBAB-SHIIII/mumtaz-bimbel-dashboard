@@ -1,3 +1,4 @@
+import { moneyStringSchema } from './common.js';
 import { z } from 'zod';
 import {
   isoDateSchema,
@@ -115,6 +116,7 @@ const sessionCoreFields = {
   student_id: uuidSchema,
   student_name: z.string(),
   grade: z.string(),
+  grade_source: z.string().optional(),
   school_name: z.string(),
   subject_ids: z.array(uuidSchema),
   /** Nama mapel digabung koma (urut abjad), mis. "IPA, Matematika". */
@@ -188,6 +190,9 @@ export type AdminAttendanceListItem = z.infer<typeof adminAttendanceListItemSche
  * terakhir untuk payload saat ini, bukan audit history penuh.
  */
 export const adminAttendanceDetailSchema = z.object({
+  hourly_rate: moneyStringSchema.nullable().optional(),
+  gross_amount: moneyStringSchema.nullable().optional(),
+  admin_fee: moneyStringSchema.nullable().optional(),
   ...sessionCoreFields,
   client_submission_id: uuidSchema,
   learning_material: z.string(),
@@ -235,6 +240,8 @@ export type TutorAttendanceListQuery = z.infer<typeof tutorAttendanceListQuerySc
  * `strictObject` memastikan tidak ada admin_note/anomali/honor yang bocor.
  */
 export const parentProgressItemSchema = z.strictObject({
+  grade: z.string().optional(),
+  grade_source: z.string().optional(),
   id: uuidSchema,
   lesson_date: isoDateSchema,
   tutor_name: z.string(),

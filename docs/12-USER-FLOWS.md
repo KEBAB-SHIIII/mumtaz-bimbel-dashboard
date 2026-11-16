@@ -150,3 +150,7 @@ Jika model belum dikonfigurasi, gunakan fake detector hanya pada development/tes
 - [ ] Progress parent hanya berisi anak terhubung dan sesi approved.
 - [ ] Export Sheets berisi 8 kolom mentah dari semua status review; re-export tidak append duplikat.
 - [ ] Gagal export/AI tidak menghapus atau membatalkan data Neon.
+
+## Perubahan kelas siswa
+
+Alur admin, tutor, dan orang tua untuk kenaikan kelas, koreksi bertanggal, serta tarif historis dijelaskan di [Riwayat kelas dan tarif](18-RIWAYAT-KELAS-DAN-TARIF.md). Ubah profil siswa tidak lagi mengganti kelas langsung; gunakan tindakan **Kelas** di Master Data → Siswa.

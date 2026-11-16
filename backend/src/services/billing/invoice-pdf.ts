@@ -118,10 +118,10 @@ export function renderInvoicePdf(input: { period: Period; student: BillingStuden
     no: String(index + 1),
     date: formatDate(line.lesson_date),
     time: line.start_time && line.end_time ? `${line.start_time.replace(':', '.')}–${line.end_time.replace(':', '.')}` : '—',
-    subject: line.subject_name,
+    subject: `${line.subject_name}${line.grade ? `\n${line.grade}` : ''}`,
     tutor: line.tutor_name,
     duration: `${line.duration_minutes} mnt`,
-    amount: formatRupiah(line.amount),
+    amount: `${formatRupiah(line.amount)}${line.hourly_rate ? `\n${formatRupiah(line.hourly_rate)}/jam` : ''}`,
   });
 
   y = drawHeader(y);

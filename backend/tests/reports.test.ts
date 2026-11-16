@@ -104,14 +104,18 @@ describe('Payroll preview (estimasi honor)', () => {
     expect(body.warnings).toEqual([]);
 
     // Naik kelas ke 4 SD: sesi lama tetap Rp60.000, sesi baru Rp80.000.
-    await admin.patch(`/admin/students/${STUDENT_IDS.murid1}`, { grade: '4 SD' }).expect(200);
+    const change = {grade:'4 SD',effective_from:'2026-11-11',reason:'Kenaikan kelas'};
+    const preview = await admin.post(`/admin/students/${STUDENT_IDS.murid1}/grade-history/preview`,change).expect(200);
+    await admin.post(`/admin/students/${STUDENT_IDS.murid1}/grade-history`,{...change,preview_token:preview.body.preview_token}).expect(200);
     try {
       await submitAt(1, '2026-11-11');
       const after = payrollPreviewResponseSchema.parse((await admin.get('/admin/payroll/preview?period=2026-11').expect(200)).body);
       const lines = after.tutors.find((tutor) => tutor.tutor_id === TUTOR_IDS.tutorB)?.sessions.map((line) => line.gross_amount);
       expect(lines).toEqual(['60000', '80000']);
     } finally {
-      await admin.patch(`/admin/students/${STUDENT_IDS.murid1}`, { grade: '3 SD' }).expect(200);
+      const reset={grade:'3 SD',effective_from:'2026-11-12',reason:'Reset test'};
+      const review=await admin.post(`/admin/students/${STUDENT_IDS.murid1}/grade-history/preview`,reset).expect(200);
+      await admin.post(`/admin/students/${STUDENT_IDS.murid1}/grade-history`,{...reset,preview_token:review.body.preview_token}).expect(200);
     }
   });
 

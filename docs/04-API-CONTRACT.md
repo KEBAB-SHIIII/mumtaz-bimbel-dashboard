@@ -363,3 +363,7 @@ Schema Zod di `packages/contracts/src/` adalah bentuk implementasi kontrak ini. 
 - Hanya sesi yang dihitung (`status=approved`: Valid, atau Perlu revisi yang Disetujui) dengan snapshot tarif. Sesi dihitung tanpa tarif tidak ditagih dan muncul di `warnings`.
 - `GET /admin/billing/:student_id/invoice.pdf?period=` → `200 application/pdf` (`Content-Disposition: attachment; filename="tagihan-YYYY-MM-<murid>.pdf"`, `Cache-Control: no-store`), dibuat backend dengan `pdfkit` (A4, nomor invoice `INV-YYYYMM-XXXXXX`, rincian sesi, total, catatan tarif). Murid tanpa sesi ditagih pada periode → `404`.
 - Omzet kotor di dashboard = Σ snapshot tarif sesi yang dihitung = total tagihan periode yang sama.
+
+## Riwayat kelas bertanggal
+
+Endpoint riwayat, preview, apply, serta tambahan field dasar tarif sesi dijelaskan di [Riwayat kelas dan tarif](18-RIWAYAT-KELAS-DAN-TARIF.md#model-data-dan-api). `PATCH /admin/students/:id` menolak field `grade`; gunakan endpoint riwayat kelas. Opsi absensi menerima `lesson_date` untuk kelas sesuai tanggal les.

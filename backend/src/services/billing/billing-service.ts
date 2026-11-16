@@ -17,6 +17,7 @@ function toLine(row: SessionView, amount: Decimal): BillingLine {
     subject_name: row.subject_name,
     duration_minutes: row.duration_minutes,
     amount: money(amount),
+    grade:row.grade, grade_source:row.grade_source, hourly_rate:row.hourly_rate_snapshot,
   };
 }
 
@@ -68,7 +69,7 @@ export async function getBilling(ctx: ServiceContext, query: BillingQuery): Prom
     .map(([studentId, entry]) => ({
       student_id: studentId,
       student_name: entry.first.student_name,
-      grade: entry.first.grade,
+      grade: [...new Set(entry.lines.map(line => line.grade))].join(' → '),
       school_name: entry.first.school_name,
       parent_names: parents.filter((parent) => parent.student_id === studentId).map((parent) => parent.full_name),
       sessions: entry.lines.length,

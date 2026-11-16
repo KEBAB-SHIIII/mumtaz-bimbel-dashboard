@@ -68,3 +68,19 @@ export function countedSnapshot(grade: string, durationMinutes: number) {
 }
 
 export const NO_SNAPSHOT = { rate_amount_snapshot: null, admin_fee_snapshot: null } as const;
+
+/** Billing basis is kept separately from approval amounts, including while a session is pending. */
+export const durationMultiplier = (minutes: number) => 1 + Math.max(0, Math.floor((minutes - 60) / 30)) * 0.5;
+export function snapshotFromBasis(session: {
+  grade: string; duration_minutes: number; hourly_rate_snapshot?: string | null;
+  rate_amount_snapshot?: string | null; admin_fee_snapshot?: string | null;
+}) {
+  if (session.rate_amount_snapshot != null && session.admin_fee_snapshot != null) {
+    return { rate_amount_snapshot: session.rate_amount_snapshot, admin_fee_snapshot: session.admin_fee_snapshot };
+  }
+  if (session.hourly_rate_snapshot == null) return countedSnapshot(session.grade, session.duration_minutes);
+  return {
+    rate_amount_snapshot: String(Number(session.hourly_rate_snapshot) * durationMultiplier(session.duration_minutes)),
+    admin_fee_snapshot: String(ADMIN_FEE_PER_HOUR * Math.max(1, Math.floor((session.duration_minutes + 30) / 60))),
+  };
+}

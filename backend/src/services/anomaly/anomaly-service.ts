@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, lte, ne, or } from 'drizzle-orm';
+import { sql, and, asc, eq, gte, lte, ne, or } from 'drizzle-orm';
 import { anomalyFindingCandidateSchema, type AnomalyFindingCandidate, type SessionValidity } from '@mumtaz/contracts';
 import type { Database } from '../../db/client.js';
 import { anomalyFlags, lessonSessions, students } from '../../db/schema.js';
@@ -10,6 +10,7 @@ import {
   type AnomalyDetector,
   type AnomalySessionSnapshot,
 } from '../../integrations/anomaly/types.js';
+import { gradeAtDate } from '../master-data/grade-history.js';
 import { validityUpdate } from '../attendance/attendance-service.js';
 import { hhmm, sessionSubjects } from '../attendance/session-query.js';
 import { COMPARISON_WINDOW_DAYS, generateCandidates, selectComparisons } from './candidates.js';
@@ -68,7 +69,7 @@ function shiftDate(isoDate: string, days: number): string {
 
 async function loadTarget(db: Database, sessionId: string) {
   const [row] = await db
-    .select({ anomaly_analysis_status: lessonSessions.anomaly_analysis_status, grade: students.grade })
+    .select({ anomaly_analysis_status: lessonSessions.anomaly_analysis_status, grade: gradeAtDate(sql`${lessonSessions.lesson_date}`) })
     .from(lessonSessions)
     .innerJoin(students, eq(students.id, lessonSessions.student_id))
     .where(eq(lessonSessions.id, sessionId))
@@ -176,10 +177,12 @@ export async function analyzeSession(deps: AnomalyServiceDeps, sessionId: string
         );
       }
       if (result.validity) {
+        const [pricing] = await tx.select().from(lessonSessions).where(eq(lessonSessions.id,sessionId));
+        if (!pricing) return 'stale' as const;
         await tx
           .update(lessonSessions)
           .set({
-            ...validityUpdate({ grade: loaded.grade, duration_minutes: target.duration_minutes }, result.validity),
+            ...validityUpdate({ ...pricing, grade:pricing?.grade_snapshot ?? loaded.grade, duration_minutes: target.duration_minutes }, result.validity),
             validity_reason: result.reason ?? null,
             reviewed_by_user_id: null,
             reviewed_at: new Date(),

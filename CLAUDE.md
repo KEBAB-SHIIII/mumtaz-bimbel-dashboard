@@ -86,3 +86,7 @@ Gunakan dokumen di folder `docs/` sebagai sumber spesifikasi normatif:
    - **Setelah edit**: Jalankan typecheck, test, dan lint yang relevan. Laporkan hasil aktual secara faktual (jangan berasumsi atau memalsukan hasil test).
 3. **Kerahasiaan Kredensial**:
    - Jangan pernah mencetak atau meng-commit file `.env`, service account key, atau kredensial nyata. Gunakan `.env.example`.
+
+## Riwayat kelas bertanggal
+
+Lihat `docs/18-RIWAYAT-KELAS-DAN-TARIF.md`. Kelas aktif dibaca melalui riwayat; kelas/tarif sesi mengikuti tanggal les dan disimpan pada sesi. Jangan memakai `students.grade` langsung untuk tarif sesi atau kelas terkini, dan jangan mengubah kelas lewat edit profil. Perubahan/koreksi kelas memakai preview dampak dan audit.

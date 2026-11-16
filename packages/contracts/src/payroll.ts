@@ -11,8 +11,9 @@ const sessionLineBase = {
   session_id: uuidSchema,
   lesson_date: isoDateSchema,
   student_name: z.string(),
-  /** Kelas siswa saat ini (mis. `2 SD`), untuk menampilkan jenjang di rincian honor. */
+  /** Kelas siswa saat sesi les (mis. `2 SD`), untuk menampilkan jenjang di rincian honor. */
   student_grade: z.string(),
+  grade_source: z.string().optional(),
   subject_name: z.string(),
   duration_minutes: z.number().int(),
   status: sessionStatusSchema,
@@ -25,6 +26,7 @@ const sessionLineBase = {
 export const payrollSessionLineSchema = z.object({
   ...sessionLineBase,
   /** Tarif les sesi (kotor); `null` bila tidak dihitung. */
+  hourly_rate: moneyStringSchema.nullable().optional(),
   gross_amount: moneyStringSchema.nullable(),
   admin_fee: moneyStringSchema.nullable(),
   net_amount: moneyStringSchema.nullable(),

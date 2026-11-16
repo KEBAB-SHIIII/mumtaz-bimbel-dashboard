@@ -25,7 +25,8 @@ function SessionDetails({ detail }: { detail: AdminAttendanceDetail }) {
     <DescriptionList items={[
       { label: 'Nama tutor', value: detail.tutor_name },
       { label: 'Nama murid', value: detail.student_name },
-      { label: 'Kelas · Sekolah', value: `${detail.grade} · ${detail.school_name}` },
+      { label: 'Kelas', value: detail.grade },
+      { label: 'Sekolah', value: detail.school_name },
       { label: 'Mata pelajaran', value: detail.subject_name },
       { label: 'Tanggal les', value: formatLessonDate(detail.lesson_date) },
       { label: 'Jam les', value: formatLessonTime(detail.start_time, detail.end_time) },
@@ -135,7 +136,7 @@ export function AttendanceDetailDialog({ sessionId, onClose, onEdit, onDelete }:
   const count = data?.findings.filter((item) => item.review_status !== 'superseded').length ?? 0;
   return <Modal open={sessionId !== null} onClose={() => { if (!busy) onClose(); }} size="lg" stableHeight="compact" title="Detail sesi"
     footer={data && tab === 0 ? <>
-      <Button variant="ghost" className="text-danger sm:me-auto" disabled={busy} icon={<Trash2 aria-hidden className="size-4" />} onClick={() => onDelete(data)}>Hapus</Button>
+      <Button variant="danger-ghost" className="sm:me-auto" disabled={busy} icon={<Trash2 aria-hidden className="size-4" />} onClick={() => onDelete(data)}>Hapus</Button>
       <Button variant="secondary" disabled={busy} icon={<PencilLine aria-hidden className="size-4" />} onClick={() => onEdit(data)}>Ubah data</Button>
     </> : undefined}>
     {!data ? detail.isError ? <ErrorState error={detail.error} onRetry={() => void detail.refetch()} /> : <SessionDetailSkeleton /> : (

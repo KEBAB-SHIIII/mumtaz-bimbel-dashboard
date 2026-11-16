@@ -359,3 +359,7 @@ Tidak mempunyai FK deklaratif ke users; identitas berada dalam JSON.
 - Pisahkan label AI, koreksi admin, dan fixture sintetis. Label AI bukan otomatis ground truth. Status, validity/reason, hasil review, dan snapshot nominal adalah data setelah keputusan dan berisiko target leakage.
 - Kelas/sekolah siswa merupakan nilai master saat ini, bukan snapshot per sesi. Belum ada histori lengkap versi payload maupun versi aturan analisis.
 - Hash kredensial, kontak pribadi yang tidak diperlukan, dan tabel app_sessions tidak dimasukkan ke dataset DS.
+
+## Riwayat kelas dan dasar tarif sesi
+
+Migrasi 0009 menambahkan `student_grade_history`, `student_grade_audit`, serta `grade_snapshot`, `grade_source`, dan `hourly_rate_snapshot` pada sesi. Makna field, perlindungan nominal historis, serta keterbatasan data legacy dijelaskan di [Riwayat kelas dan tarif](18-RIWAYAT-KELAS-DAN-TARIF.md#model-data-dan-api).

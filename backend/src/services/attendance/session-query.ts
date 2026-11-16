@@ -1,3 +1,4 @@
+import { gradeAtDate } from '../master-data/grade-history.js';
 import { and, eq, gte, lt, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { periodDateRange, type Period } from '@mumtaz/contracts';
@@ -32,7 +33,9 @@ function sessionViewColumns(subjectAgg: ReturnType<typeof sessionSubjects>) {
     tutor_name: tutorUser.full_name,
     student_id: lessonSessions.student_id,
     student_name: students.full_name,
-    grade: students.grade,
+    grade: sql<string>`coalesce(${lessonSessions.grade_snapshot}, ${gradeAtDate(sql`${lessonSessions.lesson_date}`)})`,
+    grade_source: lessonSessions.grade_source,
+    hourly_rate_snapshot: lessonSessions.hourly_rate_snapshot,
     school_name: students.school_name,
     subject_ids: subjectAgg.subject_ids,
     /** Sejajar dengan `subject_ids`. */

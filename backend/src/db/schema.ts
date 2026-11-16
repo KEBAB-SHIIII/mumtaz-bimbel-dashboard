@@ -94,6 +94,26 @@ export const students = pgTable(
   (t) => [index('students_full_name_idx').on(t.full_name)],
 );
 
+/** One baseline plus dated class changes; latest effective row wins. */
+export const studentGradeHistory = pgTable('student_grade_history', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  student_id: uuid('student_id').notNull().references(() => students.id, { onDelete: 'restrict' }),
+  grade: varchar('grade', { length: 30 }).notNull(),
+  effective_from: date('effective_from', { mode: 'string' }).notNull(),
+  reason: text('reason').notNull(),
+  changed_by: uuid('changed_by').references(() => users.id, { onDelete: 'restrict' }),
+  ...timestamps,
+}, (t) => [uniqueIndex('student_grade_effective_key').on(t.student_id, t.effective_from)]);
+
+export const studentGradeAudit = pgTable('student_grade_audit', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  student_id: uuid('student_id').notNull().references(() => students.id, { onDelete: 'restrict' }),
+  changed_by: uuid('changed_by').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  reason: text('reason').notNull(),
+  details: json('details').notNull(),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const parentStudents = pgTable(
   'parent_students',
   {
@@ -148,6 +168,9 @@ export const lessonSessions = pgTable(
     validity: varchar('validity', { length: 16 }),
     validity_reason: text('validity_reason'),
     /** Snapshot saat sesi dihitung (approved): tarif les kotor dan total potongan Admin berdasarkan durasi. */
+    grade_snapshot: varchar('grade_snapshot', { length: 30 }),
+    grade_source: varchar('grade_source', { length: 16 }).notNull().default('legacy'),
+    hourly_rate_snapshot: money('hourly_rate_snapshot'),
     rate_amount_snapshot: money('rate_amount_snapshot'),
     admin_fee_snapshot: money('admin_fee_snapshot'),
     reviewed_by_user_id: uuid('reviewed_by_user_id').references(() => users.id, { onDelete: 'restrict' }),

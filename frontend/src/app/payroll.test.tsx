@@ -39,9 +39,9 @@ describe('Honor Tutor (Admin)', () => {
     expect(within(table).getByRole('columnheader', { name: 'Tarif (kotor)' })).toBeInTheDocument();
     expect(within(table).queryByRole('columnheader', { name: 'Nilai' })).not.toBeInTheDocument();
     expect(within(table).getAllByText('Tidak dihitung')).toHaveLength(2);
-    // Setiap nama siswa diberi label jenjang dari data kelasnya, mis. "Aisyah (SD)".
+    // Nama siswa dan kelas lengkap tampil bersama, mis. "Aisyah (3 SD)".
     for (const row of within(table).getAllByRole('row').slice(1)) {
-      expect((row as HTMLTableRowElement).cells[1]).toHaveTextContent(/^.+ \((PAUD|TK|SD|SMP|SMA)\)$/);
+      expect((row as HTMLTableRowElement).cells[1]).toHaveTextContent(/^.+ \((PAUD|TK|[1-6] (SD|SMP|SMA))\)$/);
     }
   });
 
