@@ -16,27 +16,16 @@ import { fetchTutorAttendance, fetchTutorDashboard } from './api';
 
 const LINK_CLASS = 'inline-flex items-center gap-1 rounded-sm text-sm font-medium text-primary underline-offset-4 hover:underline pointer-coarse:min-h-11';
 
-/** CTA utama Tutor (mobile-first): satu aksi terisi warna per tampilan. */
+/** Aksi utama tutor, sejajar dengan kontrol periode tanpa banner tambahan. */
 function FillAttendanceCta() {
   return (
-    <section
-      aria-labelledby="cta-attendance"
-      className="flex flex-col gap-3 rounded-lg border border-brand-border/60 bg-linear-to-r from-brand-gradient-from/50 via-brand-gradient-via/35 to-brand-gradient-to/30 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+    <Link
+      to="/tutor/absensi"
+      className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md bg-linear-to-r from-brand-gradient-from/65 via-brand-gradient-via/50 to-brand-gradient-to/45 px-3.5 text-sm font-medium whitespace-nowrap text-brand-ink shadow-sm ring-1 ring-inset ring-brand-border/60 transition-[filter] duration-150 hover:brightness-95 pointer-coarse:h-11 motion-reduce:transition-none"
     >
-      <div className="flex items-center gap-3">
-        <NotebookPen aria-hidden className="size-5 shrink-0 text-muted" />
-        <div className="min-w-0">
-          <h2 id="cta-attendance" className="text-sm font-semibold text-text">Sudah selesai mengajar?</h2>
-          <p className="text-meta text-pretty text-muted">Catat sesi les Anda untuk memperbarui riwayat dan honor.</p>
-        </div>
-      </div>
-      <Link
-        to="/tutor/absensi"
-        className="group inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-linear-to-r from-brand-gradient-from/65 via-brand-gradient-via/50 to-brand-gradient-to/45 px-4 text-sm font-medium text-brand-ink ring-1 ring-inset ring-brand-border/60 transition-[filter] duration-150 hover:brightness-95 sm:h-9 motion-reduce:transition-none"
-      >
-        Isi absensi <ArrowRight aria-hidden className="size-4" />
-      </Link>
-    </section>
+      <NotebookPen aria-hidden className="size-4" />
+      Isi absensi
+    </Link>
   );
 }
 
@@ -55,10 +44,11 @@ export function TutorDashboardPage() {
           <h2 className="text-page-title-mobile text-balance text-text lg:text-page-title">Halo, {user.full_name}!</h2>
           <p className="mt-1 text-sm text-pretty text-muted">Ringkasan sesi Anda pada {formatPeriod(period)}.</p>
         </div>
-        <PeriodSelector value={period} onChange={setPeriod} />
+        <div className="flex flex-wrap items-end gap-3">
+          <PeriodSelector value={period} onChange={setPeriod} />
+          <FillAttendanceCta />
+        </div>
       </div>
-
-      <FillAttendanceCta />
 
       <QueryView query={summary} skeleton={<SkeletonStatCards count={5} />}>
         {(data) => (
