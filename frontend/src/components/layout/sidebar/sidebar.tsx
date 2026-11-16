@@ -254,14 +254,26 @@ export function Sidebar({ passwordRequired = false, role, userId, fullName, onLo
 
   return (
     <div className="flex h-full flex-col">
-      <div className={cn('flex h-16 shrink-0 items-center gap-2.5 px-5', isCollapsed && 'justify-center px-0')}>
+      <div className={cn('flex h-16 shrink-0 items-center px-3', role === 'tutor' ? 'gap-2' : 'gap-2.5', isCollapsed && 'justify-center')}>
         {!isCollapsed && (
-          <>
-            <p className="min-w-0 flex-1 truncate text-lg font-semibold text-text">Mumtaz Bimbel</p>
-          </>
+          <div className={cn('flex min-w-0 flex-1 items-center gap-2.5', role === 'tutor' && 'gap-2')}>
+            {role === 'tutor' && (
+              <img
+                src="/favicon.svg"
+                alt=""
+                aria-hidden
+                className="size-8 shrink-0 rounded-full bg-white object-cover shadow-sm ring-1 ring-brand-border/55"
+              />
+            )}
+            {role === 'tutor' ? (
+              <p className="whitespace-nowrap text-base font-semibold tracking-tight text-text">Mumtaz Bimbel</p>
+            ) : (
+              <p className="min-w-0 flex-1 truncate text-lg font-semibold text-text">Mumtaz Bimbel</p>
+            )}
+          </div>
         )}
         {variant === 'desktop' ? (
-          <IconButton aria-label={isCollapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'} aria-expanded={!isCollapsed} onClick={onToggleCollapse}>
+          <IconButton className={isCollapsed ? 'w-full pointer-coarse:w-full' : undefined} aria-label={isCollapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'} aria-expanded={!isCollapsed} onClick={onToggleCollapse}>
             {isCollapsed ? <PanelLeftOpen aria-hidden className="size-4.5" /> : <PanelLeftClose aria-hidden className="size-4.5" />}
           </IconButton>
         ) : (

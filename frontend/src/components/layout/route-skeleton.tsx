@@ -204,10 +204,12 @@ function SidebarSkeleton({ role, collapsed }: { role: Role | undefined; collapse
   const showLabels = groups.length > 1;
   return (
     <div className="flex h-full flex-col">
-      <div className={cn('flex h-16 items-center gap-2.5 px-5', collapsed && 'justify-center px-0')}>
-        {!collapsed && <Skeleton className="size-8 rounded-md" />}
-        {!collapsed && <Skeleton className="h-4 w-28" />}
-        <Skeleton className={cn('size-7 rounded-md', !collapsed && 'ms-auto')} />
+      <div className={cn('flex h-16 items-center px-3', role === 'tutor' ? 'gap-2' : 'gap-2.5', collapsed && 'justify-center')}>
+        {!collapsed && role === 'tutor' && <Skeleton className="size-8 shrink-0 rounded-full" />}
+        {!collapsed && (role === 'tutor' ? (
+          <Skeleton className="h-3.5 w-24" />
+        ) : <Skeleton className="h-4 w-28" />)}
+        <Skeleton className={cn('rounded-md', collapsed ? 'h-9 w-full pointer-coarse:h-11' : 'ms-auto size-9 pointer-coarse:size-11')} />
       </div>
       <div className="flex flex-1 flex-col gap-5 px-3 py-2">
         {groups.map((count, group) => (
