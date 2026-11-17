@@ -19,15 +19,16 @@ export const FINDING_LABEL: Record<FindingType, string> = {
 
 const SEVERITY_LABEL = { low: 'rendah', medium: 'sedang', high: 'tinggi' } as const;
 
-/** Sumber analisis dibedakan jelas: model ML FastAPI, Gemini fallback, atau test double (docs/09 §3). */
+/**
+ * Sumber analisis: AI Model atau test double (docs/09 §3). Temuan lama dari provider
+ * baseline sebelumnya ikut ditampilkan sebagai AI Model tanpa menyebut vendor.
+ */
 function providerLabel(finding: AnomalyFinding): string {
   if (!finding.provider) return 'Sumber tidak diketahui';
   if (finding.provider.startsWith('fake')) return 'Hasil uji (fake detector), bukan AI live';
-  if (finding.provider === 'ml_fastapi') {
-    return `Klasifikasi AI (Model ML${finding.model ? ` · ${finding.model}` : ''})`;
-  }
-  if (finding.provider === 'gemini') return `Klasifikasi AI (Gemini${finding.model ? ` · ${finding.model}` : ''})`;
-  return finding.provider;
+  return finding.provider === 'ml_fastapi' && finding.model
+    ? `Klasifikasi AI Model · ${finding.model}`
+    : 'Klasifikasi AI Model';
 }
 
 /** Temuan aktif (yang lama digantikan revisi Tutor tidak ditampilkan). Hanya untuk dilihat Admin. */

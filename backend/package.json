@@ -21,7 +21,6 @@
     "db:check": "drizzle-kit check"
   },
   "dependencies": {
-    "@google/genai": "^2.29.1",
     "@mumtaz/contracts": "0.0.0",
     "argon2": "^0.45.1",
     "connect-pg-simple": "^10.0.0",

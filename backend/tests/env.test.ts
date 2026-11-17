@@ -89,8 +89,8 @@ describe('parseEnv', () => {
   });
 
   it('memperlakukan nilai kosong sebagai tidak diset', () => {
-    const env = makeTestEnv({ GEMINI_API_KEY: '', DATABASE_MIGRATION_URL: '', ANOMALY_SERVICE_URL: '' });
-    expect(env.GEMINI_API_KEY).toBeUndefined();
+    const env = makeTestEnv({ ANOMALY_MODEL_NAME: '', DATABASE_MIGRATION_URL: '', ANOMALY_SERVICE_URL: '' });
+    expect(env.ANOMALY_MODEL_NAME).toBeUndefined();
     expect(env.DATABASE_MIGRATION_URL).toBeUndefined();
     expect(env.ANOMALY_SERVICE_URL).toBeUndefined();
   });
@@ -104,10 +104,8 @@ describe('integrationStatus', () => {
     });
   });
 
-  it('memprioritaskan ml_fastapi ketika ANOMALY_SERVICE_URL diisi', () => {
-    expect(
-      integrationStatus(makeTestEnv({ ANOMALY_SERVICE_URL: 'http://localhost:8000', GEMINI_API_KEY: 'k', GEMINI_MODEL: 'm' })),
-    ).toEqual({
+  it('melaporkan ml_fastapi ketika ANOMALY_SERVICE_URL diisi', () => {
+    expect(integrationStatus(makeTestEnv({ ANOMALY_SERVICE_URL: 'http://localhost:8000' }))).toEqual({
       googleSheetsExport: 'disabled',
       anomalyProvider: 'ml_fastapi',
     });

@@ -71,7 +71,7 @@ export class HttpAnomalyDetector implements AnomalyDetector {
 
   async detect(input: AnomalyDetectionInput, { signal }: { signal: AbortSignal }): Promise<AnomalyDetection> {
     // FastAPI menghitung 19 fitur langsung dari `target`, `comparisons`, dan `config`.
-    // Field `candidates` tidak dikirim karena hanya dipakai oleh prototype Gemini lama.
+    // Field `candidates` tidak dikirim karena hanya dipakai FakeAnomalyDetector di test.
     const payload = {
       target: toPublicSnapshot(input.target),
       comparisons: input.comparisons.map(toPublicSnapshot),

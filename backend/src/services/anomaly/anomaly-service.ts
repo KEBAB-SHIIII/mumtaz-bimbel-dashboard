@@ -63,7 +63,7 @@ const toSnapshot = (row: SnapshotRow): AnomalySessionSnapshot => ({
 
 /**
  * Menghapus field privat (`learning_material`, `learning_notes`, `next_focus`, `end_time`)
- * di batas service sebelum payload dikirim ke detektor AI mana pun (FastAPI, Gemini, atau fake test).
+ * di batas service sebelum payload dikirim ke detektor AI mana pun (FastAPI atau fake test).
  * Field privat hanya dipakai di dalam memori backend oleh `generateCandidates` (legacy fallback).
  */
 const toDetectorSnapshot = (s: AnomalySessionSnapshot): AnomalySessionSnapshot => ({
@@ -152,7 +152,7 @@ async function withTimeout<T>(timeoutMs: number, run: (signal: AbortSignal) => P
 }
 
 /**
- * Analisis & validasi satu sesi oleh worker (FastAPI ML / fallback Gemini).
+ * Analisis & validasi satu sesi oleh worker (FastAPI ML).
  *
  * Perubahan penting migrasi ML:
  * - Gerbang lama `if (candidates.length === 0)` DIHAPUS karena aturan baru (< 30 menit,

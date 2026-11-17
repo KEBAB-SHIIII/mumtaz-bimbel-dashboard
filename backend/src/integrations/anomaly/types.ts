@@ -3,7 +3,7 @@ import type { AnomalyFindingCandidate, FindingSeverity, FindingType, SessionVali
 /**
  * Port detektor anomali (docs/05 §6). Input sengaja pseudonymous: hanya ID
  * internal & atribut terstruktur sesi — tidak ada nama, kontak, materi/catatan,
- * maupun kode akses. Detektor memberi label validitas (revisi PM, model ML FastAPI / baseline LLM);
+ * maupun kode akses. Detektor memberi label validitas (revisi PM, model ML FastAPI);
  * service yang menulis status sesi, dan Admin selalu dapat mengoreksinya.
  */
 export interface AnomalySessionSnapshot {
@@ -24,14 +24,14 @@ export interface AnomalySessionSnapshot {
   submitted_at: string;
 }
 
-/** Sinyal deterministik yang membuat sebuah kandidat diperiksa (dipakai fallback Gemini & Fake detector). */
+/** Sinyal deterministik yang membuat sebuah kandidat diperiksa (dipakai Fake detector di test). */
 export type CandidateSignal =
   | 'same_tutor_student_subject_date_duration'
   | 'same_student_subject_date'
   | 'duration_above_threshold'
   | 'start_after_threshold';
 
-/** Kandidat terstruktur dari rule engine lokal (hanya untuk fallback Gemini & Fake detector). */
+/** Kandidat terstruktur dari rule engine lokal (hanya untuk Fake detector di test). */
 export interface AnomalyCandidate {
   finding_type: FindingType;
   signal: CandidateSignal;
@@ -40,7 +40,7 @@ export interface AnomalyCandidate {
 }
 
 /**
- * Konfigurasi ambang batas validasi yang dikirim ke layanan AI (FastAPI/Gemini).
+ * Konfigurasi ambang batas validasi yang dikirim ke layanan AI (FastAPI).
  * Nilainya berasal dari variabel `.env` agar mudah disesuaikan tanpa mengubah kode.
  */
 export interface AnomalyDetectionConfig {
@@ -64,7 +64,7 @@ export interface AnomalyDetectionInput {
    */
   comparisons: readonly AnomalySessionSnapshot[];
   /**
-   * Opsional: hanya dipakai oleh fallback Gemini & FakeAnomalyDetector di unit test.
+   * Opsional: hanya dipakai oleh FakeAnomalyDetector di unit test.
    * `HttpAnomalyDetector` (FastAPI ML) tidak mengirim field ini karena model menghitung
    * 19 fitur langsung dari `target`, `comparisons`, dan `config`.
    */
@@ -73,7 +73,7 @@ export interface AnomalyDetectionInput {
 }
 
 export interface AnomalyDetector {
-  /** Disimpan ke `anomaly_flags.provider` (mis. `'ml_fastapi'`, `'gemini'`, atau fake). */
+  /** Disimpan ke `anomaly_flags.provider` (mis. `'ml_fastapi'` atau fake). */
   readonly provider: string;
   /** Disimpan ke `anomaly_flags.model` (mis. `'anomaly-lgbm-v1'`). */
   readonly model: string | null;

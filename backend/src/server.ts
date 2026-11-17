@@ -23,7 +23,7 @@ function main() {
   });
 
   // Memilih provider AI aktif dari .env: `HttpAnomalyDetector` (FastAPI ML) jika
-  // `ANOMALY_SERVICE_URL` diset, atau fallback Gemini, atau `null`.
+  // `ANOMALY_SERVICE_URL` diset, atau `null` (not_evaluated).
   const detector = createAnomalyDetector(env);
   const anomalyWorker = new AnomalyWorker(
     (sessionId) =>

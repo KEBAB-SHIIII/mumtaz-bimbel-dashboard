@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { createAnomalyDetector } from '../src/integrations/anomaly/create-detector.js';
-import { GeminiAnomalyDetector } from '../src/integrations/anomaly/gemini-detector.js';
 import { HttpAnomalyDetector } from '../src/integrations/anomaly/http-detector.js';
 import { AnomalyProviderError, type AnomalyDetectionInput } from '../src/integrations/anomaly/types.js';
 import { makeTestEnv } from './test-env.js';
@@ -158,13 +157,11 @@ describe('HttpAnomalyDetector (adapter FastAPI ML)', () => {
 });
 
 describe('createAnomalyDetector (pemilihan provider dari env)', () => {
-  it('memilih HttpAnomalyDetector bila ANOMALY_SERVICE_URL diisi (mengalahkan Gemini)', () => {
+  it('memilih HttpAnomalyDetector bila ANOMALY_SERVICE_URL diisi', () => {
     const detector = createAnomalyDetector(
       makeTestEnv({
         ANOMALY_SERVICE_URL: 'http://localhost:8000',
         ANOMALY_MODEL_NAME: 'anomaly-lgbm-v1',
-        GEMINI_API_KEY: 'key',
-        GEMINI_MODEL: 'gemini-3.1-flash-lite',
       }),
     );
     expect(detector).toBeInstanceOf(HttpAnomalyDetector);
@@ -172,9 +169,8 @@ describe('createAnomalyDetector (pemilihan provider dari env)', () => {
     expect(detector?.model).toBe('anomaly-lgbm-v1');
   });
 
-  it('fallback ke GeminiAnomalyDetector bila hanya kredensial Gemini yang diisi, dan null bila kosong semua', () => {
-    const gemini = createAnomalyDetector(makeTestEnv({ GEMINI_API_KEY: 'key', GEMINI_MODEL: 'gemini-3.1-flash-lite' }));
-    expect(gemini).toBeInstanceOf(GeminiAnomalyDetector);
+  it('mengembalikan null (not_evaluated) bila ANOMALY_SERVICE_URL kosong', () => {
     expect(createAnomalyDetector(makeTestEnv())).toBeNull();
+    expect(createAnomalyDetector(makeTestEnv({ ANOMALY_SERVICE_URL: '' }))).toBeNull();
   });
 });

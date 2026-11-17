@@ -12,7 +12,7 @@ import type {
 export const COMPARISON_WINDOW_DAYS = 30;
 
 /**
- * Batas maksimal sesi pembanding yang dikirim ke detektor (FastAPI/Gemini).
+ * Batas maksimal sesi pembanding yang dikirim ke detektor (FastAPI).
  * Dinaikkan dari 30 ke 500 agar statistik 30 hari tutor/siswa dan deteksi bentrok/duplikat
  * tetap akurat tanpa membebani payload HTTP.
  */
@@ -29,7 +29,7 @@ const byEarliest = (a: AnomalySessionSnapshot, b: AnomalySessionSnapshot) =>
   a.submitted_at.localeCompare(b.submitted_at) || a.id.localeCompare(b.id);
 
 /**
- * Rule engine deterministik (hanya untuk fallback Gemini & `FakeAnomalyDetector` di test).
+ * Rule engine deterministik (hanya untuk `FakeAnomalyDetector` di test).
  * FastAPI ML menghitung sendiri ke-19 fitur langsung dari `target` dan `comparisons`,
  * sehingga tidak bergantung pada `generateCandidates`.
  */

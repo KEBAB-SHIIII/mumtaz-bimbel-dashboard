@@ -81,13 +81,13 @@ export const envSchema = z
     GOOGLE_SHEETS_TIMEOUT_MS: positiveInt(20_000),
 
     // =========================================================================
-    // Integrasi AI Anomaly Detection (Model ML FastAPI Sendiri vs Fallback Gemini)
+    // Integrasi AI Anomaly Detection (Model ML FastAPI)
     // =========================================================================
 
     /**
      * URL dasar layanan FastAPI model ML milik kita (contoh: http://localhost:8000).
-     * Jika diisi, backend otomatis memprioritaskan `HttpAnomalyDetector` (`ml_fastapi`)
-     * menggantikan prototype Gemini.
+     * Jika diisi, backend memakai `HttpAnomalyDetector` (`ml_fastapi`); jika kosong,
+     * sesi ditandai `not_evaluated` dan divalidasi manual oleh Admin.
      */
     ANOMALY_SERVICE_URL: optionalUrl,
     /**
@@ -95,10 +95,6 @@ export const envSchema = z
      * (contoh: `anomaly-lgbm-v1`).
      */
     ANOMALY_MODEL_NAME: optionalString,
-
-    /** Kredensial opsional untuk prototype/fallback Gemini API. */
-    GEMINI_API_KEY: optionalString,
-    GEMINI_MODEL: optionalString,
 
     /**
      * Batas atas durasi normal (menit). Durasi di atas nilai ini (> 180 menit)
@@ -214,18 +210,12 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
 
 /**
  * Status integrasi eksternal yang dicatat saat server startup (`GET /health`).
- * Prioritas provider anomali:
- * 1. `ml_fastapi` bila `ANOMALY_SERVICE_URL` diset (model ML sendiri)
- * 2. `gemini` bila kredensial Gemini diset (prototype fallback)
- * 3. `not_configured` bila keduanya kosong (tidak ada fake success)
+ * Provider anomali: `ml_fastapi` bila `ANOMALY_SERVICE_URL` diset (model ML FastAPI),
+ * `not_configured` bila kosong (tidak ada fake success).
  */
 export function integrationStatus(env: Env) {
   return {
     googleSheetsExport: env.GOOGLE_SHEETS_EXPORT_ENABLED ? 'configured' : 'disabled',
-    anomalyProvider: env.ANOMALY_SERVICE_URL
-      ? 'ml_fastapi'
-      : env.GEMINI_API_KEY && env.GEMINI_MODEL
-        ? 'gemini'
-        : 'not_configured',
+    anomalyProvider: env.ANOMALY_SERVICE_URL ? 'ml_fastapi' : 'not_configured',
   } as const;
 }
