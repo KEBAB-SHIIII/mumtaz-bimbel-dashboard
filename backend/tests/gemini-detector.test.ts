@@ -25,7 +25,7 @@ const input: AnomalyDetectionInput = {
     { finding_type: 'suspected_duplicate', signal: 'same_tutor_student_subject_date_duration', related_lesson_session_id: related.id, default_severity: 'medium' },
     { finding_type: 'duration_outlier', signal: 'duration_above_threshold', related_lesson_session_id: null, default_severity: 'low' },
   ],
-  config: { durationOutlierMinutes: 180, lateStartAfter: '21:00' },
+  config: { durationOutlierMinutes: 180, durationMinMinutes: 30, lateStartAfter: '21:00', earlyStartBefore: '07:00' },
 };
 
 /** Klien Gemini palsu: merekam request dan mengembalikan teks JSON yang ditentukan test. */
@@ -213,7 +213,7 @@ describe('temuan antar-pembanding tidak memengaruhi target', () => {
     const output = { ...validOutput, classifications: [{ ...validOutput.classifications[0], candidate_ref: 'C1', reason: 'Durasi 300 menit.' }],
       additional_findings: [{ finding_type: 'unusual_pattern', related_ref: 'S1', severity: 'low', reason: 'Pembanding duplikat.', evidence_summary: '' }] };
     const result = await new GeminiAnomalyDetector({ model: 'm', client: fakeClient(JSON.stringify(output)).client })
-      .detect({ ...input, target: { ...target, duration_minutes: 300 }, candidates: input.candidates.slice(1) }, { signal });
+      .detect({ ...input, target: { ...target, duration_minutes: 300 }, candidates: (input.candidates ?? []).slice(1) }, { signal });
     expect(result.findings).toHaveLength(1);
     expect(result.validity).toBe('needs_revision');
     expect(result.validity_reason).toBe('Durasi 300 menit.');

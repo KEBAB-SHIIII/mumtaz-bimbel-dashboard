@@ -3,7 +3,7 @@ import type { AnomalyFindingCandidate, FindingSeverity, FindingType, SessionVali
 /**
  * Port detektor anomali (docs/05 §6). Input sengaja pseudonymous: hanya ID
  * internal & atribut terstruktur sesi — tidak ada nama, kontak, materi/catatan,
- * maupun kode akses. Detektor memberi label validitas (revisi PM, baseline LLM);
+ * maupun kode akses. Detektor memberi label validitas (revisi PM, model ML FastAPI / baseline LLM);
  * service yang menulis status sesi, dan Admin selalu dapat mengoreksinya.
  */
 export interface AnomalySessionSnapshot {
@@ -15,7 +15,7 @@ export interface AnomalySessionSnapshot {
   lesson_date: string;
   /** "HH:MM"; `null` untuk sesi lama tanpa jam. */
   start_time: string | null;
-  /** Data isi hanya untuk pencocokan lokal, tidak dikirim ke model. */
+  /** Data isi hanya untuk pencocokan lokal (rule engine/test), tidak dikirim ke FastAPI/model. */
   end_time?: string | null;
   learning_material?: string;
   learning_notes?: string | null;
@@ -24,14 +24,14 @@ export interface AnomalySessionSnapshot {
   submitted_at: string;
 }
 
-/** Sinyal deterministik yang membuat sebuah kandidat diperiksa. */
+/** Sinyal deterministik yang membuat sebuah kandidat diperiksa (dipakai fallback Gemini & Fake detector). */
 export type CandidateSignal =
   | 'same_tutor_student_subject_date_duration'
   | 'same_student_subject_date'
   | 'duration_above_threshold'
   | 'start_after_threshold';
 
-/** Kandidat terstruktur dari rule engine; detektor mengklasifikasikannya. */
+/** Kandidat terstruktur dari rule engine lokal (hanya untuk fallback Gemini & Fake detector). */
 export interface AnomalyCandidate {
   finding_type: FindingType;
   signal: CandidateSignal;
@@ -39,29 +39,48 @@ export interface AnomalyCandidate {
   default_severity: FindingSeverity;
 }
 
+/**
+ * Konfigurasi ambang batas validasi yang dikirim ke layanan AI (FastAPI/Gemini).
+ * Nilainya berasal dari variabel `.env` agar mudah disesuaikan tanpa mengubah kode.
+ */
 export interface AnomalyDetectionConfig {
-  /** `ANOMALY_DURATION_OUTLIER_MINUTES` — durasi di atas ini Perlu revisi (revisi PM: > 180 menit). */
+  /** `ANOMALY_DURATION_OUTLIER_MINUTES` — durasi di atas nilai ini (> 180 menit) → `needs_revision`. */
   durationOutlierMinutes: number;
-  /** Les yang dimulai PADA ATAU SETELAH jam ini Perlu revisi (revisi PM: mulai 21.00). */
+  /** `ANOMALY_DURATION_MIN_MINUTES` — durasi di bawah nilai ini (< 30 menit) → `needs_revision`. */
+  durationMinMinutes: number;
+  /** `ANOMALY_LATE_START_AFTER` — jam mulai setelah nilai ini (> "21:00" WIB) → `needs_revision`. */
   lateStartAfter: string;
+  /** `ANOMALY_EARLY_START_BEFORE` — jam mulai sebelum nilai ini (< "07:00" WIB) → `needs_revision`. */
+  earlyStartBefore: string;
 }
 
 export interface AnomalyDetectionInput {
+  /** Sesi absen terbaru yang sedang dianalisis. */
   target: AnomalySessionSnapshot;
-  /** Sesi pembanding yang dipilih candidate generator (bukan seluruh histori). */
+  /**
+   * Sesi pembanding +-30 hari (tutor_id sama ATAU student_id sama) yang di-submit
+   * lebih awal dari `target` (maksimal 500 sesi). Dipakai FastAPI untuk menghitung
+   * 12 fitur perbandingan (duplikat persis, duplikat samar, bentrok jadwal, & statistik 30 hari).
+   */
   comparisons: readonly AnomalySessionSnapshot[];
-  candidates: readonly AnomalyCandidate[];
+  /**
+   * Opsional: hanya dipakai oleh fallback Gemini & FakeAnomalyDetector di unit test.
+   * `HttpAnomalyDetector` (FastAPI ML) tidak mengirim field ini karena model menghitung
+   * 19 fitur langsung dari `target`, `comparisons`, dan `config`.
+   */
+  candidates?: readonly AnomalyCandidate[];
   config: AnomalyDetectionConfig;
 }
 
 export interface AnomalyDetector {
-  /** Disimpan ke `anomaly_flags.provider`; fake harus berlabel jelas. */
+  /** Disimpan ke `anomaly_flags.provider` (mis. `'ml_fastapi'`, `'gemini'`, atau fake). */
   readonly provider: string;
+  /** Disimpan ke `anomaly_flags.model` (mis. `'anomaly-lgbm-v1'`). */
   readonly model: string | null;
   /**
    * Mengembalikan finding ternormalisasi + label validitas. Melempar bila provider gagal (timeout,
-   * quota, output invalid); service memetakan ke `anomaly_analysis_status='failed'` dan sesi tetap
-   * menunggu validasi (Admin dapat menetapkan manual).
+   * error jaringan/HTTP, output invalid); service memetakan ke `anomaly_analysis_status='failed'`
+   * dan sesi tetap menunggu validasi (Admin dapat menetapkan manual).
    */
   detect(input: AnomalyDetectionInput, options: { signal: AbortSignal }): Promise<AnomalyDetection>;
 }

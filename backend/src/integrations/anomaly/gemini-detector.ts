@@ -64,8 +64,8 @@ export interface GeminiDetectorOptions {
 
 /**
  * Detektor live berbasis Gemini (`@google/genai`) — baseline LLM untuk label validitas (revisi PM),
- * akan diganti model tim AI. Payload dipseudonimkan; output divalidasi Zod dan dipetakan kembali ke ID internal. Output yang tidak
- * lengkap/tidak dikenal dianggap invalid (status `failed`), bukan hasil parsial.
+ * akan diganti model tim AI (FastAPI ML). Payload dipseudonimkan; output divalidasi Zod dan dipetakan
+ * kembali ke ID internal. Output yang tidak lengkap/tidak dikenal dianggap invalid (status `failed`).
  */
 export class GeminiAnomalyDetector implements AnomalyDetector {
   readonly provider = 'gemini';
@@ -78,6 +78,7 @@ export class GeminiAnomalyDetector implements AnomalyDetector {
   }
 
   async detect(input: AnomalyDetectionInput, { signal }: { signal: AbortSignal }): Promise<AnomalyDetection> {
+    const inputCandidates = input.candidates ?? [];
     const { payload, candidateIndexOf } = pseudonymize(input);
 
     const request: GenerateContentParameters = {
@@ -99,7 +100,7 @@ export class GeminiAnomalyDetector implements AnomalyDetector {
 
     for (const item of output.classifications) {
       const index = candidateIndexOf.get(item.candidate_ref);
-      const candidate = index === undefined ? undefined : input.candidates[index];
+      const candidate = index === undefined ? undefined : inputCandidates[index];
       if (index === undefined || !candidate || classified.has(index)) {
         throw new AnomalyProviderError('Output model merujuk kandidat yang tidak dikenal', 'invalid_output');
       }
@@ -115,7 +116,7 @@ export class GeminiAnomalyDetector implements AnomalyDetector {
         suggested_action: 'review',
       });
     }
-    if (classified.size !== input.candidates.length) {
+    if (classified.size !== inputCandidates.length) {
       throw new AnomalyProviderError('Output model tidak mengklasifikasikan semua kandidat', 'invalid_output');
     }
 
@@ -123,7 +124,7 @@ export class GeminiAnomalyDetector implements AnomalyDetector {
     // menjadi temuan atau menentukan status sesi target.
     const active = findings.filter((finding) => finding.is_anomaly);
     const exactDuplicate = active.some((finding) => finding.finding_type === 'suspected_duplicate' &&
-      input.candidates.some((candidate) => candidate.signal === 'same_tutor_student_subject_date_duration' &&
+      inputCandidates.some((candidate) => candidate.signal === 'same_tutor_student_subject_date_duration' &&
         candidate.related_lesson_session_id === finding.related_lesson_session_id));
     const validity = exactDuplicate ? 'rejected' : active.length ? 'needs_revision' : 'valid';
     const validity_reason = output.additional_findings.length || validity !== output.validity

@@ -65,7 +65,8 @@ export function pseudonymize(input: AnomalyDetectionInput): AliasMap {
   const target = toSession(input.target, 'S0');
   const comparisons = input.comparisons.map((snapshot, index) => toSession(snapshot, `S${index + 1}`));
   const candidateIndexOf = new Map<string, number>();
-  const candidates = input.candidates.map((candidate, index) => {
+  // `candidates` bersifat opsional di kontrak baru (FastAPI tidak memakainya).
+  const candidates = (input.candidates ?? []).map((candidate, index) => {
     const ref = `C${index + 1}`;
     candidateIndexOf.set(ref, index);
     return {
