@@ -18,6 +18,7 @@ import { queryKeys } from '../../../lib/query-keys';
 import { fetchAdminAttendanceDetail, setAttendanceValidity } from '../api';
 import { ANALYSIS_POLL_MS } from './analysis-polling';
 import { FINDING_LABEL } from './finding-list';
+import { AiText, aiProviderLabel } from '../../shared/ai-reason';
 
 function SessionDetails({ detail }: { detail: AdminAttendanceDetail }) {
   return <div className="space-y-5">
@@ -74,8 +75,9 @@ function FindingsPanel({ detail, onBusy }: { detail: AdminAttendanceDetail; onBu
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className={`font-medium ${finding.finding_type === 'suspected_duplicate' ? 'text-danger-strong' : 'text-warning-strong'}`}>{FINDING_LABEL[finding.finding_type]}</span>
           </div>
-          <p>{finding.reason}</p>
-          {finding.evidence_summary && <p className="text-muted"><span className="font-medium">Bukti: </span>{finding.evidence_summary}</p>}
+          <p><AiText text={finding.reason} /></p>
+          {finding.evidence_summary && <p className="text-muted"><span className="font-medium">Bukti: </span><AiText text={finding.evidence_summary} /></p>}
+          <p className="text-meta text-muted">{aiProviderLabel(finding.provider, finding.model)}</p>
         </li>)}
       </ul>
       {requested && detail.last_review.admin_note && <p className="text-sm text-muted">
