@@ -23,11 +23,11 @@ export function humanizeAiText(text: string): string {
     .replace(/\b(\d{2}):(\d{2})\b/g, '$1.$2');
 }
 
-/** Timestamp ISO → waktu Asia/Jakarta, mis. "2 November 2026 pukul 10.00 WIB". */
+/** Timestamp ISO → waktu Asia/Jakarta, mis. "2 Nov 2026, 10.00 WIB". */
 export function formatTimestamp(iso: string): string {
   return `${new Intl.DateTimeFormat(LOCALE, {
     day: 'numeric',
-    month: 'long',
+    month: 'short',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
