@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   PAGE_SIZE_MAX,
+  formatCalendarDate,
+  formatPeriodLabel,
+  formatTimeRange,
+  timeToMinutes,
   GRADE_OPTIONS,
   createStudentRequestSchema,
   updateStudentRequestSchema,
@@ -221,5 +225,15 @@ describe('kelas siswa PAUD sampai SMA', () => {
   });
   it.each(['7 SD', '4 SMP', '4 SMA', 'SMP', 'SMA', ''])('menolak kelas di luar pilihan: %s', (grade) => {
     expect(updateStudentRequestSchema.safeParse({ grade }).success).toBe(false);
+  });
+});
+
+describe('format tampilan bersama', () => {
+  it('tanggal kalender, periode, jam, dan menit', () => {
+    expect(formatCalendarDate('2026-11-17')).toBe('17 November 2026');
+    expect(formatCalendarDate('2026-11-17', 'short')).toBe('17 Nov 2026');
+    expect(formatPeriodLabel('2026-10')).toBe('Oktober 2026');
+    expect(formatTimeRange('16:00', '17:30')).toBe('16.00–17.30 WIB');
+    expect(timeToMinutes('14:30')).toBe(870);
   });
 });

@@ -1,20 +1,13 @@
 import PDFDocument from 'pdfkit';
-import { BUSINESS_TIME_ZONE, type BillingStudent, type Period } from '@mumtaz/contracts';
+import { BUSINESS_TIME_ZONE, formatCalendarDate, formatPeriodLabel, formatTimeRange, type BillingStudent, type Period } from '@mumtaz/contracts';
 import { fileURLToPath } from 'node:url';
 
 const LOCALE = 'id-ID';
 const rupiah = new Intl.NumberFormat(LOCALE, { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
 const formatRupiah = (amount: string | number) => rupiah.format(Number(amount));
 
-function formatDate(isoDate: string): string {
-  const [y, m, d] = isoDate.split('-').map(Number) as [number, number, number];
-  return new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, d)));
-}
-
-function formatPeriod(period: Period): string {
-  const [y, m] = period.split('-').map(Number) as [number, number];
-  return new Intl.DateTimeFormat(LOCALE, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, 1)));
-}
+const formatDate = (isoDate: string) => formatCalendarDate(isoDate, 'long');
+const formatPeriod = (period: Period) => formatPeriodLabel(period);
 
 const formatIssued = (now: Date) =>
   new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'long', year: 'numeric', timeZone: BUSINESS_TIME_ZONE }).format(now);
@@ -115,7 +108,7 @@ export function renderInvoicePdf(input: { period: Period; student: BillingStuden
   student.lines.forEach((line,index)=>{
     const values:Record<ColumnKey,string>={
       no:String(index+1),
-      date:`${formatDate(line.lesson_date)}\n${line.start_time && line.end_time ? `${line.start_time.replace(':','.')}–${line.end_time.replace(':','.')} WIB` : 'Jam belum tercatat'}`,
+      date:`${formatDate(line.lesson_date)}\n${line.start_time && line.end_time ? formatTimeRange(line.start_time, line.end_time) : 'Jam belum tercatat'}`,
       description:`${line.subject_name}${line.grade ? ` · ${line.grade}` : ''}\nTutor: ${line.tutor_name}`,
       duration:`${line.duration_minutes} menit`,
       amount:`${formatRupiah(line.amount)}${line.hourly_rate ? `\n${formatRupiah(line.hourly_rate)}/jam` : ''}`,

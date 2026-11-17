@@ -2,6 +2,7 @@
 // Fixture test-only ada di subpath terpisah `@mumtaz/contracts/fixtures`.
 export * from './common.js';
 export * from './period.js';
+export * from './format.js';
 export * from './enums.js';
 export * from './health.js';
 export * from './error.js';

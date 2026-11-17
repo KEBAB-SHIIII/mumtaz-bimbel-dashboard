@@ -1,11 +1,8 @@
-import { BUSINESS_TIME_ZONE } from '@mumtaz/contracts';
+import { BUSINESS_TIME_ZONE, formatCalendarDate, formatPeriodLabel, formatTimeRange } from '@mumtaz/contracts';
 
 const LOCALE = 'id-ID';
 
-/**
- * `YYYY-MM-DD` → "31 Oktober 2026" (bulan ditulis lengkap agar mudah dibaca).
- * Diproses sebagai tanggal kalender (tanpa pergeseran timezone).
- */
+/** `YYYY-MM-DD` → "31 Oktober 2026" (bulan ditulis lengkap agar mudah dibaca). */
 export function formatLessonDate(isoDate: string): string {
   return formatCalendarDate(isoDate, 'long');
 }
@@ -13,13 +10,6 @@ export function formatLessonDate(isoDate: string): string {
 /** `YYYY-MM-DD` → "31 Okt 2026" — versi ringkas untuk kolom tabel yang sempit. */
 export function formatShortDate(isoDate: string): string {
   return formatCalendarDate(isoDate, 'short');
-}
-
-function formatCalendarDate(isoDate: string, month: 'long' | 'short'): string {
-  const [y, m, d] = isoDate.split('-').map(Number) as [number, number, number];
-  return new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month, year: 'numeric', timeZone: 'UTC' }).format(
-    new Date(Date.UTC(y, m - 1, d)),
-  );
 }
 
 /**
@@ -47,16 +37,11 @@ export function formatTimestamp(iso: string): string {
 /** Jam les "16:00"–"17:30" → "16.00–17.30 WIB"; sesi lama tanpa jam → "—". */
 export function formatLessonTime(start: string | null, end: string | null): string {
   if (!start || !end) return '—';
-  return `${start.replace(':', '.')}–${end.replace(':', '.')} WIB`;
+  return formatTimeRange(start, end);
 }
 
 /** `YYYY-MM` → "Oktober 2026". */
-export function formatPeriod(period: string): string {
-  const [y, m] = period.split('-').map(Number) as [number, number];
-  return new Intl.DateTimeFormat(LOCALE, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
-    new Date(Date.UTC(y, m - 1, 1)),
-  );
-}
+export const formatPeriod = formatPeriodLabel;
 
 const rupiah = new Intl.NumberFormat(LOCALE, { style: 'currency', currency: 'IDR', maximumFractionDigits: 2, minimumFractionDigits: 0 });
 

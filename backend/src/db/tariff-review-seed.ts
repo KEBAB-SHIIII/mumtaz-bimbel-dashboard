@@ -1,4 +1,5 @@
 import { and, asc, eq, gte, inArray, lt, not, or, sql } from 'drizzle-orm';
+import { timeToMinutes } from '@mumtaz/contracts';
 import type { Database } from './client.js';
 import { anomalyFlags, lessonSessions, lessonSessionSubjects, parentStudents, students, subjects, tutors, users } from './schema.js';
 import { countedSnapshot, gradeTier } from '../services/billing/tariff.js';
@@ -75,7 +76,7 @@ const at = <T,>(list: readonly T[], index: number): T => {
   if (value === undefined) throw new Error('Daftar seed kosong.');
   return value;
 };
-const toMin = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
+const toMin = timeToMinutes;
 const toTime = (m: number) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
 const levelOf = (grade: string): Level => (grade.endsWith(' SMA') ? 'SMA' : grade.endsWith(' SMP') ? 'SMP' : 'SD');
 const isSunday = (date: string) => new Date(`${date}T00:00:00Z`).getUTCDay() === 0;

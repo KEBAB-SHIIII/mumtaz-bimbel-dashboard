@@ -1,4 +1,5 @@
 import { moneyStringSchema } from './common.js';
+import { timeToMinutes } from './format.js';
 import { z } from 'zod';
 import {
   isoDateSchema,
@@ -36,8 +37,7 @@ export const lessonTimeSchema = z
 
 /** Durasi menit dari jam mulai ke jam selesai pada hari yang sama; `null` bila selesai ≤ mulai. */
 export function durationBetween(startTime: string, endTime: string): number | null {
-  const toMinutes = (value: string) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5));
-  const minutes = toMinutes(endTime) - toMinutes(startTime);
+  const minutes = timeToMinutes(endTime) - timeToMinutes(startTime);
   return minutes > 0 ? minutes : null;
 }
 
