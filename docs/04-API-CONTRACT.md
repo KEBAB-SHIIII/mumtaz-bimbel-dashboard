@@ -209,7 +209,7 @@ Admin only. Menggantikan `GET /admin/recap` (D-25): tagihan orang tua per murid.
 
 ### `GET /admin/payroll/preview?period=2026-10`
 
-Admin only. Per tutor: `counted_sessions`, `not_counted_sessions`, `gross_amount` (subtotal tarif les), `admin_fee_amount` (potongan Admin), `net_amount` (pendapatan bersih tutor), dan rincian sesi (`gross_amount`/`admin_fee`/`net_amount` per sesi). `totals`: `gross_amount` (pendapatan kotor), `admin_fee_amount` (pendapatan bersih bimbel), `net_amount` (gaji yang harus dibayarkan). Nominal dari snapshot yang dikunci saat sesi dihitung (D-25). Jangan menampilkan status sudah dibayar tanpa fitur payment tracking.
+Admin only. Per tutor: `counted_sessions`, `not_counted_sessions`, `gross_amount` (subtotal tarif les), `admin_fee_amount` (potongan Admin), `net_amount` (pendapatan bersih tutor), dan rincian sesi (`student_name`, `student_grade` — kelas siswa saat ini untuk label jenjang, `gross_amount`/`admin_fee`/`net_amount` per sesi). `totals`: `gross_amount` (pendapatan kotor), `admin_fee_amount` (pendapatan bersih bimbel), `net_amount` (gaji yang harus dibayarkan). Nominal dari snapshot yang dikunci saat sesi dihitung (D-25). Jangan menampilkan status sudah dibayar tanpa fitur payment tracking.
 
 ### `GET /tutor/me/payroll?period=2026-10`
 
@@ -351,7 +351,7 @@ Schema Zod di `packages/contracts/src/` adalah bentuk implementasi kontrak ini. 
 - `PATCH /admin/attendance/:id/validity` body `{ validity, approval? (wajib & hanya untuk needs_revision), admin_note? }` → `200 AdminAttendanceDetail`. Koreksi label AI atau status approval hasil banding via WA; berlaku dari status apa pun.
 - `GET /admin/attendance-options` → murid & mapel aktif + tutor aktif (form Admin). `POST /admin/attendance` (tutor_id + payload) → `201`, divalidasi AI seperti submit Tutor. `PUT /admin/attendance/:id` mengoreksi data tanpa mengubah validitas (snapshot dihitung ulang bila sesi dihitung). `DELETE /admin/attendance/:id` → `204`, menghapus sesi + temuannya (rujukan temuan sesi lain dilepas).
 - Tutor hanya dapat merevisi sesi `needs_revision` dengan approval `pending`; revisi → `pending` + analisis ulang. Sesi Ditolak tidak dapat diedit Tutor.
-- **Tarif** (`services/billing/tariff.ts`): per jam SD 1-3 Rp50.000, SD 4-6 Rp70.000; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×. Potongan Admin Rp10.000 flat per sesi. Saat dihitung, `rate_amount_snapshot` (kotor) & `admin_fee_snapshot` dikunci. Kelas siswa dibatasi `1 SD`–`6 SD`. `HONOR_RATE_PER_SESSION` dihapus.
+- **Tarif** (`services/billing/tariff.ts`): per jam PAUD–TK Rp40.000, SD 1–3 Rp60.000, SD 4–6 Rp80.000, SMP Rp100.000, SMA Rp120.000; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×. Potongan Admin Rp10.000 untuk jam pertama dan setiap jam berikutnya; sisa lebih dari atau sama dengan 30 menit menambah Rp10.000 (termasuk tepat 30 menit). Saat dihitung, `rate_amount_snapshot` (kotor) & `admin_fee_snapshot` dikunci. Kelas siswa: `PAUD`, `TK`, `1 SD`–`6 SD`, `1 SMP`–`3 SMP`, dan `1 SMA`–`3 SMA`. `HONOR_RATE_PER_SESSION` dihapus.
 - `GET /admin/dashboard/summary` → `{ period, active_tutors, students_with_sessions, total_sessions, gross_revenue }` (omzet kotor = Σ tarif sesi yang dihitung).
 - Filter `GET /admin/attendance` menambah `validity` (`valid|needs_revision|rejected|unvalidated`). Ekspor Google Sheets dipindah ke halaman Data Absensi; kolom "mata pelajaran" berisi nama mapel digabung koma.
 - Migration 0005–0006: tabel `lesson_session_subjects`, kolom `start_time/end_time/validity/validity_reason/admin_fee_snapshot`, finding `late_start`; data lama dipertahankan (status lama → validitas).
@@ -363,3 +363,7 @@ Schema Zod di `packages/contracts/src/` adalah bentuk implementasi kontrak ini. 
 - Hanya sesi yang dihitung (`status=approved`: Valid, atau Perlu revisi yang Disetujui) dengan snapshot tarif. Sesi dihitung tanpa tarif tidak ditagih dan muncul di `warnings`.
 - `GET /admin/billing/:student_id/invoice.pdf?period=` → `200 application/pdf` (`Content-Disposition: attachment; filename="tagihan-YYYY-MM-<murid>.pdf"`, `Cache-Control: no-store`), dibuat backend dengan `pdfkit` (A4, nomor invoice `INV-YYYYMM-XXXXXX`, rincian sesi, total, catatan tarif). Murid tanpa sesi ditagih pada periode → `404`.
 - Omzet kotor di dashboard = Σ snapshot tarif sesi yang dihitung = total tagihan periode yang sama.
+
+## Riwayat kelas bertanggal
+
+Endpoint riwayat, preview, apply, serta tambahan field dasar tarif sesi dijelaskan di [Riwayat kelas dan tarif](18-RIWAYAT-KELAS-DAN-TARIF.md#model-data-dan-api). `PATCH /admin/students/:id` menolak field `grade`; gunakan endpoint riwayat kelas. Opsi absensi menerima `lesson_date` untuk kelas sesuai tanggal les.

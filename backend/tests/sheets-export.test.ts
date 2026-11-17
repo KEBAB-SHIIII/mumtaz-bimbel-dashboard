@@ -47,7 +47,7 @@ describe('POST /admin/reports/google-sheets/attendance', () => {
     expect(tab?.[0]).toEqual([...SHEET_EXPORT_HEADERS]);
     expect(tab?.slice(1)).toEqual(EXPECTED_EXPORT_ROWS_2026_10);
     // Tidak ada status, materi, ID internal, atau honor di laporan.
-    expect(JSON.stringify(tab)).not.toMatch(/pending|approved|rejected|Numbers 1–100|00000000-|50000/);
+    expect(JSON.stringify(tab)).not.toMatch(/pending|approved|rejected|Numbers 1–100|00000000-|80000|90000/);
   });
 
   it('re-export bulan sama mengganti isi tab (tanpa duplikasi) dan membuat run baru', async () => {

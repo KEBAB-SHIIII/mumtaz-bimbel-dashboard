@@ -133,9 +133,13 @@ Semua source aplikasi ditulis dalam TypeScript:
 
 Jangan pasang shadcn/ui tanpa persetujuan owner. Palet warna, typography, logo, dan referensi visual final belum diputuskan tim; gunakan semantic design tokens yang mudah diganti.
 
+## Pemeriksaan tarif dengan dummy November–Desember
+
+Seed khusus atas permintaan pengguna tersedia melalui `npm run db:seed-tariff-review -w backend` (preview). Dataset dan perintah apply dijelaskan di [skenario pemeriksaan tarif](examples/tariff-review-scenarios.md). Ini penggantian data periode November–Desember 2026 yang disengaja, bukan seed otomatis saat startup.
+
 ## Tarif honor
 
-Tarif les per jenjang: **SD 1-3 Rp50.000/jam, SD 4-6 Rp70.000/jam** (≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×), dengan **potongan Admin Rp10.000 per sesi** (keputusan owner D-25, hardcode sementara di `backend/src/services/billing/tariff.ts`). Tarif kotor ditagihkan ke orang tua (Penagihan + invoice PDF); honor tutor = kotor − potongan. Nilainya dikunci ke sesi saat dihitung sehingga bulan lalu tidak berubah. Tidak ada penugasan tutor maupun master tarif (D-24).
+Tarif les per jenjang: **PAUD–TK Rp40.000/jam, SD 1–3 Rp60.000/jam, SD 4–6 Rp80.000/jam, SMP Rp100.000/jam, SMA Rp120.000/jam** (≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×), dengan **potongan Admin Rp10.000 untuk jam pertama dan setiap jam berikutnya; sisa lebih dari 30 menit menambah Rp10.000 (tepat 30 menit belum)** (keputusan owner D-26 di `backend/src/services/billing/tariff.ts`). Tarif kotor ditagihkan ke orang tua (Penagihan + invoice PDF); honor tutor = kotor − potongan. Nilainya dikunci ke sesi saat dihitung sehingga bulan lalu tidak berubah. Tidak ada penugasan tutor maupun master tarif (D-24). Aturan durasi pecahan tagihan dipertahankan dari implementasi sebelumnya karena belum ada ketentuan baru. Batas potongan: 90 menit Rp10.000, 91–150 menit Rp20.000, 151–210 menit Rp30.000. Tidak ada hitung ulang massal histori; koreksi atau approval ulang sesi tetap membuat snapshot memakai tarif baru.
 
 ## Mulai dari dokumentasi
 

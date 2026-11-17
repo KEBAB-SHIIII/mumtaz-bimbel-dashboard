@@ -3,6 +3,7 @@
  * KHUSUS TEST UI (tidak ikut build aplikasi). Bentuk respons mengikuti
  * docs/04 (diverifikasi test terhadap schema kontrak). Bukan data Neon.
  */
+import { formatPeriod } from '../../lib/format';
 import {
   approvalStatusOf,
   durationBetween,
@@ -273,6 +274,7 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
               session_id: s.id,
               lesson_date: s.lesson_date,
               student_name: c.student_name,
+              student_grade: c.grade,
               subject_name: c.subject_name,
               duration_minutes: s.duration_minutes,
               status: s.status,
@@ -407,11 +409,18 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
     };
   };
 
-  /** Tarif fake (meniru mesin tarif backend): SD 1-3 Rp50.000/jam, SD 4-6 Rp70.000/jam. */
-  const fakeGross = (s: FixtureLessonSession) => {
+  /** Tarif owner untuk sesi baru; data contoh juga memakai snapshot sesuai ketentuan owner. */
+  const fakeSnapshot = (s: FixtureLessonSession) => {
     const grade = students.find((st) => st.id === s.student_id)?.grade ?? '';
-    const hourly = /^[1-3] SD$/.test(grade) ? 50_000 : /^[4-6] SD$/.test(grade) ? 70_000 : 0;
-    return hourly + Math.max(0, Math.floor((s.duration_minutes - 60) / 30)) * hourly * 0.5;
+    const hourly = /^(PAUD|TK)$/.test(grade) ? 40_000
+      : /^[1-3] SD$/.test(grade) ? 60_000 : /^[4-6] SD$/.test(grade) ? 80_000
+        : /^[1-3] SMP$/.test(grade) ? 100_000 : /^[1-3] SMA$/.test(grade) ? 120_000 : 0;
+    if (!hourly || !Number.isFinite(s.duration_minutes) || s.duration_minutes <= 0) {
+      return { rate_amount_snapshot: null, admin_fee_snapshot: null };
+    }
+    const gross = hourly + Math.max(0, Math.floor((s.duration_minutes - 60) / 30)) * hourly * 0.5;
+    const fee = 10_000 * Math.max(1, Math.floor((s.duration_minutes + 30) / 60));
+    return { rate_amount_snapshot: String(gross), admin_fee_snapshot: String(fee) };
   };
 
   // --- routes ------------------------------------------------------------------
@@ -545,7 +554,7 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
         if (!s) throw new FakeError(404, 'NOT_FOUND', 'Sesi tidak ditemukan');
         const duration = validateChoice(req.body);
         Object.assign(s, { tutor_id: String(req.body.tutor_id), ...editableOf(req.body, duration), updated_at: now().toISOString() });
-        if (s.status === 'approved') s.rate_amount_snapshot = String(fakeGross(s));
+        if (s.status === 'approved') Object.assign(s, fakeSnapshot(s));
         return ok(toDetail(s));
       },
     ],
@@ -577,8 +586,7 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
           reviewed_by_user_id: admin.id,
           reviewed_at: now().toISOString(),
           updated_at: now().toISOString(),
-          rate_amount_snapshot: status === 'approved' ? String(fakeGross(s)) : null,
-          admin_fee_snapshot: status === 'approved' ? '10000' : null,
+          ...(status === 'approved' ? fakeSnapshot(s) : { rate_amount_snapshot: null, admin_fee_snapshot: null }),
         });
         return ok(toDetail(s));
       },
@@ -598,7 +606,7 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
         requireRole('admin');
         const student = billing(req.params.period ?? '', id).students[0];
         if (!student) throw new FakeError(404, 'NOT_FOUND', 'Tagihan murid pada periode ini tidak ditemukan');
-        const fileName = `tagihan-${req.params.period}-${student.student_name.toLowerCase()}.pdf`;
+        const fileName = `Tagihan ${student.student_name} - ${formatPeriod(req.params.period ?? '')}.pdf`;
         return { status: 200, data: new Blob(['%PDF-fake'], { type: 'application/pdf' }), headers: { 'content-disposition': `attachment; filename="${fileName}"` } };
       },
     ],

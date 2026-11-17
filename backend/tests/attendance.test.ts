@@ -258,13 +258,13 @@ describe('Admin: Data Absensi, validitas & CRUD', () => {
   });
 
   it('Admin menetapkan Valid → langsung dihitung dengan snapshot tarif per jenjang & potongan Admin', async () => {
-    // s02: Bima (5 SD), 60 menit → Rp70.000 kotor, potongan Rp10.000.
+    // s02: Bima (5 SD), 60 menit → Rp80.000 kotor, potongan Rp10.000.
     const res = await admin.patch(`/admin/attendance/${SESSION_IDS.s02}/validity`, { validity: 'valid' });
     expect(res.status).toBe(200);
     expect(adminAttendanceDetailSchema.parse(res.body)).toMatchObject({ validity: 'valid', approval_status: null, status: 'approved' });
 
     const [row] = await t.database.db.select().from(lessonSessions).where(eq(lessonSessions.id, SESSION_IDS.s02));
-    expect(Number(row?.rate_amount_snapshot)).toBe(70000);
+    expect(Number(row?.rate_amount_snapshot)).toBe(80000);
     expect(Number(row?.admin_fee_snapshot)).toBe(10000);
     expect(row?.reviewed_at?.toISOString()).toBe('2026-11-15T03:00:00.000Z');
   });

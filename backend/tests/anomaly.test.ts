@@ -107,10 +107,10 @@ describe('analyzeSession — validasi oleh AI (baseline LLM, fake detector di te
     const id = await submit(duplicateOfS08);
     expect(await analyzeSession(deps(new FakeAnomalyDetector('dismiss_all')), id)).toBe('completed');
     expect(await flagsOf(id)).toEqual([]);
-    // Bima 5 SD, 60 menit → Rp70.000 kotor, potongan Rp10.000.
+    // Bima 5 SD, 60 menit → Rp80.000 kotor, potongan Rp10.000.
     const row = await sessionRow(id);
     expect(row).toMatchObject({ validity: 'valid', status: 'approved' });
-    expect([Number(row?.rate_amount_snapshot), Number(row?.admin_fee_snapshot)]).toEqual([70000, 10000]);
+    expect([Number(row?.rate_amount_snapshot), Number(row?.admin_fee_snapshot)]).toEqual([80000, 10000]);
   });
 
   it('tanpa kandidat → Valid tanpa memanggil model (hemat & PII minimum), juga tanpa provider', async () => {

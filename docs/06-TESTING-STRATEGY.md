@@ -9,7 +9,7 @@ Tes membuktikan aturan akses, validasi data, periode, verifikasi manual, klasifi
 - Validator submit form: field wajib, durasi bukan integer/tidak positif, tanggal tidak valid, murid/mapel nonaktif atau tidak ada.
 - Mapping sesi → row ekspor delapan kolom; `no` berurutan, tanggal/durasi konsisten, tanpa field tambahan.
 - Period filter `YYYY-MM` memakai `lesson_date`, termasuk sesi yang baru disubmit pada bulan berikutnya.
-- Payroll: hanya sesi approved; tarif dummy Rp50.000 per sesi dibaca dari `tutor_rates`; hasil decimal-safe dengan flag `is_demo_assumption` (UI: badge "Tarif demo").
+- Payroll: hanya sesi approved; snapshot fixture mengikuti tarif owner PAUD–SMA dan potongan berdasarkan durasi (D-26); kotor − potongan = honor bersih. Uji kompatibilitas tarif historis terpisah dari fixture utama.
 - Retry `PATCH` revisi: jika respons pertama hilang dan sesi sudah `pending` dengan payload editable yang identik, server mengembalikan sesi yang sama tanpa mengubah timestamp atau menjadwalkan analisis ulang kedua kali; state/payload berbeda menghasilkan `409 SESSION_STATE_CONFLICT`.
 - State transition: pending → approved/revision_requested/rejected; tutor hanya memperbaiki sesi miliknya yang revision_requested; setelah revisi kembali pending, `submitted_at` diperbarui, metadata review dibersihkan, finding lama menjadi `superseded`; sesi approved/rejected tidak dapat dibuka ulang pada baseline working default O-15; jika keputusan ini berubah, update state-machine tests.
 - Anomaly service membentuk/menilai kandidat duplikasi berdasarkan atribut sesi dan dapat mengembalikan `suspected_duplicate` dengan referensi sesi pembanding.
@@ -49,7 +49,7 @@ Tes membuktikan aturan akses, validasi data, periode, verifikasi manual, klasifi
 
 ## Integration/smoke tests (credential live bila tersedia)
 
-1. Buat tutor (password acak sekali tampil), siswa, dan mapel; tarif tunggal Rp50.000/sesi dari konfigurasi.
+1. Buat tutor (password acak sekali tampil), siswa, dan mapel; tarif owner per jenjang dan potongan berdasarkan durasi (D-26).
 2. Login Tutor, submit sesi, pastikan status pending, tersimpan di Neon, dan tidak ada call Sheets saat submit.
 3. Pastikan anomaly detector dipanggil melalui adapter. Dalam test offline gunakan fake detector yang diberi label; jika menguji Gemini live, gunakan credential valid dan data sintetis/pseudonymous.
 4. Login Admin, review temuan anomali secara terpisah, lalu approve sesi. Pastikan honor/progress hanya memasukkan sesi setelah approved.

@@ -36,10 +36,10 @@ const columns: ColumnDef<BillingLine, unknown>[] = [
   { id: 'no', header: 'No', cell: ({ row }) => row.index + 1 },
   { id: 'date', header: 'Tanggal les', meta: { cardTitle: true }, cell: ({ row }) => <span className="whitespace-nowrap">{formatLessonDate(row.original.lesson_date)}</span> },
   { id: 'time', header: 'Jam', cell: ({ row }) => <span className="whitespace-nowrap">{formatLessonTime(row.original.start_time, row.original.end_time)}</span> },
-  { accessorKey: 'subject_name', header: 'Mata pelajaran' },
+  { accessorKey: 'subject_name', header: 'Mata pelajaran', cell:({row})=><div>{row.original.subject_name}<p className="text-meta text-muted">{row.original.grade}</p></div> },
   { accessorKey: 'tutor_name', header: 'Tutor' },
   { id: 'duration', header: 'Durasi', cell: ({ row }) => <span className="whitespace-nowrap">{formatDuration(row.original.duration_minutes)}</span> },
-  { id: 'amount', header: () => <span className="block text-right">Tarif per sesi</span>, cell: ({ row }) => <span className="block text-right tabular-nums">{formatRupiah(row.original.amount)}</span> },
+  { id: 'amount', header: () => <span className="block text-right">Tarif per sesi</span>, cell: ({ row }) => <span className="block text-right tabular-nums">{formatRupiah(row.original.amount)}{row.original.hourly_rate && <span className="block text-meta text-muted">{formatRupiah(row.original.hourly_rate)}/jam</span>}</span> },
 ];
 
 function StudentInvoice({ student, period }: { student: BillingStudent; period: string }) {

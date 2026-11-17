@@ -1,6 +1,6 @@
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
 import { Menu } from 'lucide-react';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { ROLE_LABEL, useLogoutMutation, useSession } from '../../features/auth/session';
 import { cn } from '../../lib/cn';
@@ -21,6 +21,13 @@ const DESKTOP_QUERY = '(min-width: 64rem)';
  */
 export function AppShell() {
   const user = useSession().data;
+  const role = user?.role;
+  // Set before paint; reset on logout/unmount so other roles and login keep their own colors.
+  useLayoutEffect(() => {
+    if (!role) return;
+    document.documentElement.dataset.appRole = role;
+    return () => { delete document.documentElement.dataset.appRole; };
+  }, [role]);
   const logout = useLogoutMutation();
   const navigate = useNavigate();
   const location = useLocation();

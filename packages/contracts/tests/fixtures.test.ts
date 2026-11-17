@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   SHEET_EXPORT_HEADERS,
+  gradeSchema,
   anomalyAnalysisResultSchema,
   anomalyAnalysisStatusSchema,
   anomalyReviewStatusSchema,
@@ -86,6 +87,12 @@ describe('integritas fixtures', () => {
       expect(fixtureUsers.find((u) => u.id === link.parent_user_id)?.role).toBe('parent');
       expect(fixtureStudents.some((s) => s.id === link.student_id)).toBe(true);
     }
+  });
+
+  it('master siswa mencakup PAUD, TK, SD, SMP, dan SMA dengan kelas valid', () => {
+    for (const student of fixtureStudents) expect(gradeSchema.safeParse(student.grade).success).toBe(true);
+    expect(new Set(fixtureStudents.map((student) => student.grade.split(' ').at(-1))))
+      .toEqual(new Set(['PAUD', 'TK', 'SD', 'SMP', 'SMA']));
   });
 
   it('baris sesi memenuhi enum/format ERD dan aturan snapshot', () => {

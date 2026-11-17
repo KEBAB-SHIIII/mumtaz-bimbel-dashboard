@@ -1,3 +1,4 @@
+import { isoDateSchema } from '@mumtaz/contracts';
 import { listAvailablePeriods } from '../services/period-service.js';
 import { Router } from 'express';
 import {
@@ -50,8 +51,9 @@ export function tutorRouter(ctx: ServiceContext, limiters: AuthRateLimiters, ano
   });
 
   /** Murid & mata pelajaran aktif yang dapat dipilih Tutor di Form Absensi (tanpa penugasan, D-24). */
-  router.get('/tutor/attendance-options', async (_req, res) => {
-    res.json(await listAttendanceOptions(ctx));
+  router.get('/tutor/attendance-options', async (req, res) => {
+    const date = parseInput(isoDateSchema.optional(), req.query.lesson_date);
+    res.json(await listAttendanceOptions(ctx, date));
   });
 
   /** Submit Form Absensi → Neon `pending`. Tidak ada panggilan Google Sheets. */

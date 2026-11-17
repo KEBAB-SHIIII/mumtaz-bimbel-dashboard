@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isoDateSchema, moneyStringSchema } from './common.js';
 import {
   paginationQuerySchema,
   requiredText,
@@ -68,14 +69,20 @@ export type TutorCredentialIssued = z.infer<typeof tutorCredentialIssuedSchema>;
 
 // --- Student -------------------------------------------------------------
 
-/** Kelas yang didukung: mentok di SD kelas 6 (keputusan owner); tarif per jenjang SD 1-3 dan SD 4-6. */
-export const GRADE_OPTIONS = ['1 SD', '2 SD', '3 SD', '4 SD', '5 SD', '6 SD'] as const;
-export const gradeSchema = z.enum(GRADE_OPTIONS, { error: 'Pilih kelas 1–6 SD' });
+/** Jenjang PAUD sampai SMA; format kelas SD lama tetap kompatibel. */
+export const GRADE_OPTIONS = [
+  'PAUD', 'TK',
+  '1 SD', '2 SD', '3 SD', '4 SD', '5 SD', '6 SD',
+  '1 SMP', '2 SMP', '3 SMP',
+  '1 SMA', '2 SMA', '3 SMA',
+] as const;
+export const gradeSchema = z.enum(GRADE_OPTIONS, { error: 'Pilih jenjang atau kelas PAUD sampai SMA' });
 
 export const studentSchema = z.object({
   id: uuidSchema,
   full_name: z.string(),
   grade: z.string(),
+  scheduled_grade: z.object({ grade: z.string(), effective_from: isoDateSchema }).nullable().optional(),
   school_name: z.string(),
   is_active: z.boolean(),
   ...timestamps,
@@ -198,3 +205,35 @@ export const adminAttendanceOptionsSchema = attendanceOptionsSchema.extend({
   tutors: z.array(z.object({ id: uuidSchema, full_name: z.string() })),
 });
 export type AdminAttendanceOptions = z.infer<typeof adminAttendanceOptionsSchema>;
+
+// Class history and explicit, previewed corrections.
+export const gradeChangeRequestSchema = z.strictObject({
+  history_id: uuidSchema.optional(),
+  grade: gradeSchema,
+  effective_from: isoDateSchema,
+  reason: requiredText(500),
+});
+export type GradeChangeRequest = z.infer<typeof gradeChangeRequestSchema>;
+export const applyGradeChangeRequestSchema = gradeChangeRequestSchema.extend({ preview_token: z.string().length(64) });
+export const gradeHistoryEntrySchema = z.object({
+  id: uuidSchema, grade: z.string(), effective_from: z.string(), reason: z.string(),
+  changed_by_name: z.string().nullable(), updated_at: timestampSchema,
+});
+export const gradeHistoryResponseSchema = z.object({
+  entries: z.array(gradeHistoryEntrySchema),
+  audit: z.array(z.object({ id: uuidSchema, reason: z.string(), changed_by_name: z.string(), created_at: timestampSchema })),
+});
+export type GradeHistoryResponse = z.infer<typeof gradeHistoryResponseSchema>;
+export const gradeChangePreviewSchema = z.object({
+  preview_token: z.string(),
+  previous_grade: z.string(), new_grade: z.string(),
+  previous_hourly_rate: moneyStringSchema.nullable(), new_hourly_rate: moneyStringSchema.nullable(),
+  affected_sessions: z.array(z.object({
+    id: uuidSchema, lesson_date: isoDateSchema, status: z.string(),
+    previous_grade: z.string(), new_grade: z.string(),
+    old_amount: moneyStringSchema.nullable(), new_amount: moneyStringSchema.nullable(),
+    old_net: moneyStringSchema.nullable(), new_net: moneyStringSchema.nullable(),
+  })),
+  billing_delta: z.string(), tutor_net_delta: z.string(),
+});
+export type GradeChangePreview = z.infer<typeof gradeChangePreviewSchema>;

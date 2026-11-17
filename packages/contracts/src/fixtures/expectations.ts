@@ -41,20 +41,20 @@ export const EXPECTED_EXPORT_SESSION_ORDER_2026_10 = [
   SESSION_IDS.s08, SESSION_IDS.s09, SESSION_IDS.s11, SESSION_IDS.s10, SESSION_IDS.s05,
 ];
 
-/** Payroll Oktober 2026: hanya `approved` × tarif snapshot Rp50.000 (tarif tunggal, D-24). */
+/** Payroll Oktober 2026: hanya `approved`, tarif owner D-26 sesuai kelas/durasi. */
 export const EXPECTED_PAYROLL_2026_10 = {
   period: '2026-10',
   /** Total kotor, potongan Admin (pendapatan bersih bimbel), dan gaji yang dibayarkan. */
-  totals: { gross_amount: '200000', admin_fee_amount: '40000', net_amount: '160000' },
+  totals: { gross_amount: '340000', admin_fee_amount: '60000', net_amount: '280000' },
   tutors: [
     {
       tutor_id: TUTOR_IDS.tutorA,
       tutor_name: 'Farhan',
       counted_sessions: 3,
       not_counted_sessions: 2,
-      gross_amount: '150000',
-      admin_fee_amount: '30000',
-      net_amount: '120000',
+      gross_amount: '260000',
+      admin_fee_amount: '50000',
+      net_amount: '210000',
       approved_session_ids: [SESSION_IDS.s01, SESSION_IDS.s05, SESSION_IDS.s08],
     },
     {
@@ -62,9 +62,9 @@ export const EXPECTED_PAYROLL_2026_10 = {
       tutor_name: 'Noreen',
       counted_sessions: 1,
       not_counted_sessions: 3,
-      gross_amount: '50000',
+      gross_amount: '80000',
       admin_fee_amount: '10000',
-      net_amount: '40000',
+      net_amount: '70000',
       approved_session_ids: [SESSION_IDS.s11],
     },
   ],

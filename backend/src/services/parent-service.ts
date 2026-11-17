@@ -1,3 +1,4 @@
+import { currentGrade } from './master-data/grade-history.js';
 import { and, asc, desc, eq } from 'drizzle-orm';
 import type { ParentProgressResponse, ParentStudent, Period } from '@mumtaz/contracts';
 import { lessonSessions, parentStudents, students } from '../db/schema.js';
@@ -11,7 +12,7 @@ export async function listParentStudents(ctx: ServiceContext, parentUserId: stri
     .select({
       id: students.id,
       full_name: students.full_name,
-      grade: students.grade,
+      grade: currentGrade(ctx.now()),
       school_name: students.school_name,
       relationship: parentStudents.relationship,
     })
@@ -30,7 +31,7 @@ export async function assertParentLinked(ctx: ServiceContext, parentUserId: stri
     .select({
       id: students.id,
       full_name: students.full_name,
-      grade: students.grade,
+      grade: currentGrade(ctx.now()),
       school_name: students.school_name,
     })
     .from(parentStudents)
@@ -62,6 +63,8 @@ export async function getParentProgress(
     student,
     period,
     sessions: rows.map((row) => ({
+      grade: row.grade,
+      grade_source: row.grade_source,
       id: row.id,
       lesson_date: row.lesson_date,
       tutor_name: row.tutor_name,

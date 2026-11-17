@@ -49,6 +49,7 @@ function Timeline({ sessions }: { sessions: ParentProgressItem[] }) {
               <time dateTime={session.lesson_date}>{formatLessonDate(session.lesson_date)}</time> · {formatDuration(session.duration_minutes)}
             </p>
             <h3 className="text-card-title text-text">{session.subject_name}</h3>
+            {session.grade && <p className="text-meta text-muted">{session.grade}</p>}
             <p className="text-meta text-muted">Tutor: {session.tutor_name}</p>
             <dl className="mt-1 flex flex-col gap-1.5 rounded-md bg-surface-muted px-3 py-2.5 text-sm">
               <div>

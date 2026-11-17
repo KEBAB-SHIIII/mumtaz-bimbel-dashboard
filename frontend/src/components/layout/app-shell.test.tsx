@@ -33,6 +33,15 @@ describe('AppShell: sidebar berkelompok', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('banner')).toContainElement(screen.getByRole('heading', { name: 'Dashboard' }));
   });
+
+  it('menampilkan logo Mumtaz pada sidebar tutor', async () => {
+    renderApp('/login');
+    await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
+    await screen.findByRole('heading', { name: 'Halo, Farhan!' });
+
+    const sidebar = document.querySelector('aside');
+    expect(sidebar?.querySelector('img[src="/favicon.svg"]')).toBeInTheDocument();
+  });
 });
 
 describe('AppShell: submenu Master Data', () => {

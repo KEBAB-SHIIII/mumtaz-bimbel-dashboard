@@ -2,13 +2,14 @@ import { LoaderCircle } from 'lucide-react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from '../../../lib/cn';
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'danger' | 'danger-ghost' | 'ghost';
 type Size = 'sm' | 'md' | 'icon' | 'icon-sm';
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-linear-to-r from-[#B9DDB5]/65 via-[#C7E7AC]/50 to-[#D9ED98]/45 text-[#193923] shadow-sm ring-1 ring-inset ring-[#A9D39F]/60 hover:brightness-95',
+  primary: 'bg-linear-to-r from-brand-gradient-from/65 via-brand-gradient-via/50 to-brand-gradient-to/45 text-brand-ink shadow-sm ring-1 ring-inset ring-brand-border/60 hover:brightness-95',
   secondary: 'border border-border bg-surface text-text shadow-sm hover:bg-surface-muted',
   danger: 'bg-danger text-danger-foreground shadow-sm hover:bg-danger/90',
+  'danger-ghost': 'text-danger hover:bg-danger-subtle focus-visible:outline-danger',
   ghost: 'text-text hover:bg-surface-muted',
 };
 

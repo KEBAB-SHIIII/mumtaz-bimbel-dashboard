@@ -136,13 +136,13 @@ export function AttendancePage() {
           </Button>
           {row.original.validity === 'rejected' && (
             <Button
-              variant="ghost"
+              variant="danger-ghost"
               size="icon-sm"
               title="Hapus sesi"
               aria-label={`Hapus sesi ${sessionLabel(row.original)}`}
               onClick={() => setDeleting({ id: row.original.id, label: sessionLabel(row.original) })}
             >
-              <Trash2 aria-hidden className="size-4 text-danger" />
+              <Trash2 aria-hidden className="size-4" />
             </Button>
           )}
         </div>

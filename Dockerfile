@@ -47,6 +47,7 @@ COPY --from=build /app/packages/contracts/dist packages/contracts/dist
 COPY --from=build /app/backend/package.json backend/
 COPY --from=build /app/backend/dist backend/dist
 COPY --from=build /app/backend/drizzle backend/drizzle
+COPY --from=build /app/backend/assets backend/assets
 COPY --from=build /app/frontend/dist frontend/dist
 WORKDIR /app/backend
 USER node

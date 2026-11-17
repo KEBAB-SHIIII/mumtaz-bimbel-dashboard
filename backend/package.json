@@ -17,6 +17,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:bootstrap-admin": "tsx --conditions=source src/scripts/bootstrap-admin.ts",
+    "db:seed-tariff-review": "tsx --conditions=source src/scripts/seed-tariff-review.ts",
     "db:check": "drizzle-kit check"
   },
   "dependencies": {

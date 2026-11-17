@@ -19,6 +19,9 @@ interface SessionRow {
   session_id: string;
   lesson_date: string;
   student_name: string;
+  student_grade: string;
+  hourly_rate?: string | null | undefined;
+  grade_source?: string | undefined;
   subject_name: string;
   duration_minutes: number;
   validity: PayrollTutorSummary['sessions'][number]['validity'];
@@ -47,11 +50,13 @@ function SessionLines({ caption, rows, amountLabel }: { caption: string; rows: S
           {rows.map((line) => (
             <tr key={line.session_id} className={cn('border-b border-border last:border-0 [&>td]:h-11 [&>td]:px-4 [&>td]:py-2.5', line.counted ? 'text-text' : 'text-muted')}>
               <td className="whitespace-nowrap">{formatLessonDate(line.lesson_date)}</td>
-              <td>{line.student_name}</td>
+              <td>
+                {line.student_name} <span className="text-muted">({line.student_grade})</span>
+              </td>
               <td>{line.subject_name}</td>
               <td className="whitespace-nowrap">{formatDuration(line.duration_minutes)}</td>
               <td><ValidityBadge validity={line.validity} variant="caption" /></td>
-              <td className="text-end whitespace-nowrap"><AmountCell amount={line.amount} counted={line.counted} /></td>
+              <td className="text-end whitespace-nowrap"><AmountCell amount={line.amount} counted={line.counted} />{line.hourly_rate && <p className="text-meta text-muted">{formatRupiah(line.hourly_rate)}/jam</p>}</td>
             </tr>
           ))}
         </tbody>

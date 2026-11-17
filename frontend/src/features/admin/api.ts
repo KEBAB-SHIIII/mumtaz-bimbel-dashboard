@@ -1,3 +1,4 @@
+import { gradeHistoryResponseSchema, gradeChangePreviewSchema, type GradeChangeRequest } from '@mumtaz/contracts';
 import type { z } from 'zod';
 import {
   adminAttendanceDetailSchema,
@@ -148,3 +149,13 @@ export async function exportAttendanceToSheets(input: SheetExportRequest) {
 
 export const fetchExportHistory = (params: { page?: number; page_size?: number; period?: string }) =>
   get(paginatedSchema(sheetExportRunSchema), '/admin/reports/google-sheets/attendance/history', params);
+
+export const fetchGradeHistory = (id: string) => get(gradeHistoryResponseSchema, `/admin/students/${encodeURIComponent(id)}/grade-history`);
+export async function previewGradeChange(id: string, input: GradeChangeRequest) {
+  const {data} = await apiClient.post(`/admin/students/${encodeURIComponent(id)}/grade-history/preview`, input);
+  return gradeChangePreviewSchema.parse(data);
+}
+export async function applyGradeChange(id: string, input: GradeChangeRequest, token: string) {
+  const {data} = await apiClient.post(`/admin/students/${encodeURIComponent(id)}/grade-history`, {...input, preview_token:token});
+  return gradeChangePreviewSchema.parse(data);
+}

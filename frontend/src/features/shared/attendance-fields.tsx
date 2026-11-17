@@ -1,3 +1,7 @@
+import { useQuery } from '@tanstack/react-query';
+import { attendanceOptionsSchema, isoDateSchema } from '@mumtaz/contracts';
+import { apiClient } from '../../lib/api-client';
+import { useSession } from '../auth/session';
 import type { ReactNode } from 'react';
 import { Controller, useWatch, type UseFormReturn } from 'react-hook-form';
 import {
@@ -109,7 +113,13 @@ interface AttendanceFieldsProps {
  */
 export function AttendanceFields({ form, options, tutorField, idPrefix }: AttendanceFieldsProps) {
   const { errors } = form.formState;
-  const [studentId, startTime, endTime] = useWatch({ control: form.control, name: ['student_id', 'start_time', 'end_time'] });
+  const [studentId, startTime, endTime, lessonDate] = useWatch({ control: form.control, name: ['student_id', 'start_time', 'end_time', 'lesson_date'] });
+  const role = useSession().data?.role;
+  const dated = useQuery({queryKey:['attendance-grade',role,lessonDate], enabled:!!studentId && !!role && isoDateSchema.safeParse(lessonDate).success, queryFn:async()=>{
+    const {data}=await apiClient.get(`/${role}/attendance-options`,{params:{lesson_date:lessonDate}});
+    return attendanceOptionsSchema.parse(data);
+  }});
+  const datedStudent=dated.data?.students.find(s=>s.id===studentId);
   const selected = options.students.find((student) => student.id === studentId);
   const duration = startTime && endTime ? durationBetween(startTime, endTime) : null;
   const id = (name: string) => `${idPrefix}-${name}`;
@@ -141,10 +151,10 @@ export function AttendanceFields({ form, options, tutorField, idPrefix }: Attend
         />
       </FormField>
 
-      <FormField id={id('grade')} label="Kelas · Asal sekolah" hint="Terisi otomatis setelah memilih murid.">
+      <FormField id={id('grade')} label="Kelas · Asal sekolah" hint="Mengikuti tanggal les yang dipilih.">
         <Input
           id={id('grade')}
-          value={selected ? `${selected.grade} · ${selected.school_name}` : ''}
+          value={selected ? `${lessonDate ? datedStudent?.grade ?? (dated.isError ? 'Kelas belum dapat dimuat' : 'Memuat kelas…') : selected.grade} · ${selected.school_name}` : ''}
           placeholder="—"
           readOnly
           disabled

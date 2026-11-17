@@ -21,7 +21,7 @@ beforeAll(async () => {
 afterAll(() => t.close());
 
 describe('Payroll preview (estimasi honor)', () => {
-  it('Oktober 2026 sesuai expected outcome fixture: kotor, potongan Admin Rp10.000/sesi, bersih tutor', async () => {
+  it('Oktober 2026 sesuai fixture tarif owner: kotor, potongan berdasarkan durasi, bersih tutor', async () => {
     const res = await admin.get('/admin/payroll/preview?period=2026-10').expect(200);
     const body = payrollPreviewResponseSchema.parse(res.body);
 
@@ -40,13 +40,17 @@ describe('Payroll preview (estimasi honor)', () => {
       // Traceable ke sesi: tarif per sesi = kotor; bersih = kotor − potongan.
       const counted = actual?.sessions.filter((line) => line.counted) ?? [];
       expect(counted.map((line) => line.session_id).sort()).toEqual([...expected.approved_session_ids].sort());
-      expect(counted.every((line) => line.gross_amount === '50000' && line.admin_fee === '10000' && line.net_amount === '40000')).toBe(true);
+      expect(counted.map((line) => [line.gross_amount, line.admin_fee, line.net_amount])).toEqual(
+        expected.tutor_id === TUTOR_IDS.tutorA
+          ? [['90000', '20000', '70000'], ['80000', '10000', '70000'], ['90000', '20000', '70000']]
+          : [['80000', '10000', '70000']],
+      );
     }
   });
 
   it('periode memakai lesson_date: s05 (31 Okt, disubmit Nov) masuk Oktober, s06 masuk November', async () => {
     const nov = payrollPreviewResponseSchema.parse((await admin.get('/admin/payroll/preview?period=2026-11').expect(200)).body);
-    expect(nov.totals.gross_amount).toBe('50000');
+    expect(nov.totals.gross_amount).toBe('90000');
     expect(nov.tutors[0]?.sessions.filter((line) => line.counted).map((line) => line.session_id)).toEqual([SESSION_IDS.s06]);
   });
 
@@ -59,11 +63,11 @@ describe('Payroll preview (estimasi honor)', () => {
     const tutorB = await as.tutorB(t.app);
     const res = await tutorB.get('/tutor/me/payroll?period=2026-10').expect(200);
     const body = tutorPayrollResponseSchema.parse(res.body);
-    expect(body).toMatchObject({ counted_sessions: 1, not_counted_sessions: 3, net_amount: '40000' });
-    expect(body.sessions.find((line) => line.counted)?.net_amount).toBe('40000');
-    expect(JSON.stringify(res.body)).not.toMatch(/gross|admin_fee|50000|tutor_name/);
+    expect(body).toMatchObject({ counted_sessions: 1, not_counted_sessions: 3, net_amount: '70000' });
+    expect(body.sessions.find((line) => line.counted)?.net_amount).toBe('70000');
+    expect(JSON.stringify(res.body)).not.toMatch(/gross|admin_fee|80000|tutor_name/);
     const summary = tutorDashboardSummarySchema.parse((await tutorB.get('/tutor/dashboard/summary?period=2026-10').expect(200)).body);
-    expect(summary.honor.estimated_amount).toBe('40000');
+    expect(summary.honor.estimated_amount).toBe('70000');
     expect((await tutorB.get('/admin/payroll/preview?period=2026-10')).status).toBe(403);
   });
 
@@ -89,25 +93,29 @@ describe('Payroll preview (estimasi honor)', () => {
       await admin.patch(`/admin/attendance/${res.body.session.id as string}/validity`, { validity: 'valid' }).expect(200);
     };
 
-    // Aisyah 3 SD, 60 menit → Rp50.000.
+    // Aisyah 3 SD, 60 menit → Rp60.000.
     await submitAt(0, '2026-11-10');
     const body = payrollPreviewResponseSchema.parse((await admin.get('/admin/payroll/preview?period=2026-11').expect(200)).body);
     expect(body.tutors.find((tutor) => tutor.tutor_id === TUTOR_IDS.tutorB)).toMatchObject({
       counted_sessions: 1,
       approved_sessions_without_rate: 0,
-      net_amount: '40000',
+      net_amount: '50000',
     });
     expect(body.warnings).toEqual([]);
 
-    // Naik kelas ke 4 SD: sesi lama tetap Rp50.000, sesi baru Rp70.000.
-    await admin.patch(`/admin/students/${STUDENT_IDS.murid1}`, { grade: '4 SD' }).expect(200);
+    // Naik kelas ke 4 SD: sesi lama tetap Rp60.000, sesi baru Rp80.000.
+    const change = {grade:'4 SD',effective_from:'2026-11-11',reason:'Kenaikan kelas'};
+    const preview = await admin.post(`/admin/students/${STUDENT_IDS.murid1}/grade-history/preview`,change).expect(200);
+    await admin.post(`/admin/students/${STUDENT_IDS.murid1}/grade-history`,{...change,preview_token:preview.body.preview_token}).expect(200);
     try {
       await submitAt(1, '2026-11-11');
       const after = payrollPreviewResponseSchema.parse((await admin.get('/admin/payroll/preview?period=2026-11').expect(200)).body);
       const lines = after.tutors.find((tutor) => tutor.tutor_id === TUTOR_IDS.tutorB)?.sessions.map((line) => line.gross_amount);
-      expect(lines).toEqual(['50000', '70000']);
+      expect(lines).toEqual(['60000', '80000']);
     } finally {
-      await admin.patch(`/admin/students/${STUDENT_IDS.murid1}`, { grade: '3 SD' }).expect(200);
+      const reset={grade:'3 SD',effective_from:'2026-11-12',reason:'Reset test'};
+      const review=await admin.post(`/admin/students/${STUDENT_IDS.murid1}/grade-history/preview`,reset).expect(200);
+      await admin.post(`/admin/students/${STUDENT_IDS.murid1}/grade-history`,{...reset,preview_token:review.body.preview_token}).expect(200);
     }
   });
 
@@ -142,16 +150,16 @@ describe('Penagihan Orang Tua', () => {
   it('per murid: hanya sesi yang dihitung, tarif per sesi (snapshot), subtotal & total tagihan', async () => {
     const body = billingResponseSchema.parse((await admin.get('/admin/billing?period=2026-10').expect(200)).body);
     expect(body.students.map((student) => [student.student_name, student.sessions, student.total_amount])).toEqual([
-      ['Aisyah', 2, '100000'],
-      ['Bima', 1, '50000'],
-      ['Citra', 1, '50000'],
+      ['Aisyah', 2, '180000'],
+      ['Bima', 1, '80000'],
+      ['Citra', 1, '80000'],
     ]);
-    expect(body).toMatchObject({ total_sessions: 4, total_amount: '200000', warnings: [] });
+    expect(body).toMatchObject({ total_sessions: 4, total_amount: '340000', warnings: [] });
     const aisyah = body.students[0];
     expect(aisyah).toMatchObject({ grade: '3 SD', school_name: 'SD Harapan Bangsa', parent_names: ['Sari'] });
     expect(aisyah?.lines.map((line) => [line.lesson_date, line.amount])).toEqual([
-      ['2026-10-01', '50000'],
-      ['2026-10-31', '50000'],
+      ['2026-10-01', '90000'],
+      ['2026-10-31', '90000'],
     ]);
     // Total tagihan = omzet kotor di dashboard.
     const dashboard = adminDashboardSummarySchema.parse((await admin.get('/admin/dashboard/summary?period=2026-10').expect(200)).body);
@@ -173,7 +181,7 @@ describe('Penagihan Orang Tua', () => {
     });
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toBe('application/pdf');
-    expect(res.headers['content-disposition']).toBe('attachment; filename="tagihan-2026-10-aisyah.pdf"');
+    expect(res.headers['content-disposition']).toBe('attachment; filename="Tagihan Aisyah - Oktober 2026.pdf"');
     expect(res.headers['cache-control']).toBe('no-store');
     const pdf = res.body as Buffer;
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
@@ -185,24 +193,24 @@ describe('Penagihan Orang Tua', () => {
 
   it('nomor invoice & nama file deterministik', () => {
     expect(invoiceNumber('2026-10', '00000000-0000-4000-8003-00000000ab12')).toBe('INV-202610-00AB12');
-    expect(invoiceFileName('2026-10', 'Siti Nur Aisyah')).toBe('tagihan-2026-10-siti-nur-aisyah.pdf');
+    expect(invoiceFileName('2026-10', 'Siti Nur Aisyah')).toBe('Tagihan Siti Nur Aisyah - Oktober 2026.pdf');
   });
 });
 
 describe('Ringkasan dashboard', () => {
   it('Admin: empat metrik — tutor aktif, siswa bersesi, total sesi, omzet kotor per jenjang', async () => {
     const body = adminDashboardSummarySchema.parse((await admin.get('/admin/dashboard/summary?period=2026-10').expect(200)).body);
-    // Omzet = Σ tarif terkunci (snapshot) sesi approved: 4 sesi historis × Rp50.000.
+    // Omzet = Σ tarif terkunci (snapshot) sesi approved: 2 × Rp90.000 (SD 1–3, 90 menit) + 2 × Rp80.000 (SD 4–6, 60 menit).
     expect(body).toMatchObject({
       period: '2026-10',
       active_tutors: 6,
       students_with_sessions: 3,
       total_sessions: 9,
-      gross_revenue: '200000',
+      gross_revenue: '340000',
     });
     // Grafik pendapatan: 6 bulan s.d. Oktober dari snapshot sesi yang dihitung.
     expect(body.revenue_by_month.map((month) => month.period)).toEqual(['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10']);
-    expect(body.revenue_by_month.at(-1)).toEqual({ period: '2026-10', gross_revenue: '200000', tutor_salary: '160000', net_revenue: '40000' });
+    expect(body.revenue_by_month.at(-1)).toEqual({ period: '2026-10', gross_revenue: '340000', tutor_salary: '280000', net_revenue: '60000' });
     expect(body.revenue_by_month[0]).toEqual({ period: '2026-05', gross_revenue: '0', tutor_salary: '0', net_revenue: '0' });
   });
 
@@ -210,8 +218,8 @@ describe('Ringkasan dashboard', () => {
     const tutorA = await as.tutorA(t.app);
     const body = tutorDashboardSummarySchema.parse((await tutorA.get('/tutor/dashboard/summary?period=2026-10').expect(200)).body);
     expect(body.status_counts).toEqual({ pending: 2, approved: 3, revision_requested: 0, rejected: 0 });
-    // Bersih: 3 sesi × (Rp50.000 − Rp10.000).
-    expect(body.honor.estimated_amount).toBe('120000');
+    // Bersih Farhan: 2 × (Rp90.000 − Rp20.000) + (Rp80.000 − Rp10.000).
+    expect(body.honor.estimated_amount).toBe('210000');
   });
 
   it('Orang Tua: hanya approved anak terhubung, tanpa honor', async () => {

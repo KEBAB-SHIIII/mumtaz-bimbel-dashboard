@@ -6,7 +6,7 @@ Diperbarui 5 November 2026 berdasarkan backend/src/db/schema.ts dan migration 00
 
 - Setiap submit tutor membuat satu record `lesson_sessions` dengan status awal `pending`.
 - Analisis otomatis dapat menetapkan status sesi; Admin dapat menindaklanjuti atau mengoreksinya. Hanya sesi approved dihitung ke honor.
-- Honor & tagihan memakai tarif les per jenjang (SD 1-3 Rp50.000/jam, SD 4-6 Rp70.000/jam; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×) dikurangi potongan Admin Rp10.000 per sesi, dikunci ke `rate_amount_snapshot`/`admin_fee_snapshot` saat sesi dihitung (D-25). Tidak ada tabel penugasan atau tarif; Tutor memilih murid & 1–3 mapel sendiri (`lesson_session_subjects`).
+- Honor & tagihan memakai tarif les per jenjang (PAUD–TK Rp40.000/jam, SD 1–3 Rp60.000/jam, SD 4–6 Rp80.000/jam, SMP Rp100.000/jam, SMA Rp120.000/jam; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×) dikurangi potongan Admin Rp10.000 untuk jam pertama dan setiap jam berikutnya; sisa lebih dari atau sama dengan 30 menit menambah Rp10.000 (termasuk tepat 30 menit), dikunci ke `rate_amount_snapshot`/`admin_fee_snapshot` saat sesi dihitung (D-25). Tidak ada tabel penugasan atau tarif; Tutor memilih murid & 1–3 mapel sendiri (`lesson_session_subjects`).
 - Materi pembelajaran disimpan di database dan dipakai di Riwayat Mengajar serta Progress Anak. Materi tidak masuk ekspor standar delapan kolom.
 - Modul anomali mengklasifikasikan kandidat anomali, termasuk dugaan duplikasi. Hasil analisis dapat menetapkan status approved, revision_requested, atau rejected dan memengaruhi snapshot honor.
 - Ekspor Google Sheets hanya dilakukan atas permintaan Admin, per bulan, memakai delapan kolom mentah yang diminta UMKM.
@@ -148,7 +148,7 @@ erDiagram
 - `parent_students` membatasi siswa yang boleh dilihat akun orang tua.
 - `users.username` dan `users.password_hash` digunakan untuk login Admin/Tutor. Orang tua hanya menggunakan `parent_access_code` yang menjadi kode rahasia akses; database menyimpan digest-nya, bukan kode mentah.
 - Kode akses orang tua bukan `users.id`, ID siswa, NPM publik, nomor telepon, atau kode berurutan. Kode harus acak, sulit ditebak, hanya dibagikan privat, dapat dirotasi, dan dilindungi rate limit.
-- Tidak ada tabel tarif. Tarif per jenjang & potongan Admin ada di `services/billing/tariff.ts`; tarif resmi UMKM masih O-01.
+- Tidak ada tabel tarif. Tarif per jenjang & potongan Admin ada di `services/billing/tariff.ts`; tarif resmi dikonfirmasi owner (D-26).
 - `lesson_sessions.rate_amount_snapshot` ditetapkan saat sesi disetujui dari tarif konfigurasi; snapshot menjaga histori honor tidak berubah saat tarif konfigurasi diganti.
 - `anomaly_flags` menyimpan hasil klasifikasi/indikasi anomali, termasuk `suspected_duplicate`. Status proses agregat disimpan di `lesson_sessions.anomaly_analysis_status`; `anomaly_flags.review_status` memiliki nilai `pending_review`, `confirmed_anomaly`, `false_positive`, `resolved`, dan `superseded` (khusus ditetapkan sistem saat Tutor merevisi payload). Label validitas hasil analisis digunakan service untuk memperbarui status sesi.
 - `sheet_export_runs` mencatat tindakan ekspor Admin. Tidak ada status sinkronisasi per sesi karena Sheets bukan tujuan submit live.
@@ -359,3 +359,7 @@ Tidak mempunyai FK deklaratif ke users; identitas berada dalam JSON.
 - Pisahkan label AI, koreksi admin, dan fixture sintetis. Label AI bukan otomatis ground truth. Status, validity/reason, hasil review, dan snapshot nominal adalah data setelah keputusan dan berisiko target leakage.
 - Kelas/sekolah siswa merupakan nilai master saat ini, bukan snapshot per sesi. Belum ada histori lengkap versi payload maupun versi aturan analisis.
 - Hash kredensial, kontak pribadi yang tidak diperlukan, dan tabel app_sessions tidak dimasukkan ke dataset DS.
+
+## Riwayat kelas dan dasar tarif sesi
+
+Migrasi 0009 menambahkan `student_grade_history`, `student_grade_audit`, serta `grade_snapshot`, `grade_source`, dan `hourly_rate_snapshot` pada sesi. Makna field, perlindungan nominal historis, serta keterbatasan data legacy dijelaskan di [Riwayat kelas dan tarif](18-RIWAYAT-KELAS-DAN-TARIF.md#model-data-dan-api).

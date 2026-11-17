@@ -69,7 +69,7 @@ Ekspor mencakup semua submission pada periode terpilih, termasuk `pending`, `app
 
 Transisi baseline: `pending → approved`, `pending → revision_requested`, atau `pending → rejected`; setelah Tutor memperbaiki sesi `revision_requested`, record yang sama kembali ke `pending` untuk direview ulang. `approved` dan `rejected` terminal adalah working default MVP (O-15, belum dikonfirmasi owner); belum ada endpoint reopen pada baseline. Hanya Admin dapat memutuskan status review. Tutor hanya boleh mengedit sesi miliknya yang berstatus `revision_requested`. Schema baseline hanya menyimpan metadata review untuk payload sesi yang saat ini tersimpan, bukan riwayat keputusan penuh. Saat Tutor mengirim revisi, perbarui `submitted_at` ke waktu submit payload terbaru, set status ke `pending`, kosongkan `reviewed_by_user_id`, `reviewed_at`, dan `admin_note` (alasan revisi telah ditampilkan kepada Tutor sebelum revisi dikirim), reset `anomaly_analysis_status` ke `pending`, dan tandai finding lama sebagai `superseded` dengan `review_note="superseded_by_revision"`. Jalankan analisis ulang berdasarkan payload terbaru. Riwayat keputusan/revisi penuh membutuhkan tabel audit terpisah dan berada di luar baseline.
 
-**Honor & tagihan hanya menghitung sesi approved** (Valid, atau Perlu revisi yang Disetujui). Tagihan orang tua = tarif les (kotor); honor tutor = tarif les per jenjang (SD 1-3 Rp50.000/jam, SD 4-6 Rp70.000/jam; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×) dikurangi potongan Admin Rp10.000 per sesi, dikunci ke `rate_amount_snapshot`/`admin_fee_snapshot` saat sesi dihitung (D-25). Tarif resmi UMKM masih O-01.
+**Honor & tagihan hanya menghitung sesi approved** (Valid, atau Perlu revisi yang Disetujui). Tagihan orang tua = tarif les (kotor); honor tutor = tarif les per jenjang (PAUD–TK Rp40.000/jam, SD 1–3 Rp60.000/jam, SD 4–6 Rp80.000/jam, SMP Rp100.000/jam, SMA Rp120.000/jam; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×) dikurangi potongan Admin Rp10.000 untuk jam pertama dan setiap jam berikutnya; sisa lebih dari atau sama dengan 30 menit menambah Rp10.000 (termasuk tepat 30 menit), dikunci ke `rate_amount_snapshot`/`admin_fee_snapshot` saat sesi dihitung (D-25). Tarif resmi dikonfirmasi owner (D-26).
 
 ### 5.1 Revisi sesi — field yang dapat diubah
 
@@ -91,7 +91,7 @@ Untuk sesi milik Tutor yang berstatus `revision_requested`, hanya field berikut 
 
 ## 7. Data honor
 
-- Tarif per jenjang dan potongan Admin di-hardcode di `backend/src/services/billing/tariff.ts` (D-25); `HONOR_RATE_PER_SESSION` dihapus. Kelas murid dibatasi `1 SD`–`6 SD`.
+- Tarif per jenjang dan potongan Admin di-hardcode di `backend/src/services/billing/tariff.ts` (D-25); `HONOR_RATE_PER_SESSION` dihapus. Kelas murid: `PAUD`, `TK`, `1 SD`–`6 SD`, `1 SMP`–`3 SMP`, dan `1 SMA`–`3 SMA`.
 - Nominal berasal dari konfigurasi/snapshot, tidak ditulis sebagai konstanta di tiap komponen atau service.
 - Hanya status approved yang masuk total honor.
 - Sesi pending/revision/rejected ditampilkan sebagai jumlah terpisah, tidak masuk nominal.

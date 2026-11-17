@@ -15,8 +15,11 @@ export const SAMPLE_TUTOR_RANKING = [
 ];
 
 export const SAMPLE_GRADE_COMPOSITION = [
-  { tier: 'SD kelas 1–3', students: 14 },
-  { tier: 'SD kelas 4–6', students: 19 },
+  { tier: 'PAUD–TK', students: 4 },
+  { tier: 'SD 1–3', students: 10 },
+  { tier: 'SD 4–6', students: 12 },
+  { tier: 'SMP', students: 4 },
+  { tier: 'SMA', students: 3 },
 ];
 
 export const SAMPLE_STUDENT_GROWTH = [

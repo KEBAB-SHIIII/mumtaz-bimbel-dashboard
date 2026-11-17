@@ -19,7 +19,7 @@ const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 const ITEM_BASE =
   'group/item relative flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-sm font-medium transition-colors duration-150 pointer-coarse:h-11 motion-reduce:transition-none';
 /** Forced colors membuang gradien/latar: outline menjaga item aktif tetap terlihat di mode kontras tinggi. */
-const ITEM_ACTIVE = 'bg-linear-to-r from-[#B9DDB5]/65 via-[#C7E7AC]/50 to-[#D9ED98]/45 text-[#193923] shadow-sm ring-1 ring-inset ring-[#A9D39F]/60 forced-colors:outline-2 forced-colors:-outline-offset-2 forced-colors:outline-solid';
+const ITEM_ACTIVE = 'bg-linear-to-r from-brand-gradient-from/65 via-brand-gradient-via/50 to-brand-gradient-to/45 text-brand-ink shadow-sm ring-1 ring-inset ring-brand-border/60 forced-colors:outline-2 forced-colors:-outline-offset-2 forced-colors:outline-solid';
 const ITEM_IDLE = 'text-muted hover:bg-surface hover:text-text';
 
 /** Tooltip sidebar ciut: nama aksesibel tetap dari label sr-only, jadi tooltip disembunyikan dari AT. */
@@ -254,14 +254,26 @@ export function Sidebar({ passwordRequired = false, role, userId, fullName, onLo
 
   return (
     <div className="flex h-full flex-col">
-      <div className={cn('flex h-16 shrink-0 items-center gap-2.5 px-5', isCollapsed && 'justify-center px-0')}>
+      <div className={cn('flex h-16 shrink-0 items-center px-3', role === 'tutor' ? 'gap-2' : 'gap-2.5', isCollapsed && 'justify-center')}>
         {!isCollapsed && (
-          <>
-            <p className="min-w-0 flex-1 truncate text-lg font-semibold text-text">Mumtaz Bimbel</p>
-          </>
+          <div className={cn('flex min-w-0 flex-1 items-center gap-2.5', role === 'tutor' && 'gap-2')}>
+            {role === 'tutor' && (
+              <img
+                src="/favicon.svg"
+                alt=""
+                aria-hidden
+                className="size-8 shrink-0 rounded-full bg-white object-cover shadow-sm ring-1 ring-brand-border/55"
+              />
+            )}
+            {role === 'tutor' ? (
+              <p className="whitespace-nowrap text-base font-semibold tracking-tight text-text">Mumtaz Bimbel</p>
+            ) : (
+              <p className="min-w-0 flex-1 truncate text-lg font-semibold text-text">Mumtaz Bimbel</p>
+            )}
+          </div>
         )}
         {variant === 'desktop' ? (
-          <IconButton aria-label={isCollapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'} aria-expanded={!isCollapsed} onClick={onToggleCollapse}>
+          <IconButton className={isCollapsed ? 'w-full pointer-coarse:w-full' : undefined} aria-label={isCollapsed ? 'Lebarkan sidebar' : 'Ciutkan sidebar'} aria-expanded={!isCollapsed} onClick={onToggleCollapse}>
             {isCollapsed ? <PanelLeftOpen aria-hidden className="size-4.5" /> : <PanelLeftClose aria-hidden className="size-4.5" />}
           </IconButton>
         ) : (
@@ -279,19 +291,19 @@ export function Sidebar({ passwordRequired = false, role, userId, fullName, onLo
         {isCollapsed ? (
           <Avatar seed={userId} name={fullName} size={32} />
         ) : (
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-[#A9D39F]/60 bg-linear-to-r from-[#B9DDB5]/65 via-[#C7E7AC]/50 to-[#D9ED98]/45 px-4 pb-4 text-center shadow-sm">
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-brand-border/60 bg-linear-to-r from-brand-gradient-from/65 via-brand-gradient-via/50 to-brand-gradient-to/45 px-4 pb-4 text-center shadow-sm">
             <div className="-mt-6 flex shrink-0 rounded-full bg-surface p-1 shadow-sm">
               <Avatar seed={userId} name={fullName} size={72} decorative className="size-14" />
             </div>
             <div className="min-w-0">
-              <p className="text-base font-semibold break-words text-[#193923]">{fullName}</p>
+              <p className="text-base font-semibold break-words text-brand-ink">{fullName}</p>
               {role === 'tutor' && <p className="mt-1 text-xs text-muted">as tutor</p>}
             </div>
             <button
               type="button"
               onClick={onLogout}
               disabled={logoutPending}
-              className="mt-1 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-[#193923]/15 bg-white/65 px-5 py-2 text-sm font-medium text-[#193923] shadow-sm transition-colors hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#193923] disabled:cursor-not-allowed disabled:opacity-60 pointer-coarse:min-h-11 motion-reduce:transition-none"
+              className="mt-1 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-brand-ink/15 bg-white/65 px-5 py-2 text-sm font-medium text-brand-ink shadow-sm transition-colors hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-ink disabled:cursor-not-allowed disabled:opacity-60 pointer-coarse:min-h-11 motion-reduce:transition-none"
             >
               <LogOut aria-hidden className="size-4" />
               {logoutPending ? 'Keluar…' : 'Logout'}
