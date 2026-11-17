@@ -84,7 +84,7 @@ describe('perjalanan end-to-end lintas role', () => {
   it('3. Perlu revisi (pesan Admin) → Tutor merevisi → menunggu validasi → Valid', async () => {
     expect(await sessionsInOctober()).toBe(totalBefore + 1);
     await admin
-      .patch(`/admin/attendance/${sessionId}/validity`, { validity: 'needs_revision', approval: 'pending', admin_note: 'Durasi sesuai jadwal 60 menit.' })
+      .patch(`/admin/attendance/${sessionId}/validity`, { validity: 'needs_revision', admin_note: 'Durasi sesuai jadwal 60 menit.' })
       .expect(200);
     const mine = (await farhan.get(`/tutor/me/attendance?period=${PERIOD}&page_size=100`).expect(200)).body.items as { id: string; status: string; admin_note: string }[];
     expect(mine.find((item) => item.id === sessionId)).toMatchObject({ status: 'revision_requested', admin_note: 'Durasi sesuai jadwal 60 menit.' });

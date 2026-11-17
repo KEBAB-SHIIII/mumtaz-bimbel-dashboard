@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
-import { choosePeriod, loginStaff, renderApp, useFakeBackend } from '../test/render';
+import { choosePeriod, loginStaff, openAt, renderApp, useFakeBackend } from '../test/render';
 
 /** Ekspor Sheets ada di halaman Data Absensi (revisi PM; sebelumnya di Rekap). */
 async function openAttendance(period: string) {
@@ -10,6 +10,13 @@ async function openAttendance(period: string) {
   await user.click(await screen.findByRole('link', { name: 'Data Absensi' }));
   await screen.findByRole('heading', { name: 'Data Absensi', level: 1 });
   await choosePeriod(period);
+  return user;
+}
+
+/** Bulan tanpa sesi tidak ada di dropdown Periode, jadi dibuka lewat URL. */
+async function openEmptyAttendance(period: string) {
+  const user = await openAt(`/admin/absensi?period=${period}`, 'admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
+  await screen.findByRole('heading', { name: 'Data Absensi', level: 1 });
   return user;
 }
 
@@ -43,7 +50,7 @@ describe('Ekspor Google Sheets (Data Absensi)', () => {
   it('periode kosong + tab berisi → konfirmasi kedua (danger) sebelum mengganti dengan laporan kosong', async () => {
     const backend = useFakeBackend();
     backend.seedSheetTab('Absensi 2026-12', 4);
-    const user = await openAttendance('2026-12');
+    const user = await openEmptyAttendance('2026-12');
     await screen.findByText('Belum ada sesi');
 
     await user.click(exportButton());
@@ -58,7 +65,7 @@ describe('Ekspor Google Sheets (Data Absensi)', () => {
 
   it('periode kosong + tab belum ada → langsung sukses tanpa konfirmasi kedua', async () => {
     useFakeBackend();
-    const user = await openAttendance('2026-12');
+    const user = await openEmptyAttendance('2026-12');
     await user.click(exportButton());
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Ekspor sekarang' }));
     expect(await screen.findByText(/0 baris ditulis ke tab Absensi 2026-12/)).toBeInTheDocument();

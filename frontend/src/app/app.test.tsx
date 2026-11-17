@@ -135,12 +135,14 @@ describe('Admin: validitas data (label AI)', () => {
     expect(within(dialog).getByText('Hasil uji (fake detector), bukan AI live')).toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: 'Review temuan' })).not.toBeInTheDocument();
 
-    await user.selectOptions(within(dialog).getByLabelText(/^Validitas data/), 'needs_revision');
+    // Admin meminta revisi dari tab Temuan anomali (tanpa pilihan status approval).
+    await user.click(within(dialog).getByRole('tab', { name: /Temuan anomali/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'Minta revisi' }));
     expect(within(dialog).queryByLabelText(/^Status approval/)).not.toBeInTheDocument();
     await user.type(within(dialog).getByLabelText(/^Pesan untuk tutor/), 'Konfirmasi durasi via WA');
-    await user.click(within(dialog).getByRole('button', { name: 'Simpan validitas' }));
-    expect(await within(dialog).findByText('Validitas tersimpan.')).toBeInTheDocument();
-    expect(within(dialog).getAllByText('Perlu revisi').length).toBeGreaterThan(0);
+    await user.click(within(dialog).getByRole('button', { name: 'Kirim permintaan revisi' }));
+    expect(await screen.findByText('Permintaan revisi tersimpan')).toBeInTheDocument();
+    expect(within(dialog).getByText('Konfirmasi durasi via WA')).toBeInTheDocument();
   });
 
   it('Admin menambah sesi atas nama tutor (CRUD), lalu menghapusnya', async () => {

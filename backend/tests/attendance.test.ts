@@ -276,28 +276,26 @@ describe('Admin: Data Absensi, validitas & CRUD', () => {
     expect(row?.reviewed_at?.toISOString()).toBe('2026-11-15T03:00:00.000Z');
   });
 
-  it('status approval Perlu revisi dipilih Admin: Disetujui dihitung, Ditolak ditahan', async () => {
-    // s03: Citra (5 SD), 90 menit → Rp105.000.
-    const approved = await admin.patch(`/admin/attendance/${SESSION_IDS.s03}/validity`, {
+  it('Perlu revisi oleh Admin → diminta revisi Tutor, ditahan dari rekap, pesan tersimpan', async () => {
+    // Alur approval terpisah dihapus (fc657b4): Perlu revisi selalu berarti meminta Tutor merevisi.
+    const res = await admin.patch(`/admin/attendance/${SESSION_IDS.s03}/validity`, {
       validity: 'needs_revision',
-      approval: 'approved',
-      admin_note: 'Sudah dikonfirmasi tutor via WA',
+      admin_note: 'Durasi tidak sesuai jadwal',
     });
-    expect(adminAttendanceDetailSchema.parse(approved.body)).toMatchObject({ approval_status: 'approved', status: 'approved' });
-    let [row] = await t.database.db.select().from(lessonSessions).where(eq(lessonSessions.id, SESSION_IDS.s03));
-    expect(Number(row?.rate_amount_snapshot)).toBe(105000);
-
-    const rejected = await admin.patch(`/admin/attendance/${SESSION_IDS.s03}/validity`, { validity: 'needs_revision', approval: 'rejected' });
-    expect(adminAttendanceDetailSchema.parse(rejected.body)).toMatchObject({ approval_status: 'rejected', status: 'rejected' });
-    [row] = await t.database.db.select().from(lessonSessions).where(eq(lessonSessions.id, SESSION_IDS.s03));
-    expect(row).toMatchObject({ rate_amount_snapshot: null, admin_fee_snapshot: null, admin_note: 'Sudah dikonfirmasi tutor via WA' });
-
-    await admin.patch(`/admin/attendance/${SESSION_IDS.s03}/validity`, { validity: 'needs_revision', approval: 'pending' }).expect(200);
+    expect(adminAttendanceDetailSchema.parse(res.body)).toMatchObject({
+      validity: 'needs_revision',
+      approval_status: 'pending',
+      status: 'revision_requested',
+    });
+    const [row] = await t.database.db.select().from(lessonSessions).where(eq(lessonSessions.id, SESSION_IDS.s03));
+    expect(row).toMatchObject({ rate_amount_snapshot: null, admin_fee_snapshot: null, admin_note: 'Durasi tidak sesuai jadwal' });
   });
 
-  it('approval hanya untuk Perlu revisi → 422 bila dikirim untuk label lain', async () => {
-    const res = await admin.patch(`/admin/attendance/${SESSION_IDS.s04}/validity`, { validity: 'valid', approval: 'approved' });
-    expect(res.status).toBe(422);
+  it('field approval sudah tidak diterima → 422', async () => {
+    for (const validity of ['valid', 'needs_revision'] as const) {
+      const res = await admin.patch(`/admin/attendance/${SESSION_IDS.s04}/validity`, { validity, approval: 'approved' });
+      expect(res.status).toBe(422);
+    }
   });
 
   it('Admin: tambah, ubah, dan hapus sesi (CRUD penuh)', async () => {
@@ -378,7 +376,6 @@ describe('revisi oleh Tutor', () => {
     await admin
       .patch(`/admin/attendance/${SESSION_IDS.s09}/validity`, {
         validity: 'needs_revision',
-        approval: 'pending',
         admin_note: 'Tanggal sama dengan sesi lain',
       })
       .expect(200);

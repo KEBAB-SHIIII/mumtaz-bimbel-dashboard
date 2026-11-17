@@ -5,7 +5,7 @@ import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
 import { createFakeAdapter } from '../test/fake-api/fake-adapter';
 import { createFakeBackend } from '../test/fake-api/fake-backend';
 import { apiClient } from '../lib/api-client';
-import { chooseFilter, choosePeriod, loginStaff, renderApp, useFakeBackend } from '../test/render';
+import { chooseFilter, choosePeriod, loginStaff, openAt, renderApp, useFakeBackend } from '../test/render';
 
 const tutorPassword = TEST_ONLY_CREDENTIALS.tutorPassword;
 const rowsOf = () => within(screen.getByRole('table')).getAllByRole('row').slice(1);
@@ -92,7 +92,8 @@ describe('Tutor: Riwayat Mengajar', () => {
 
   it('empty state saat tidak ada sesi pada periode', async () => {
     useFakeBackend();
-    await openHistory('farhan', '2026-08');
+    // Dropdown Periode hanya berisi bulan yang punya sesi; bulan kosong dibuka lewat URL.
+    await openAt('/tutor/riwayat?period=2026-08', 'farhan', tutorPassword);
     expect(await screen.findByText('Belum ada sesi')).toBeInTheDocument();
   });
 

@@ -133,10 +133,11 @@ describe('validitas data & status approval (revisi PM)', () => {
     expect(approvalStatusOf('valid', 'approved')).toBeNull();
   });
 
-  it('approval hanya untuk Perlu revisi; catatan Admin opsional', () => {
+  it('label validitas Admin tanpa field approval; catatan Admin opsional', () => {
     expect(setValidityRequestSchema.safeParse({ validity: 'valid' }).success).toBe(true);
-    expect(setValidityRequestSchema.safeParse({ validity: 'needs_revision', approval: 'approved' }).success).toBe(true);
-    expect(setValidityRequestSchema.safeParse({ validity: 'needs_revision' }).success).toBe(false);
+    expect(setValidityRequestSchema.safeParse({ validity: 'needs_revision' }).success).toBe(true);
+    expect(setValidityRequestSchema.safeParse({ validity: 'needs_revision', admin_note: 'Perbaiki durasi' }).success).toBe(true);
+    expect(setValidityRequestSchema.safeParse({ validity: 'needs_revision', approval: 'approved' }).success).toBe(false);
     expect(setValidityRequestSchema.safeParse({ validity: 'valid', approval: 'approved' }).success).toBe(false);
     expect(setValidityRequestSchema.safeParse({ validity: 'pending' }).success).toBe(false);
   });

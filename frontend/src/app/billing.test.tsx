@@ -1,7 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
-import { chooseFilter, choosePeriod, loginStaff, renderApp, useFakeBackend } from '../test/render';
+import { choosePeriod, loginStaff, openAt, renderApp, useFakeBackend } from '../test/render';
 
 async function openBilling(period: string) {
   renderApp('/login');
@@ -38,8 +39,13 @@ describe('Penagihan Orang Tua', () => {
   it('filter murid hanya menampilkan tagihan murid itu', async () => {
     useFakeBackend();
     await openBilling('2026-10');
+    const user = userEvent.setup();
     await screen.findByRole('heading', { name: 'Aisyah', level: 2 });
-    await chooseFilter('Murid', 'Bima');
+    // Filter murid berupa combobox pencarian (SearchSelect).
+    const studentFilter = screen.getByRole('combobox', { name: 'Murid' });
+    await user.clear(studentFilter); // berisi "Semua murid" sebelum dicari
+    await user.type(studentFilter, 'Bima');
+    await user.click(await screen.findByRole('option', { name: 'Bima' }));
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'Aisyah', level: 2 })).not.toBeInTheDocument());
     expect(screen.getByRole('heading', { name: 'Bima', level: 2 })).toBeInTheDocument();
   });
@@ -60,7 +66,8 @@ describe('Penagihan Orang Tua', () => {
 
   it('periode tanpa sesi yang ditagihkan → empty state', async () => {
     useFakeBackend();
-    await openBilling('2026-08');
+    // Dropdown Periode hanya berisi bulan yang punya sesi; bulan kosong dibuka lewat URL.
+    await openAt('/admin/penagihan?period=2026-08', 'admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
     expect(await screen.findByText('Belum ada tagihan')).toBeInTheDocument();
   });
 
@@ -72,6 +79,10 @@ describe('Penagihan Orang Tua', () => {
     await choosePeriod('2026-10');
     await user.click(await screen.findByRole('link', { name: 'Total omzet kotor' }));
     expect(await screen.findByRole('heading', { name: 'Penagihan Orang Tua', level: 1 })).toBeInTheDocument();
+    // Rincian sesi tertutup secara default; buka untuk memastikan periodenya sama (Oktober 2026).
+    const card = (await screen.findByRole('heading', { name: 'Aisyah', level: 2 })).closest('section');
+    if (!card) throw new Error('bagian tagihan Aisyah tidak ada');
+    await user.click(within(card).getByRole('button', { name: /Rincian sesi/ }));
     expect(await screen.findByRole('table', { name: 'Rincian tagihan Aisyah Oktober 2026' })).toBeInTheDocument();
   });
 });
