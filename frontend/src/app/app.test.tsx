@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
-import { chooseFilter, choosePeriod, loginStaff, renderApp, useFakeBackend } from '../test/render';
+import { chooseFilter, choosePeriod, loginStaff, openAt, renderApp, useFakeBackend } from '../test/render';
 
 const navLinks = async () =>
   within(await screen.findByRole('navigation', { name: 'Navigasi utama' }))
@@ -10,6 +10,19 @@ const navLinks = async () =>
     .map((link) => link.textContent);
 
 describe('autentikasi & navigasi per role', () => {
+  it('membuka link halaman sebelum login → setelah login kembali ke halaman & periode yang sama', async () => {
+    useFakeBackend();
+    await openAt('/admin/penagihan?period=2026-10', 'admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
+    expect(await screen.findByRole('heading', { name: 'Penagihan Orang Tua', level: 1 })).toBeInTheDocument();
+    expect(screen.getByText(/Tagihan les Oktober 2026/)).toBeInTheDocument();
+  });
+
+  it('link milik role lain diabaikan → ke dashboard role sendiri', async () => {
+    useFakeBackend();
+    await openAt('/tutor/riwayat', 'admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
+    expect(await screen.findByRole('heading', { name: 'Dashboard', level: 1 })).toBeInTheDocument();
+  });
+
   it('route terproteksi tanpa sesi → halaman login', async () => {
     useFakeBackend();
     renderApp('/admin');

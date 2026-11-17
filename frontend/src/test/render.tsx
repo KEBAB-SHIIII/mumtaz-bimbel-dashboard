@@ -39,6 +39,15 @@ export async function loginStaff(username: string, password: string) {
   return user;
 }
 
+/**
+ * Buka URL terlindungi langsung (mis. `/admin/absensi?period=2026-12`): diarahkan ke login, lalu
+ * kembali ke URL tersebut. Dipakai untuk periode tanpa sesi, yang tidak muncul di dropdown Periode.
+ */
+export async function openAt(route: string, username: string, password: string) {
+  renderApp(route);
+  return loginStaff(username, password);
+}
+
 /** Pilih periode (`YYYY-MM`) dari dropdown Periode (Listbox), seperti pengguna memilih bulan. */
 export async function choosePeriod(period: string) {
   const user = userEvent.setup();

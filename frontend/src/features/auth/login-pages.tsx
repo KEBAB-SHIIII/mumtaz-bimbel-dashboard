@@ -40,15 +40,21 @@ function AuthLayout({ title, description, children, footer }: { title: string; d
   );
 }
 
-/** Setelah login: kembali ke halaman asal bila milik role yang sama, selain itu ke dashboard role. */
-function useAfterLogin() {
-  const navigate = useNavigate();
+/** Halaman asal (`state.from`, diisi RequireRole) bila milik role yang sama, selain itu dashboard role. */
+function useDestination() {
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from;
   return (role: Role) => {
     const home = ROLE_HOME[role];
-    navigate(from?.startsWith(home) ? from : home, { replace: true });
+    return from?.startsWith(home) ? from : home;
   };
+}
+
+/** Setelah login: kembali ke halaman asal (lihat `useDestination`). */
+function useAfterLogin() {
+  const navigate = useNavigate();
+  const destination = useDestination();
+  return (role: Role) => navigate(destination(role), { replace: true });
 }
 
 /** Kerangka halaman login (refresh): geometri sama dengan `AuthLayout`, jadi form muncul tanpa lompatan. */
@@ -81,8 +87,10 @@ function AuthSkeleton({ fields }: { fields: number }) {
 
 function AlreadySignedIn({ fields }: { fields: number }) {
   const session = useSession();
+  const destination = useDestination();
   if (session.isPending) return <AuthSkeleton fields={fields} />;
-  if (session.data) return <Navigate to={ROLE_HOME[session.data.role]} replace />;
+  // Sesi baru terisi tepat setelah login berhasil: ikuti halaman asal, bukan selalu dashboard.
+  if (session.data) return <Navigate to={destination(session.data.role)} replace />;
   return null;
 }
 
