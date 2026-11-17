@@ -43,8 +43,9 @@ describe('Penagihan Orang Tua', () => {
     await screen.findByRole('heading', { name: 'Aisyah', level: 2 });
     // Filter murid berupa combobox pencarian (SearchSelect).
     const studentFilter = screen.getByRole('combobox', { name: 'Murid' });
-    await user.clear(studentFilter); // berisi "Semua murid" sebelum dicari
-    await user.type(studentFilter, 'Bima');
+    // Berisi "Semua murid"; klik lalu langsung mengetik mengganti isinya.
+    await user.click(studentFilter);
+    await user.keyboard('Bima');
     await user.click(await screen.findByRole('option', { name: 'Bima' }));
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'Aisyah', level: 2 })).not.toBeInTheDocument());
     expect(screen.getByRole('heading', { name: 'Bima', level: 2 })).toBeInTheDocument();

@@ -11,6 +11,7 @@ import { ValidityBadge } from './data-display/status-badge';
 import { Button } from './actions/button';
 import { CountUp } from './motion/count-up';
 import { DataTable } from './data-display/data-table';
+import { SearchSelect } from './forms/field';
 import { SearchInput } from './forms/search-input';
 import { SegmentedControl, SegmentedTabs } from './navigation/segmented-tabs';
 import { LoadingSwitch, SKELETON_DELAY_MS, SKELETON_MIN_VISIBLE_MS, setSkeletonBooting, useDelayedSkeleton } from './feedback/skeleton';
@@ -294,5 +295,27 @@ describe('Badge & Button', () => {
     renderUi(<Button loading>Simpan</Button>);
     await waitFor(() => expect(screen.getByRole('button', { name: 'Simpan' })).toBeDisabled());
     expect(screen.getByRole('button', { name: 'Simpan' })).toHaveAttribute('aria-busy', 'true');
+  });
+});
+
+describe('SearchSelect', () => {
+  const items = [
+    { value: '', label: 'Semua murid' },
+    { value: 'a', label: 'Aisyah' },
+    { value: 'b', label: 'Bima' },
+  ];
+
+  it('berisi pilihan terpilih → mengetik langsung mengganti isi, bukan menyambung', async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    renderUi(<SearchSelect id="murid" items={items} value="" onChange={onChange} />);
+    const input = screen.getByRole('combobox');
+    expect(input).toHaveValue('Semua murid');
+
+    await user.click(input);
+    await user.keyboard('Bima');
+    expect(input).toHaveValue('Bima');
+    await user.click(await screen.findByRole('option', { name: 'Bima' }));
+    expect(onChange).toHaveBeenCalledWith('b');
   });
 });

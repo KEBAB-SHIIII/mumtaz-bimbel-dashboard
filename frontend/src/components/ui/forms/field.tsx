@@ -69,6 +69,10 @@ export function SearchSelect({ id, items, value, onChange, placeholder, invalid,
           autoComplete="off"
           displayValue={(item: SearchSelectItem | null) => item?.label ?? ''}
           onChange={(event) => setQuery(event.target.value)}
+          // Isi pilihan terpilih (mis. "Semua murid") diseleksi penuh agar ketikan langsung menggantinya,
+          // bukan tersambung jadi "Semua muridBima". Juga saat klik: di Chrome klik membatalkan seleksi fokus.
+          onFocus={(event) => event.currentTarget.select()}
+          onClick={(event) => event.currentTarget.select()}
         />
         <ComboboxButton aria-label="Tampilkan daftar pilihan" className="absolute inset-y-0 end-0 flex items-center px-2.5 text-muted">
           <ChevronDown aria-hidden className="size-4" />
