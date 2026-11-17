@@ -77,6 +77,19 @@ function RevisionForm({ session, onDone, onCancel }: { session: TutorSession; on
  * Detail sesi Tutor (docs/15 §3.3; revisi PM): validitas data + alasannya dan pesan Admin yang
  * diperlukan untuk revisi. Rincian temuan anomali tidak ditampilkan ke Tutor (data internal Admin).
  */
+
+/** Awalan dari layanan AI sudah diwakili judul alert, jadi tidak perlu diulang. */
+const stripReasonPrefix = (reason: string) => reason.replace(/^Perlu konfirmasi\/revisi:\s*/i, '');
+
+/** Durasi, jam, dan tanggal ditebalkan agar Tutor langsung melihat angka yang bermasalah. */
+const FACT_PATTERN = /(\([+-]\d+ menit\)|[+-]?\d+ menit|\d{2}[:.]\d{2}(?:\s*[–-]\s*\d{2}[:.]\d{2})?(?: WIB)?|\d{4}-\d{2}-\d{2})/g;
+
+function EmphasizeFacts({ text }: { text: string }) {
+  return text.split(FACT_PATTERN).map((part, index) =>
+    index % 2 === 1 ? <strong key={index} className="font-semibold text-text">{part}</strong> : part,
+  );
+}
+
 export function TutorSessionDialog({ session, onClose }: { session: TutorSession | null; onClose: () => void }) {
   const [editing, setEditing] = useState(false);
   const [revised, setRevised] = useState(false);
@@ -111,9 +124,21 @@ export function TutorSessionDialog({ session, onClose }: { session: TutorSession
     >
       <div className="flex flex-col gap-4">
         {!revised && (session.validity_reason || session.admin_note) && (session.status === 'revision_requested' || session.status === 'rejected') && (
-          <InlineAlert tone={session.status === 'rejected' ? 'danger' : 'info'} title={session.status === 'rejected' ? 'Alasan penolakan' : 'Yang perlu diperbaiki'}>
-            {session.validity_reason && <p>{session.validity_reason}</p>}
-            {session.admin_note && <p className="mt-1">Pesan Admin: {session.admin_note}</p>}
+          <InlineAlert tone={session.status === 'rejected' ? 'danger' : 'warning'} title={session.status === 'rejected' ? 'Alasan penolakan' : 'Yang perlu diperbaiki'}>
+            <div className="flex flex-col gap-2">
+              {session.validity_reason && (
+                <div>
+                  <p className="font-semibold text-text">Hasil pemeriksaan AI</p>
+                  <p><EmphasizeFacts text={stripReasonPrefix(session.validity_reason)} /></p>
+                </div>
+              )}
+              {session.admin_note && (
+                <div>
+                  <p className="font-semibold text-text">Pesan Admin</p>
+                  <p className="whitespace-pre-line">{session.admin_note}</p>
+                </div>
+              )}
+            </div>
           </InlineAlert>
         )}
         {editing ? (
