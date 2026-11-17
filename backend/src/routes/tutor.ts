@@ -77,7 +77,8 @@ export function tutorRouter(ctx: ServiceContext, limiters: AuthRateLimiters, ano
   router.patch('/tutor/me/attendance/:id', async (req, res) => {
     const { id } = parseInput(idParamSchema, req.params);
     const input = parseInput(reviseAttendanceRequestSchema, req.body);
-    const session = await reviseAttendance(ctx, tutorIdOf(req), id, input);
+    // Sesi lain yang temuannya merujuk sesi ini ikut dianalisis ulang setelah commit.
+    const session = await reviseAttendance(ctx, tutorIdOf(req), id, input, (ids) => ids.forEach((dep) => anomalyQueue.enqueue(dep)));
     // Payload baru → analisis ulang (no-op bila retry identik yang sudah dianalisis).
     anomalyQueue.enqueue(session.id);
     res.json({ session });

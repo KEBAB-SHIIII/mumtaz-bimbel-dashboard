@@ -214,6 +214,50 @@ async function supersedeFindings(tx: DbOrTx, sessionId: string): Promise<void> {
     .where(and(eq(anomalyFlags.lesson_session_id, sessionId), ne(anomalyFlags.review_status, 'superseded')));
 }
 
+/** Callback setelah commit untuk meng-enqueue analisis ulang (diisi route dengan antrean anomali). */
+export type RequeueAnalysis = (sessionIds: readonly string[]) => void;
+const NO_REQUEUE: RequeueAnalysis = () => undefined;
+
+/**
+ * Temuan sesi lain yang merujuk `sessionId` (duplikat/bentrok jadwal) menjadi basi saat sesi itu
+ * direvisi, dikoreksi Admin, atau dihapus. Sesi tersebut dikembalikan ke "menunggu validasi" agar
+ * AI menganalisis ulang: `submitted_at` TIDAK diubah (urutan submit tetap) dan sesi yang sudah
+ * diputuskan Admin (`reviewed_by_user_id` terisi) tidak disentuh. Mengembalikan ID untuk di-enqueue.
+ */
+async function resetDependentSessions(tx: DbOrTx, sessionId: string, now: Date): Promise<string[]> {
+  const rows = await tx
+    .selectDistinct({ id: anomalyFlags.lesson_session_id })
+    .from(anomalyFlags)
+    .innerJoin(lessonSessions, eq(lessonSessions.id, anomalyFlags.lesson_session_id))
+    .where(
+      and(
+        eq(anomalyFlags.related_lesson_session_id, sessionId),
+        ne(anomalyFlags.lesson_session_id, sessionId),
+        ne(anomalyFlags.review_status, 'superseded'),
+        isNull(lessonSessions.reviewed_by_user_id),
+      ),
+    );
+  const ids = rows.map((row) => row.id);
+  if (ids.length === 0) return [];
+  await tx
+    .update(anomalyFlags)
+    .set({ review_status: 'superseded', review_note: SUPERSEDED_BY_REVISION_NOTE })
+    .where(and(inArray(anomalyFlags.lesson_session_id, ids), ne(anomalyFlags.review_status, 'superseded')));
+  await tx
+    .update(lessonSessions)
+    .set({
+      status: 'pending',
+      validity: null,
+      validity_reason: null,
+      anomaly_analysis_status: 'pending',
+      ...NO_SNAPSHOT,
+      reviewed_at: null,
+      updated_at: now,
+    })
+    .where(and(inArray(lessonSessions.id, ids), isNull(lessonSessions.reviewed_by_user_id)));
+  return ids;
+}
+
 /** Kembali ke "menunggu validasi": AI akan menganalisis ulang payload baru. */
 const resetToPendingValidation = (now: Date) => ({
   status: 'pending',
@@ -388,8 +432,10 @@ export async function reviseAttendance(
   tutorId: string,
   sessionId: string,
   input: ReviseAttendanceRequest,
+  requeue: RequeueAnalysis = NO_REQUEUE,
 ): Promise<TutorSession> {
-  return ctx.db.transaction(async (tx) => {
+  let dependents: string[] = [];
+  const session = await ctx.db.transaction(async (tx) => {
     const basis = await lessonBasis(tx, input.student_id, input.lesson_date);
     const current = await sessionViewById(tx, sessionId);
     if (!current || current.tutor_id !== tutorId) throw notFound('Sesi');
@@ -413,11 +459,14 @@ export async function reviseAttendance(
 
     await replaceSubjects(tx, sessionId, input.subject_ids);
     await supersedeFindings(tx, sessionId);
+    dependents = await resetDependentSessions(tx, sessionId, ctx.now());
 
     const row = await sessionViewById(tx, sessionId);
     if (!row) throw notFound('Sesi');
     return toTutorSession(row);
   });
+  requeue(dependents);
+  return session;
 }
 
 // ---------------------------------------------------------------------------
@@ -558,8 +607,10 @@ export async function adminUpdateAttendance(
   ctx: ServiceContext,
   sessionId: string,
   input: AdminUpdateAttendanceRequest,
+  requeue: RequeueAnalysis = NO_REQUEUE,
 ): Promise<AdminAttendanceDetail> {
-  return ctx.db.transaction(async (tx) => {
+  let dependents: string[] = [];
+  const detail = await ctx.db.transaction(async (tx) => {
     const basis = await lessonBasis(tx, input.student_id, input.lesson_date);
     const [locked] = await tx
       .select()
@@ -587,13 +638,22 @@ export async function adminUpdateAttendance(
       .set({ tutor_id: input.tutor_id, ...normalizeEditable(input, duration), ...selectedBasis, ...snapshot, updated_at: ctx.now() })
       .where(eq(lessonSessions.id, sessionId));
     await replaceSubjects(tx, sessionId, input.subject_ids);
+    dependents = await resetDependentSessions(tx, sessionId, ctx.now());
     return adminDetailById(tx, sessionId);
   });
+  requeue(dependents);
+  return detail;
 }
 
 /** `DELETE /admin/attendance/:id` — hapus sesi beserta temuannya (mis. data duplikat yang Ditolak). */
-export async function deleteAttendance(ctx: ServiceContext, sessionId: string): Promise<void> {
+export async function deleteAttendance(
+  ctx: ServiceContext,
+  sessionId: string,
+  requeue: RequeueAnalysis = NO_REQUEUE,
+): Promise<void> {
+  let dependents: string[] = [];
   await ctx.db.transaction(async (tx) => {
+    dependents = await resetDependentSessions(tx, sessionId, ctx.now());
     // Temuan sesi lain yang merujuk sesi ini sebagai pembanding: lepaskan rujukannya.
     await tx
       .update(anomalyFlags)
@@ -603,6 +663,7 @@ export async function deleteAttendance(ctx: ServiceContext, sessionId: string): 
     const deleted = await tx.delete(lessonSessions).where(eq(lessonSessions.id, sessionId)).returning({ id: lessonSessions.id });
     if (deleted.length === 0) throw notFound('Sesi');
   });
+  requeue(dependents);
 }
 
 /**

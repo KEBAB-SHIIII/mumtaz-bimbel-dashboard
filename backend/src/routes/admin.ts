@@ -100,6 +100,9 @@ export function adminRouter(ctx: ServiceContext, exportDeps: ExportDeps, anomaly
   });
 
   // --- Absensi -------------------------------------------------------------
+  /** Sesi lain yang temuannya merujuk sesi yang dikoreksi/dihapus → analisis ulang setelah commit. */
+  const requeueDependents = (ids: readonly string[]) => ids.forEach((id) => anomalyQueue.enqueue(id));
+
   router.get('/admin/attendance', async (req, res) => {
     res.json(await listAdminAttendance(ctx, parseInput(adminAttendanceListQuerySchema, req.query)));
   });
@@ -123,11 +126,11 @@ export function adminRouter(ctx: ServiceContext, exportDeps: ExportDeps, anomaly
 
   router.put('/admin/attendance/:id', async (req, res) => {
     const input = parseInput(adminUpdateAttendanceRequestSchema, req.body);
-    res.json(await adminUpdateAttendance(ctx, idOf(req.params), input));
+    res.json(await adminUpdateAttendance(ctx, idOf(req.params), input, requeueDependents));
   });
 
   router.delete('/admin/attendance/:id', async (req, res) => {
-    await deleteAttendance(ctx, idOf(req.params));
+    await deleteAttendance(ctx, idOf(req.params), requeueDependents);
     res.status(204).end();
   });
 
