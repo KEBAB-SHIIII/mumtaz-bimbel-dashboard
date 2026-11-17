@@ -44,7 +44,7 @@ export function TutorHistoryPage() {
     { accessorKey: 'subject_name', header: 'Mata pelajaran' },
     { id: 'duration', header: 'Durasi', cell: ({ row }) => <span className="whitespace-nowrap">{formatDuration(row.original.duration_minutes)}</span> },
     { id: 'validity', header: 'Validitas data', cell: ({ row }) => <ValidityBadge validity={row.original.validity} /> },
-    { id: 'material', header: 'Materi', cell: ({ row }) => <p className="line-clamp-2 max-w-xs">{row.original.learning_material}</p> },
+    { id: 'material', header: 'Materi', meta: { grow: true }, cell: ({ row }) => <p className="line-clamp-2 max-w-xs min-w-48">{row.original.learning_material}</p> },
     {
       id: 'actions',
       meta: { stickyRight: true },

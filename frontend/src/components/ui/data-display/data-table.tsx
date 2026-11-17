@@ -16,6 +16,11 @@ declare module '@tanstack/react-table' {
     cardTitle?: boolean;
     /** Sembunyikan kolom di tampilan kartu HP (kolom `no` selalu disembunyikan). */
     cardHidden?: boolean;
+    /**
+     * Kolom ini menampung sisa lebar tabel (mis. teks panjang). Bila ada, kolom lain dibuat
+     * selebar isinya tanpa terpotong per kata, sehingga jarak antarkolom tetap rapat.
+     */
+    grow?: boolean;
   }
 }
 
@@ -111,6 +116,9 @@ type TableInstance<T> = ReturnType<typeof useReactTable<T>>;
 function Table<T>({ table, caption, footer }: { table: TableInstance<T>; caption: string; footer: ReactNode[] | undefined }) {
   const { ref, edges, measure } = useHorizontalOverflow();
   const hasSticky = table.getAllColumns().some((column) => column.columnDef.meta?.stickyRight);
+  const hasGrow = table.getAllColumns().some((column) => column.columnDef.meta?.grow);
+  /** Dengan kolom `grow`, kolom lain selebar isinya (`w-px` + nowrap); sisa lebar ke kolom `grow`. */
+  const fitClass = (hasGrowColumn: boolean, grow: boolean | undefined) => hasGrowColumn && !grow && 'w-px whitespace-nowrap';
   const stickyClass = (sticky: boolean | undefined) =>
     sticky ? cn('sticky end-0 bg-inherit', edges.right && 'shadow-edge') : undefined;
 
@@ -135,6 +143,7 @@ function Table<T>({ table, caption, footer }: { table: TableInstance<T>; caption
                     scope="col"
                     className={cn(
                       'h-10 px-4 text-start text-meta font-medium whitespace-nowrap text-muted',
+                      fitClass(hasGrow, header.column.columnDef.meta?.grow),
                       stickyClass(header.column.columnDef.meta?.stickyRight),
                     )}
                   >
@@ -152,7 +161,7 @@ function Table<T>({ table, caption, footer }: { table: TableInstance<T>; caption
                 className="border-b border-border bg-surface transition-colors duration-150 last:border-b-0 hover:bg-surface-muted/60 motion-reduce:transition-none"
               >
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className={cn('h-11 px-4 py-2.5 align-middle text-text', stickyClass(cell.column.columnDef.meta?.stickyRight))}>
+                  <td key={cell.id} className={cn('h-11 px-4 py-2.5 align-middle text-text', fitClass(hasGrow, cell.column.columnDef.meta?.grow), stickyClass(cell.column.columnDef.meta?.stickyRight))}>
                     {renderSlot(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
