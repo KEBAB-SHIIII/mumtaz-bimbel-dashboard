@@ -114,7 +114,7 @@ export function StudentsPage() {
 
   const columns: ColumnDef<Student, unknown>[] = [
     { accessorKey: 'full_name', header: 'Nama' },
-    { accessorKey: 'grade', header: 'Kelas', cell:({row})=><div>{row.original.grade}{row.original.scheduled_grade && <p className="text-meta text-muted">{row.original.scheduled_grade.grade} · mulai {formatLessonDate(row.original.scheduled_grade.effective_from)}</p>}</div> },
+    { accessorKey: 'grade', header: 'Kelas', cell:({row})=><div><span className="whitespace-nowrap">{row.original.grade}</span>{row.original.scheduled_grade && <p className="text-meta text-muted">{row.original.scheduled_grade.grade} · mulai {formatLessonDate(row.original.scheduled_grade.effective_from)}</p>}</div> },
     { accessorKey: 'school_name', header: 'Asal sekolah' },
     { id: 'is_active', header: 'Status', cell: ({ row }) => <ActiveBadge active={row.original.is_active} /> },
     {

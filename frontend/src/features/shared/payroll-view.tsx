@@ -51,7 +51,7 @@ function SessionLines({ caption, rows, amountLabel }: { caption: string; rows: S
             <tr key={line.session_id} className={cn('border-b border-border last:border-0 [&>td]:h-11 [&>td]:px-4 [&>td]:py-2.5', line.counted ? 'text-text' : 'text-muted')}>
               <td className="whitespace-nowrap">{formatLessonDate(line.lesson_date)}</td>
               <td>
-                {line.student_name} <span className="text-muted">({line.student_grade})</span>
+                {line.student_name} <span className="whitespace-nowrap text-muted">({line.student_grade})</span>
               </td>
               <td>{line.subject_name}</td>
               <td className="whitespace-nowrap">{formatDuration(line.duration_minutes)}</td>

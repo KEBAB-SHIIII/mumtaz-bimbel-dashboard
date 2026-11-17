@@ -40,7 +40,7 @@ export function TutorHistoryPage() {
   const columns: ColumnDef<TutorSession, unknown>[] = [
     { id: 'date', header: 'Tanggal les', cell: ({ row }) => <span className="whitespace-nowrap">{formatShortDate(row.original.lesson_date)}</span> },
     { accessorKey: 'student_name', header: 'Siswa', meta: { cardTitle: true } },
-    { accessorKey: 'grade', header: 'Kelas' },
+    { accessorKey: 'grade', header: 'Kelas', cell: ({ row }) => <span className="whitespace-nowrap">{row.original.grade}</span> },
     { accessorKey: 'subject_name', header: 'Mata pelajaran' },
     { id: 'duration', header: 'Durasi', cell: ({ row }) => <span className="whitespace-nowrap">{formatDuration(row.original.duration_minutes)}</span> },
     { id: 'validity', header: 'Validitas data', cell: ({ row }) => <ValidityBadge validity={row.original.validity} /> },
