@@ -22,6 +22,9 @@ describe('parseEnv', () => {
     expect(env.AUTH_RATE_LIMIT_MAX).toBe(5);
     expect(env.AUTH_RATE_LIMIT_WINDOW_MINUTES).toBe(15);
     expect(env.ANOMALY_DURATION_OUTLIER_MINUTES).toBe(180);
+    expect(env.ANOMALY_DURATION_MIN_MINUTES).toBe(30);
+    expect(env.ANOMALY_LATE_START_AFTER).toBe('21:00');
+    expect(env.ANOMALY_EARLY_START_BEFORE).toBe('07:00');
     expect(env.GOOGLE_SHEETS_EXPORT_ENABLED).toBe(false);
   });
 
@@ -86,9 +89,10 @@ describe('parseEnv', () => {
   });
 
   it('memperlakukan nilai kosong sebagai tidak diset', () => {
-    const env = makeTestEnv({ GEMINI_API_KEY: '', DATABASE_MIGRATION_URL: '' });
+    const env = makeTestEnv({ GEMINI_API_KEY: '', DATABASE_MIGRATION_URL: '', ANOMALY_SERVICE_URL: '' });
     expect(env.GEMINI_API_KEY).toBeUndefined();
     expect(env.DATABASE_MIGRATION_URL).toBeUndefined();
+    expect(env.ANOMALY_SERVICE_URL).toBeUndefined();
   });
 });
 
@@ -97,6 +101,15 @@ describe('integrationStatus', () => {
     expect(integrationStatus(makeTestEnv())).toEqual({
       googleSheetsExport: 'disabled',
       anomalyProvider: 'not_configured',
+    });
+  });
+
+  it('memprioritaskan ml_fastapi ketika ANOMALY_SERVICE_URL diisi', () => {
+    expect(
+      integrationStatus(makeTestEnv({ ANOMALY_SERVICE_URL: 'http://localhost:8000', GEMINI_API_KEY: 'k', GEMINI_MODEL: 'm' })),
+    ).toEqual({
+      googleSheetsExport: 'disabled',
+      anomalyProvider: 'ml_fastapi',
     });
   });
 });

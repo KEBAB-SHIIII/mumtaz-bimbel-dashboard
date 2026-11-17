@@ -1,10 +1,16 @@
 import { z } from 'zod';
 import { DURATION_MINUTES_TECHNICAL_MAX, lessonTimeSchema } from '@mumtaz/contracts';
 
-// Nilai kosong di .env ("KEY=") diperlakukan sebagai tidak diset.
+// Nilai kosong di .env ("KEY=") diperlakukan sebagai tidak diset (undefined).
 const optionalString = z.preprocess(
   (value) => (value === '' ? undefined : value),
   z.string().optional(),
+);
+
+// URL opsional di .env: string kosong ("ANOMALY_SERVICE_URL=") diperlakukan sebagai tidak diset.
+const optionalUrl = z.preprocess(
+  (value) => (value === '' ? undefined : value),
+  z.url().optional(),
 );
 
 const positiveInt = (fallback: number) =>
@@ -74,13 +80,47 @@ export const envSchema = z
     /** Batas waktu satu panggilan Google Sheets API (ms). */
     GOOGLE_SHEETS_TIMEOUT_MS: positiveInt(20_000),
 
+    // =========================================================================
+    // Integrasi AI Anomaly Detection (Model ML FastAPI Sendiri vs Fallback Gemini)
+    // =========================================================================
+
+    /**
+     * URL dasar layanan FastAPI model ML milik kita (contoh: http://localhost:8000).
+     * Jika diisi, backend otomatis memprioritaskan `HttpAnomalyDetector` (`ml_fastapi`)
+     * menggantikan prototype Gemini.
+     */
+    ANOMALY_SERVICE_URL: optionalUrl,
+    /**
+     * Nama/versi model ML yang dicatat ke kolom `anomaly_flags.model` untuk audit
+     * (contoh: `anomaly-lgbm-v1`).
+     */
+    ANOMALY_MODEL_NAME: optionalString,
+
+    /** Kredensial opsional untuk prototype/fallback Gemini API. */
     GEMINI_API_KEY: optionalString,
     GEMINI_MODEL: optionalString,
-    /** Durasi di atas ini dilabeli Perlu revisi (revisi PM: > 180 menit). */
+
+    /**
+     * Batas atas durasi normal (menit). Durasi di atas nilai ini (> 180 menit)
+     * dilabeli `needs_revision`. Nilai tepat 180 menit masih dianggap `valid`.
+     */
     ANOMALY_DURATION_OUTLIER_MINUTES: positiveInt(180),
-    /** Les yang dimulai pada atau setelah jam ini (WIB, "HH:MM") dilabeli Perlu revisi (revisi PM: mulai 21.00). */
+    /**
+     * Batas bawah durasi normal (menit). Durasi di bawah nilai ini (< 30 menit)
+     * dilabeli `needs_revision`. Nilai tepat 30 menit masih dianggap `valid`.
+     */
+    ANOMALY_DURATION_MIN_MINUTES: positiveInt(30),
+    /**
+     * Batas jam mulai paling malam (WIB, format "HH:MM"). Sesi yang dimulai
+     * setelah jam ini (> 21:00) dilabeli `needs_revision`; tepat 21:00 masih `valid`.
+     */
     ANOMALY_LATE_START_AFTER: lessonTimeSchema.default('21:00'),
-    /** Batas waktu satu panggilan provider anomali; lewat batas → `failed`. */
+    /**
+     * Batas jam mulai paling pagi (WIB, format "HH:MM"). Sesi yang dimulai
+     * sebelum jam ini (< 07:00) dilabeli `needs_revision`; tepat 07:00 masih `valid`.
+     */
+    ANOMALY_EARLY_START_BEFORE: lessonTimeSchema.default('07:00'),
+    /** Batas waktu satu panggilan provider anomali (ms); lewat batas → status `failed`. */
     ANOMALY_PROVIDER_TIMEOUT_MS: positiveInt(20_000),
   })
   .superRefine((env, ctx) => {
@@ -172,10 +212,20 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
   return result.data;
 }
 
-/** Status integrasi eksternal. Tidak ada fake success: belum dikonfigurasi = nonaktif. */
+/**
+ * Status integrasi eksternal yang dicatat saat server startup (`GET /health`).
+ * Prioritas provider anomali:
+ * 1. `ml_fastapi` bila `ANOMALY_SERVICE_URL` diset (model ML sendiri)
+ * 2. `gemini` bila kredensial Gemini diset (prototype fallback)
+ * 3. `not_configured` bila keduanya kosong (tidak ada fake success)
+ */
 export function integrationStatus(env: Env) {
   return {
     googleSheetsExport: env.GOOGLE_SHEETS_EXPORT_ENABLED ? 'configured' : 'disabled',
-    anomalyProvider: env.GEMINI_API_KEY && env.GEMINI_MODEL ? 'gemini' : 'not_configured',
+    anomalyProvider: env.ANOMALY_SERVICE_URL
+      ? 'ml_fastapi'
+      : env.GEMINI_API_KEY && env.GEMINI_MODEL
+        ? 'gemini'
+        : 'not_configured',
   } as const;
 }
