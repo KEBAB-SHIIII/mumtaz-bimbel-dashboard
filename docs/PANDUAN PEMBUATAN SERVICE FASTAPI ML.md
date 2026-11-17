@@ -1,29 +1,29 @@
-# Panduan Lengkap Pembuatan Layanan FastAPI: Deteksi Anomali Absen Tutor (`anomaly_model.pkl` + *Guardrail*)
+# Panduan Lengkap Pembuatan Layanan FastAPI: Deteksi Anomali Absen Tutor (`anomaly_model.pkl` + _Guardrail_)
 
-Dokumen ini adalah panduan teknis *end-to-end* untuk membangun layanan **FastAPI** di folder/repositori terpisah. Layanan ini bertugas membungkus model Machine Learning **LightGBM (`anomaly_model.pkl`)** dan **Tahap 4 (*Guardrail* Deterministik)**, lalu melayani *request* HTTP dari *Backend* Node.js/TypeScript yang sudah kita siapkan.
+Dokumen ini adalah panduan teknis _end-to-end_ untuk membangun layanan **FastAPI** di folder/repositori terpisah. Layanan ini bertugas membungkus model Machine Learning **LightGBM (`anomaly_model.pkl`)** dan **Tahap 4 (_Guardrail_ Deterministik)**, lalu melayani _request_ HTTP dari _Backend_ Node.js/TypeScript yang sudah kita siapkan.
 
 ---
 
-## 1. Gambaran Besar & Kontrak Komunikasi dengan *Backend*
+## 1. Gambaran Besar & Kontrak Komunikasi dengan _Backend_
 
-Saat ini *Backend* (`C:\mumtaz-bimbel-dashboard\backend`) sudah memiliki adapter **`HttpAnomalyDetector`** (`backend/src/integrations/anomaly/http-detector.ts`). Begitu tutor melakukan *submit* atau *revisi* absen, *Backend* akan otomatis mengirim *request* ke FastAPI dengan spesifikasi berikut:
+Saat ini _Backend_ (`C:\mumtaz-bimbel-dashboard\backend`) sudah memiliki adapter **`HttpAnomalyDetector`** (`backend/src/integrations/anomaly/http-detector.ts`). Begitu tutor melakukan _submit_ atau _revisi_ absen, _Backend_ akan otomatis mengirim _request_ ke FastAPI dengan spesifikasi berikut:
 
-| Komponen | Spesifikasi |
-|---|---|
-| **Base URL** | Diatur lewat `ANOMALY_SERVICE_URL` di `backend/.env` (contoh lokal: `http://localhost:8000`) |
-| **Endpoint Utama** | `POST /v1/anomaly/analyze` |
-| **Endpoint Cek Kesehatan** | `GET /health` |
-| **Timeout dari Backend** | `20.000 ms` (`ANOMALY_PROVIDER_TIMEOUT_MS=20000`) |
-| **Input ke FastAPI** | JSON `{ "target": {...}, "comparisons": [...], "config": {...} }` |
-| **Output dari FastAPI** | JSON `{ "validity": "...", "validity_reason": "...", "findings": [...] }` (`HTTP 200`) |
+| Komponen                   | Spesifikasi                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------------- |
+| **Base URL**               | Diatur lewat `ANOMALY_SERVICE_URL` di `backend/.env` (contoh lokal: `http://localhost:8000`) |
+| **Endpoint Utama**         | `POST /v1/anomaly/analyze`                                                                   |
+| **Endpoint Cek Kesehatan** | `GET /health`                                                                                |
+| **Timeout dari Backend**   | `20.000 ms` (`ANOMALY_PROVIDER_TIMEOUT_MS=20000`)                                            |
+| **Input ke FastAPI**       | JSON `{ "target": {...}, "comparisons": [...], "config": {...} }`                            |
+| **Output dari FastAPI**    | JSON `{ "validity": "...", "validity_reason": "...", "findings": [...] }` (`HTTP 200`)       |
 
 ### Lima Tahap Eksekusi di Dalam FastAPI (`POST /v1/anomaly/analyze`)
 
-1. **Tahap 1 — Validasi Input (Pydantic):** Menerima JSON `target` (8 *field*), `comparisons` (maks 500 sesi, +-30 hari yang di-*submit* lebih awal), dan `config` (4 ambang batas).
+1. **Tahap 1 — Validasi Input (Pydantic):** Menerima JSON `target` (8 _field_), `comparisons` (maks 500 sesi, +-30 hari yang di-_submit_ lebih awal), dan `config` (4 ambang batas).
 2. **Tahap 2 — Transformasi 19 Fitur Angka (`feature_extractor.py`):** Menghitung 19 fitur numerik dengan rumus dan urutan kolom yang **100% identik** dengan saat pelatihan di Google Colab, sekaligus mencatat `helper_meta` (ID sesi pembanding yang memicu duplikat/bentrok).
 3. **Tahap 3 — Prediksi Model ML (`anomaly_model.pkl`):** Memasukkan ke-19 fitur ke model LightGBM untuk mendapatkan prediksi mentah (`raw_model_prediction`).
-4. **Tahap 4 — *Guardrail* Deterministik (`apply_business_guardrail`):** Menutup celah perbatasan (*Boundary Discretization Gap* seperti kasus durasi **181 menit**) dengan memeriksa 19 fitur secara eksak berdasarkan urutan prioritas mutlak: **`rejected` > `needs_revision` > `valid`**.
-5. **Tahap 5 — Penyusunan *Response* & *Findings* Bahasa Indonesia (`response_builder.py`):** Membuat kalimat penjelasan `validity_reason` (untuk dibaca Tutor & Admin) serta daftar `findings` yang dipetakan ke 4 `finding_type` database PostgreSQL (`suspected_duplicate`, `duration_outlier`, `late_start`, `unusual_pattern`).
+4. **Tahap 4 — _Guardrail_ Deterministik (`apply_business_guardrail`):** Menutup celah perbatasan (_Boundary Discretization Gap_ seperti kasus durasi **181 menit**) dengan memeriksa 19 fitur secara eksak berdasarkan urutan prioritas mutlak: **`rejected` > `needs_revision` > `valid`**.
+5. **Tahap 5 — Penyusunan _Response_ & _Findings_ Bahasa Indonesia (`response_builder.py`):** Membuat kalimat penjelasan `validity_reason` (untuk dibaca Tutor & Admin) serta daftar `findings` yang dipetakan ke 4 `finding_type` database PostgreSQL (`suspected_duplicate`, `duration_outlier`, `late_start`, `unusual_pattern`).
 
 ---
 
@@ -51,7 +51,7 @@ mumtaz-anomaly-fastapi/
 
 ---
 
-## 3. Persiapan *Environment* & `requirements.txt`
+## 3. Persiapan _Environment_ & `requirements.txt`
 
 ### 3.1 Isi `requirements.txt`
 
@@ -375,9 +375,9 @@ def extract_features_and_meta(
 
 ---
 
-### 4.3 `app/guardrail.py` (Tahap 4 — *Guardrail* Deterministik Solusi Kasus 181 Menit)
+### 4.3 `app/guardrail.py` (Tahap 4 — _Guardrail_ Deterministik Solusi Kasus 181 Menit)
 
-Sesuai dokumen `docs/analisis_kasus_181_menit_dan_solusi_guardrail_fastapi.md`, pohon keputusan LightGBM meletakkan titik potong di sekitar `181,5` menit karena tidak ada sampel `181` atau `182` menit di *Training Set*. Fungsi di bawah ini menjamin akurasi aturan bisnis **100%** di produksi.
+Sesuai dokumen `docs/analisis_kasus_181_menit_dan_solusi_guardrail_fastapi.md`, pohon keputusan LightGBM meletakkan titik potong di sekitar `181,5` menit karena tidak ada sampel `181` atau `182` menit di _Training Set_. Fungsi di bawah ini menjamin akurasi aturan bisnis **100%** di produksi.
 
 ```python
 from .schemas import SessionValidity
@@ -808,6 +808,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Cek di browser atau terminal:
+
 - `http://localhost:8000/health` -> mengembalikan `{"status": "ok", "model_loaded": true, "model_name": "LightGBM", "feature_count": 19}`
 - `http://localhost:8000/docs` -> dokumentasi interaktif Swagger UI.
 
@@ -873,13 +874,14 @@ def test_exact_duplicate_is_rejected():
 ```
 
 Jalankan test dengan perintah:
+
 ```powershell
 pytest
 ```
 
 ---
 
-## 6. Cara Menyambungkan FastAPI ke *Backend* Dashboard
+## 6. Cara Menyambungkan FastAPI ke _Backend_ Dashboard
 
 Setelah server FastAPI berjalan di `http://localhost:8000`:
 
@@ -889,9 +891,9 @@ Setelah server FastAPI berjalan di `http://localhost:8000`:
    ANOMALY_SERVICE_URL=http://localhost:8000
    ANOMALY_MODEL_NAME=anomaly-lgbm-v1
    ```
-3. Jalankan ulang *Backend* (`npm run dev -w backend` atau `npm run start`).
-4. Pada log *startup* *Backend*, pastikan muncul:
+3. Jalankan ulang _Backend_ (`npm run dev -w backend` atau `npm run start`).
+4. Pada log _startup_ _Backend_, pastikan muncul:
    ```json
    "anomaly_provider": "ml_fastapi"
    ```
-5. Selesai! Setiap sesi absen yang di-*submit* atau direvisi oleh Tutor kini otomatis divalidasi oleh model LightGBM + *Guardrail* di FastAPI.
+5. Selesai! Setiap sesi absen yang di-_submit_ atau direvisi oleh Tutor kini otomatis divalidasi oleh model LightGBM + _Guardrail_ di FastAPI.
