@@ -1,7 +1,6 @@
-import { TriangleAlert } from 'lucide-react';
 import { m } from 'motion/react';
 import type { ReactNode } from 'react';
-import type { ApprovalStatus, SessionStatus, SessionValidity } from '@mumtaz/contracts';
+import type { SessionStatus, SessionValidity } from '@mumtaz/contracts';
 import { Chip, type ChipColor, type ChipVariant } from './chip';
 
 export type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info';
@@ -56,16 +55,6 @@ export function StatusBadge({ status, variant = 'bold' }: { status: SessionStatu
   );
 }
 
-export function FindingIndicator({ count }: { count: number }) {
-  if (count === 0) return <span className="text-meta text-muted">—</span>;
-  return (
-    <Chip color="yellow">
-      <TriangleAlert aria-hidden className="size-3.5 shrink-0" />
-      {count} temuan
-    </Chip>
-  );
-}
-
 /**
  * Validitas data (D-25): Valid hijau, Perlu revisi kuning, Ditolak merah. Belum divalidasi = AI masih
  * menganalisis (cyan, berdenyut pelan). Selalu berupa teks, tidak mengandalkan warna saja.
@@ -93,25 +82,3 @@ export function ValidityBadge({ validity, variant = 'bold' }: { validity: Sessio
   );
 }
 
-/** Status approval sesi Perlu revisi (dipilih Admin setelah banding via WA). */
-const APPROVAL: Record<ApprovalStatus, StatusConfig> = {
-  pending: { label: 'Menunggu', tone: 'warning' },
-  approved: { label: 'Disetujui', tone: 'success' },
-  rejected: { label: 'Ditolak', tone: 'danger' },
-};
-
-export const APPROVAL_LABELS = Object.fromEntries(
-  Object.entries(APPROVAL).map(([key, value]) => [key, value.label]),
-) as Record<ApprovalStatus, string>;
-
-export function ApprovalBadge({ approval, variant = 'bold' }: { approval: ApprovalStatus | null; variant?: ChipVariant }) {
-  if (!approval) return <span className="text-meta text-muted">—</span>;
-  const config = APPROVAL[approval];
-  return (
-    <StatusSwap statusKey={approval}>
-      <Chip variant={variant} color={TONE_COLOR[config.tone]}>
-        {config.label}
-      </Chip>
-    </StatusSwap>
-  );
-}

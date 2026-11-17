@@ -132,21 +132,6 @@ export function SkeletonStatCards({ count = 4, dashboard = false }: { count?: nu
   );
 }
 
-/** Kartu grafik: judul + subjudul + area grafik setinggi grafik asli. */
-export function SkeletonChart({ height = 240 }: { height?: number }) {
-  return (
-    <SkeletonRegion>
-      <CardFrame className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Skeleton className="h-4 w-40" />
-          <Skeleton className="h-3 w-24" />
-        </div>
-        <Skeleton className="w-full" style={{ height }} />
-      </CardFrame>
-    </SkeletonRegion>
-  );
-}
-
 /** Tabel: header asli tetap tampil (tidak di-skeleton) + 6 baris selebar kolom. */
 export function SkeletonTable({ headers, rows = 6 }: { headers: readonly string[]; rows?: number }) {
   return (

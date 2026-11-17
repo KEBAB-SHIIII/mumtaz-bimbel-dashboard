@@ -21,7 +21,6 @@ Dikerjakan di Tahap 3 dan ditaruh di `frontend/src/components/ui/`. Semua dituli
 |---|---|---|---|
 | **CountUp** | `count-up.tsx` | Angka `StatCard` (Rp, jumlah sesi, jam) | 600ms, sekali saja saat pertama terlihat (`useInView once`). Format lewat `Intl.NumberFormat('id-ID')`, `tabular-nums` agar lebar tetap. Pembaca layar menerima nilai akhir (bukan angka yang sedang berjalan). Reduced motion: langsung tampil nilai akhir |
 | **AnimatedList** | `animated-list.tsx` | Riwayat sesi tutor, daftar "Perlu revisi", daftar kartu DataTable di HP | Item fade + naik 6px, stagger 20ms, maksimal 10 item pertama; sisanya tampil tanpa animasi. Bukan untuk tabel > 50 baris. Reduced motion: fade saja |
-| **FadeContent** | `fade-content.tsx` | Transisi skeleton → konten, blok konten saat masuk layar | Fade + blur 4px→0, 200ms, `once`. Pengecualian aturan "hanya transform & opacity": `filter: blur` dibolehkan karena kecil dan sekali jalan. Reduced motion: opasitas saja, tanpa blur |
 | **SpotlightCard** | `spotlight-card.tsx` | Kartu login, `StatCard` | CSS murni: posisi kursor disimpan di variabel CSS lewat `pointermove`, latar `radial-gradient` warna `primary-subtle` dengan opasitas rendah. Hanya aktif di `@media (hover: hover) and (pointer: fine)`; di HP tampil sebagai kartu biasa. Dekoratif: kontras teks tetap diukur terhadap `surface` dan tidak boleh turun di bawah 4.5:1 |
 
 Yang tetap **tidak** dipakai dari ReactBits: komponen berbasis GSAP (Split Text, Animated Content, dsb.), three.js/ogl (latar 3D, partikel, shader), dan efek yang berjalan terus-menerus (marquee, partikel latar).
@@ -151,7 +150,7 @@ Komponen ada di `frontend/src/components/ui/`. Penyesuaian terhadap spesifikasi 
 - **Skeleton**: `useDelayedSkeleton` (150ms / minimal 300ms), `LoadingSwitch` (skeleton → konten crossfade), `PageSkeleton` untuk fallback rute lazy, dan varian `SkeletonStatCards`, `SkeletonChart`, `SkeletonTable`, `SkeletonCardList`, `SkeletonForm`, `SkeletonProfile`.
 - **Avatar**: DiceBear critters dibuat lokal, `@dicebear/core` + `critters.json` di-lazy import dan di-cache per seed. Latar pastel dipilih stabil dari seed. Sudah dipakai di sidebar (40px; 32px saat ciut) dan menu akun header.
 - **Motion**: komponen `m.*` ringan masuk bundle awal; fitur `domMax` (animasi + layout/`layoutId`) dimuat async lewat `LazyMotion` (`src/app/motion-features.ts`), tanpa grup chunk manual.
-- **ReactBits**: `CountUp`, `AnimatedList`, `FadeContent`, `SpotlightCard` (+ `trackSpotlight`/`SPOTLIGHT_CLASS` untuk `StatCard`). `StatCard` kini punya `icon`, `accent`, `count`, `index` (stagger 40ms); API lama (`label`, `value`, `hint`, `to`) tetap.
+- **ReactBits**: `CountUp`, `AnimatedList`, `SpotlightCard` (+ `trackSpotlight`/`SPOTLIGHT_CLASS` untuk `StatCard`). `StatCard` kini punya `icon`, `accent`, `count`, `index` (stagger 40ms); API lama (`label`, `value`, `hint`, `to`) tetap.
 
 ## Revisi filter & animasi (2026-11-02)
 
