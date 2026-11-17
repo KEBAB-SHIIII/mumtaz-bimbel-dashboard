@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatLongDate, humanizeAiText } from './format';
+import { formatLessonDate, formatTimestamp, humanizeAiText } from './format';
 
 describe('format tanggal & teks AI', () => {
   it('tanggal ISO → tanggal Indonesia dengan bulan lengkap', () => {
-    expect(formatLongDate('2026-11-17')).toBe('17 November 2026');
-    expect(formatLongDate('2026-01-05')).toBe('5 Januari 2026');
+    expect(formatLessonDate('2026-11-17')).toBe('17 November 2026');
+    expect(formatLessonDate('2026-01-05')).toBe('5 Januari 2026');
+    expect(formatTimestamp('2026-11-17T08:32:00Z')).toBe('17 November 2026 pukul 15.32 WIB');
   });
 
   it('kalimat AI memakai tanggal & jam format Indonesia', () => {

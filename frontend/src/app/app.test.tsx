@@ -116,7 +116,7 @@ describe('Admin: validitas data (label AI)', () => {
     await choosePeriod('2026-10');
 
     // s10: durasi 240 menit dengan temuan duration_outlier, belum divalidasi.
-    await user.click(await screen.findByRole('button', { name: 'Detail sesi Citra 12 Okt 2026' }));
+    await user.click(await screen.findByRole('button', { name: 'Detail sesi Citra 12 Oktober 2026' }));
     const dialog = await screen.findByRole('dialog', { name: 'Detail sesi' });
     expect(within(dialog).getByText('Durasi di luar batas (30–180 menit)')).toBeInTheDocument();
     expect(within(dialog).getByText('Hasil uji (fake detector), bukan AI live')).toBeInTheDocument();
@@ -151,13 +151,13 @@ describe('Admin: validitas data (label AI)', () => {
     await user.click(within(form).getByRole('button', { name: 'Simpan' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Tambah sesi' })).not.toBeInTheDocument());
-    await user.click(await screen.findByRole('button', { name: 'Detail sesi Aisyah 25 Okt 2026' }));
+    await user.click(await screen.findByRole('button', { name: 'Detail sesi Aisyah 25 Oktober 2026' }));
     const dialog = await screen.findByRole('dialog', { name: 'Detail sesi' });
     expect(within(dialog).getByText('Menunggu validasi')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Hapus' }));
     const confirm = await screen.findByRole('dialog', { name: 'Hapus sesi?' });
     await user.click(within(confirm).getByRole('button', { name: 'Hapus' }));
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Detail sesi Aisyah 25 Okt 2026' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Detail sesi Aisyah 25 Oktober 2026' })).not.toBeInTheDocument());
   });
 });
 

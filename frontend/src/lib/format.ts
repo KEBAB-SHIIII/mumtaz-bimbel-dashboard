@@ -2,16 +2,11 @@ import { BUSINESS_TIME_ZONE } from '@mumtaz/contracts';
 
 const LOCALE = 'id-ID';
 
-/** `YYYY-MM-DD` → "31 Okt 2026". Diproses sebagai tanggal kalender (tanpa pergeseran timezone). */
+/**
+ * `YYYY-MM-DD` → "31 Oktober 2026" (bulan ditulis lengkap agar mudah dibaca).
+ * Diproses sebagai tanggal kalender (tanpa pergeseran timezone).
+ */
 export function formatLessonDate(isoDate: string): string {
-  const [y, m, d] = isoDate.split('-').map(Number) as [number, number, number];
-  return new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(
-    new Date(Date.UTC(y, m - 1, d)),
-  );
-}
-
-/** `YYYY-MM-DD` → "17 November 2026" (bulan ditulis lengkap, untuk kalimat). */
-export function formatLongDate(isoDate: string): string {
   const [y, m, d] = isoDate.split('-').map(Number) as [number, number, number];
   return new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
     new Date(Date.UTC(y, m - 1, d)),
@@ -24,15 +19,15 @@ export function formatLongDate(isoDate: string): string {
  */
 export function humanizeAiText(text: string): string {
   return text
-    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, (iso) => formatLongDate(iso))
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, (iso) => formatLessonDate(iso))
     .replace(/\b(\d{2}):(\d{2})\b/g, '$1.$2');
 }
 
-/** Timestamp ISO → waktu Asia/Jakarta, mis. "2 Nov 2026, 10.00 WIB". */
+/** Timestamp ISO → waktu Asia/Jakarta, mis. "2 November 2026 pukul 10.00 WIB". */
 export function formatTimestamp(iso: string): string {
   return `${new Intl.DateTimeFormat(LOCALE, {
     day: 'numeric',
-    month: 'short',
+    month: 'long',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',

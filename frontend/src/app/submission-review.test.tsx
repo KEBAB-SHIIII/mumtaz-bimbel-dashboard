@@ -22,10 +22,10 @@ async function openHistory(username: string, period: string) {
 describe('Tutor: revisi sesi Perlu revisi → menunggu validasi ulang', () => {
   it('melihat pesan Admin, merevisi jam & mapel, lalu sesi divalidasi ulang', async () => {
     useFakeBackend();
-    // Noreen punya sesi Citra 5 Okt 2026 berstatus "Perlu revisi" (fixture s03).
+    // Noreen punya sesi Citra 5 Oktober 2026 berstatus "Perlu revisi" (fixture s03).
     const user = await openHistory('noreen', '2026-10');
 
-    await user.click(await screen.findByRole('button', { name: 'Revisi sesi Citra 5 Okt 2026' }));
+    await user.click(await screen.findByRole('button', { name: 'Revisi sesi Citra 5 Oktober 2026' }));
     const dialog = await screen.findByRole('dialog', { name: 'Detail sesi' });
     expect(within(dialog).getByText(/Durasi tidak sesuai jadwal; mohon periksa kembali\./)).toBeInTheDocument();
 
@@ -44,14 +44,14 @@ describe('Tutor: revisi sesi Perlu revisi → menunggu validasi ulang', () => {
     expect(await screen.findByText('Revisi terkirim')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Tutup' }));
     // Daftar ikut diperbarui: tidak ada lagi sesi yang perlu revisi.
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Revisi sesi Citra 5 Okt 2026' })).not.toBeInTheDocument());
-    expect(screen.getByRole('button', { name: 'Detail sesi Citra 5 Okt 2026' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Revisi sesi Citra 5 Oktober 2026' })).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Detail sesi Citra 5 Oktober 2026' })).toBeInTheDocument();
   });
 
   it('validasi revisi di dekat field (materi wajib), revisi tidak terkirim', async () => {
     useFakeBackend();
     const user = await openHistory('noreen', '2026-10');
-    await user.click(await screen.findByRole('button', { name: 'Revisi sesi Citra 5 Okt 2026' }));
+    await user.click(await screen.findByRole('button', { name: 'Revisi sesi Citra 5 Oktober 2026' }));
     await user.click(within(await screen.findByRole('dialog', { name: 'Detail sesi' })).getByRole('button', { name: 'Revisi sesi' }));
     const form = await screen.findByRole('dialog', { name: 'Revisi sesi' });
     await user.clear(within(form).getByLabelText(/^Materi pembelajaran/));
@@ -63,7 +63,7 @@ describe('Tutor: revisi sesi Perlu revisi → menunggu validasi ulang', () => {
   it('sesi yang tidak perlu revisi hanya bisa dilihat (tanpa tombol revisi)', async () => {
     useFakeBackend();
     const user = await openHistory('farhan', '2026-10');
-    await user.click(await screen.findByRole('button', { name: 'Detail sesi Aisyah 1 Okt 2026' }));
+    await user.click(await screen.findByRole('button', { name: 'Detail sesi Aisyah 1 Oktober 2026' }));
     const dialog = await screen.findByRole('dialog', { name: 'Detail sesi' });
     expect(within(dialog).getByText('Valid')).toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: 'Revisi sesi' })).not.toBeInTheDocument();
@@ -74,11 +74,11 @@ describe('Tutor: Riwayat Mengajar', () => {
   it('periode memakai tanggal les: sesi 31 Okt yang disubmit November masuk Oktober, bukan November', async () => {
     useFakeBackend();
     await openHistory('farhan', '2026-10');
-    expect(await screen.findByText('31 Okt 2026')).toBeInTheDocument();
+    expect(await screen.findByText('31 Oktober 2026')).toBeInTheDocument();
 
     await choosePeriod('2026-11');
-    await waitFor(() => expect(screen.queryByText('31 Okt 2026')).not.toBeInTheDocument());
-    expect(screen.getByText('1 Nov 2026')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('31 Oktober 2026')).not.toBeInTheDocument());
+    expect(screen.getByText('1 November 2026')).toBeInTheDocument();
   });
 
   it('filter siswa hanya menampilkan siswa yang dipilih', async () => {
@@ -139,7 +139,7 @@ describe('Admin: tab detail dan permintaan revisi', () => {
     const user = await loginStaff('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword);
     await user.click(await screen.findByRole('link', { name: 'Data Absensi' }));
     await choosePeriod('2026-10');
-    await user.click(await screen.findByRole('button', { name: /Detail sesi .*12 Okt 2026/ }));
+    await user.click(await screen.findByRole('button', { name: /Detail sesi .*12 Oktober 2026/ }));
     const dialog = await screen.findByRole('dialog', { name: 'Detail sesi' });
     const detailTab = await within(dialog).findByRole('tab', { name: 'Detail sesi' });
     expect(detailTab).toHaveAttribute('aria-selected', 'true');
@@ -160,7 +160,7 @@ describe('Admin: tab detail dan permintaan revisi', () => {
     expect(within(dialog).getByText('Mohon koreksi jam selesai sesuai sesi sebenarnya.')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Tutup' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    await user.click(screen.getByRole('button', { name: /Detail sesi .*12 Okt 2026/ }));
+    await user.click(screen.getByRole('button', { name: /Detail sesi .*12 Oktober 2026/ }));
     expect(await screen.findByRole('tab', { name: 'Detail sesi' })).toHaveAttribute('aria-selected', 'true');
   });
 });

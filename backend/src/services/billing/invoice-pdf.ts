@@ -8,7 +8,7 @@ const formatRupiah = (amount: string | number) => rupiah.format(Number(amount));
 
 function formatDate(isoDate: string): string {
   const [y, m, d] = isoDate.split('-').map(Number) as [number, number, number];
-  return new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, d)));
+  return new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, d)));
 }
 
 function formatPeriod(period: Period): string {
