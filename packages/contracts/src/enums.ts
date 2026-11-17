@@ -58,11 +58,7 @@ export const anomalyReviewStatusSchema = z.enum([
 ]);
 export type AnomalyReviewStatus = z.infer<typeof anomalyReviewStatusSchema>;
 
-
 export const SUPERSEDED_BY_REVISION_NOTE = 'superseded_by_revision';
 
 export const exportRunStatusSchema = z.enum(['running', 'succeeded', 'failed']);
 export type ExportRunStatus = z.infer<typeof exportRunStatusSchema>;
-
-export const reportTypeSchema = z.enum(['attendance']);
-export type ReportType = z.infer<typeof reportTypeSchema>;

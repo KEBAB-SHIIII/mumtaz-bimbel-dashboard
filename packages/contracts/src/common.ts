@@ -22,11 +22,6 @@ export const moneyStringSchema = z
   .string()
   .regex(/^\d+(\.\d{1,2})?$/, 'Nominal harus angka desimal non-negatif, maksimal 2 digit desimal');
 
-export const positiveMoneyStringSchema = moneyStringSchema.refine(
-  (value) => Number(value) > 0,
-  'Nominal harus lebih dari 0',
-);
-
 /** Teks wajib: di-trim dan tidak boleh kosong. */
 export const requiredText = (max: number) => z.string().trim().min(1, 'Wajib diisi').max(max);
 

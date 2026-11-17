@@ -26,14 +26,12 @@ export type AnomalyFindingCandidate = z.infer<typeof anomalyFindingCandidateSche
 
 /** Status analisis yang dapat dihasilkan service (bukan `pending`). */
 export const anomalyAnalysisOutcomeSchema = anomalyAnalysisStatusSchema.exclude(['pending']);
-export type AnomalyAnalysisOutcome = z.infer<typeof anomalyAnalysisOutcomeSchema>;
 
 export const anomalyAnalysisResultSchema = z.object({
   findings: z.array(anomalyFindingCandidateSchema),
   analysis_status: anomalyAnalysisOutcomeSchema,
   notice: z.string().optional(),
 });
-export type AnomalyAnalysisResult = z.infer<typeof anomalyAnalysisResultSchema>;
 
 /** Finding tersimpan (`anomaly_flags`) untuk tampilan Admin. */
 export const anomalyFindingSchema = z.object({

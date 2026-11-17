@@ -223,7 +223,6 @@ export const gradeHistoryResponseSchema = z.object({
   entries: z.array(gradeHistoryEntrySchema),
   audit: z.array(z.object({ id: uuidSchema, reason: z.string(), changed_by_name: z.string(), created_at: timestampSchema })),
 });
-export type GradeHistoryResponse = z.infer<typeof gradeHistoryResponseSchema>;
 export const gradeChangePreviewSchema = z.object({
   preview_token: z.string(),
   previous_grade: z.string(), new_grade: z.string(),

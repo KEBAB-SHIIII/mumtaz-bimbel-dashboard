@@ -72,7 +72,6 @@ export const tutorPayrollSessionLineSchema = z.strictObject({
   ...sessionLineBase,
   net_amount: moneyStringSchema.nullable(),
 });
-export type TutorPayrollSessionLine = z.infer<typeof tutorPayrollSessionLineSchema>;
 
 /** `GET /tutor/me/payroll` — Honor Saya: pendapatan bersih tutor login saja. */
 export const tutorPayrollResponseSchema = z.strictObject({
