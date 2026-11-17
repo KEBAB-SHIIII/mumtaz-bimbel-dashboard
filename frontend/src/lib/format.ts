@@ -10,6 +10,24 @@ export function formatLessonDate(isoDate: string): string {
   );
 }
 
+/** `YYYY-MM-DD` → "17 November 2026" (bulan ditulis lengkap, untuk kalimat). */
+export function formatLongDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split('-').map(Number) as [number, number, number];
+  return new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
+    new Date(Date.UTC(y, m - 1, d)),
+  );
+}
+
+/**
+ * Kalimat dari layanan AI memakai format teknis; ubah ke format Indonesia:
+ * "2026-11-17" → "17 November 2026", "12:00" → "12.00".
+ */
+export function humanizeAiText(text: string): string {
+  return text
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, (iso) => formatLongDate(iso))
+    .replace(/\b(\d{2}):(\d{2})\b/g, '$1.$2');
+}
+
 /** Timestamp ISO → waktu Asia/Jakarta, mis. "2 Nov 2026, 10.00 WIB". */
 export function formatTimestamp(iso: string): string {
   return `${new Intl.DateTimeFormat(LOCALE, {

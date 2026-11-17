@@ -1,5 +1,6 @@
 import type { AnomalyFinding, FindingType } from '@mumtaz/contracts';
 import { Chip } from '../../../components/ui/data-display/chip';
+import { humanizeAiText } from '../../../lib/format';
 
 /**
  * Penjelasan jenis anomali (kolom "Temuan" di Data Absensi & dialog detail Admin).
@@ -48,8 +49,8 @@ export function FindingList({ findings }: { findings: AnomalyFinding[] }) {
                 <Chip variant="caption" color="yellow">{FINDING_LABEL[finding.finding_type]}</Chip>
                 <span className="text-meta text-muted">Prioritas {SEVERITY_LABEL[finding.severity]}</span>
               </div>
-              <p className="mt-2 text-text">{finding.reason}</p>
-              {finding.evidence_summary && <p className="mt-1 text-muted">{finding.evidence_summary}</p>}
+              <p className="mt-2 text-text">{humanizeAiText(finding.reason)}</p>
+              {finding.evidence_summary && <p className="mt-1 text-muted">{humanizeAiText(finding.evidence_summary)}</p>}
               <p className="mt-2 text-meta text-muted">{providerLabel(finding)}</p>
             </li>
           ))}
