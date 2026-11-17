@@ -19,7 +19,7 @@ import { PeriodSelector } from '../../../components/ui/forms/period-selector';
 import { SearchInput } from '../../../components/ui/forms/search-input';
 import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/feedback/skeleton';
 import { toApiError } from '../../../lib/api-error';
-import { formatDuration, formatLessonDate, formatLessonTime, formatPeriod } from '../../../lib/format';
+import { formatDuration, formatLessonDate, formatLessonTime, formatPeriod, formatShortDate } from '../../../lib/format';
 import { usePeriodParam } from '../../../hooks/use-period-param';
 import { queryKeys } from '../../../lib/query-keys';
 import { useSearchState } from '../../../hooks/use-search-state';
@@ -88,7 +88,7 @@ export function AttendancePage() {
       header: 'Tanggal & jam',
       cell: ({ row }) => (
         <div className="whitespace-nowrap">
-          <p>{formatLessonDate(row.original.lesson_date)}</p>
+          <p className="whitespace-nowrap">{formatShortDate(row.original.lesson_date)}</p>
           <p className="text-meta text-muted">{formatLessonTime(row.original.start_time, row.original.end_time)}</p>
         </div>
       ),

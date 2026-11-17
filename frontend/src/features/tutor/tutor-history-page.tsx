@@ -12,7 +12,7 @@ import { FilterSelect } from '../../components/ui/forms/filter-select';
 import { Card, PageHeader } from '../../components/ui/surfaces/layout-primitives';
 import { PeriodSelector } from '../../components/ui/forms/period-selector';
 import { LoadingSwitch, SkeletonDataTable } from '../../components/ui/feedback/skeleton';
-import { formatDuration, formatLessonDate, formatPeriod } from '../../lib/format';
+import { formatDuration, formatLessonDate, formatPeriod, formatShortDate } from '../../lib/format';
 import { usePeriodParam } from '../../hooks/use-period-param';
 import { queryKeys } from '../../lib/query-keys';
 import { useSearchState } from '../../hooks/use-search-state';
@@ -38,7 +38,7 @@ export function TutorHistoryPage() {
   const studentOptions = (options.data?.students ?? []).map((student) => [student.id, student.full_name] as const);
 
   const columns: ColumnDef<TutorSession, unknown>[] = [
-    { id: 'date', header: 'Tanggal les', cell: ({ row }) => <span className="whitespace-nowrap">{formatLessonDate(row.original.lesson_date)}</span> },
+    { id: 'date', header: 'Tanggal les', cell: ({ row }) => <span className="whitespace-nowrap">{formatShortDate(row.original.lesson_date)}</span> },
     { accessorKey: 'student_name', header: 'Siswa', meta: { cardTitle: true } },
     { accessorKey: 'grade', header: 'Kelas' },
     { accessorKey: 'subject_name', header: 'Mata pelajaran' },

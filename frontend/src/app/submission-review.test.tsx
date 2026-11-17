@@ -74,11 +74,11 @@ describe('Tutor: Riwayat Mengajar', () => {
   it('periode memakai tanggal les: sesi 31 Okt yang disubmit November masuk Oktober, bukan November', async () => {
     useFakeBackend();
     await openHistory('farhan', '2026-10');
-    expect(await screen.findByText('31 Oktober 2026')).toBeInTheDocument();
+    expect(await screen.findByText('31 Okt 2026')).toBeInTheDocument();
 
     await choosePeriod('2026-11');
-    await waitFor(() => expect(screen.queryByText('31 Oktober 2026')).not.toBeInTheDocument());
-    expect(screen.getByText('1 November 2026')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('31 Okt 2026')).not.toBeInTheDocument());
+    expect(screen.getByText('1 Nov 2026')).toBeInTheDocument();
   });
 
   it('filter siswa hanya menampilkan siswa yang dipilih', async () => {

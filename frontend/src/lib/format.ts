@@ -7,8 +7,17 @@ const LOCALE = 'id-ID';
  * Diproses sebagai tanggal kalender (tanpa pergeseran timezone).
  */
 export function formatLessonDate(isoDate: string): string {
+  return formatCalendarDate(isoDate, 'long');
+}
+
+/** `YYYY-MM-DD` → "31 Okt 2026" — versi ringkas untuk kolom tabel yang sempit. */
+export function formatShortDate(isoDate: string): string {
+  return formatCalendarDate(isoDate, 'short');
+}
+
+function formatCalendarDate(isoDate: string, month: 'long' | 'short'): string {
   const [y, m, d] = isoDate.split('-').map(Number) as [number, number, number];
-  return new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
+  return new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month, year: 'numeric', timeZone: 'UTC' }).format(
     new Date(Date.UTC(y, m - 1, d)),
   );
 }
