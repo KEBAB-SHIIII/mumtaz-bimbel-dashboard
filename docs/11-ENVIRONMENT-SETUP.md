@@ -34,14 +34,14 @@ Google Sheets bukan sumber input. Spreadsheet hanya dibutuhkan saat Admin memaka
 
 ## 4. Provider AI untuk anomaly screening
 
-Anomaly screening dan klasifikasi kandidat duplikasi adalah bagian baseline development. Implementasikan interface provider agar dapat dites tanpa credential; live AI dihubungkan saat tim siap setup key.
+Provider anomaly screening adalah layanan FastAPI model ML (repo terpisah `AI-MODEL-MUMTAZ`, dijalankan dengan Docker). Gemini sudah tidak dipakai.
 
-- [x] Provider live yang direncanakan adalah Gemini melalui `@google/genai`. *(Selesai)*
-- [x] Saat siap, buat key di https://aistudio.google.com/app/apikey lalu simpan `GEMINI_API_KEY` hanya di backend. *(Selesai)*
-- [x] Atur `GEMINI_MODEL` ke model yang tersedia pada project ketika integrasi dilakukan; jangan mengunci asumsi model yang bisa berubah. *(Selesai, default: gemini-3.1-flash-lite)*
+- [x] Clone service AI di folder sibling lalu jalankan: `git clone https://github.com/KEBAB-SHIIII/AI-MODEL-MUMTAZ.git ../AI-MODEL-MUMTAZ && cd ../AI-MODEL-MUMTAZ && docker compose up -d --build`.
+- [x] Cek `curl http://localhost:8000/health` → `{"status":"ok","model_loaded":true,...,"feature_count":19}`.
+- [x] Isi `backend/.env`: `ANOMALY_SERVICE_URL=http://localhost:8000`, `ANOMALY_MODEL_NAME=anomaly-lgbm-v1` (+ 4 ambang batas & `ANOMALY_PROVIDER_TIMEOUT_MS`, lihat `.env.example`). Log startup backend harus menampilkan `anomaly_provider: "ml_fastapi"`.
 - [ ] Unit test memakai fake detector deterministik. Jangan menampilkan output fake sebagai hasil AI live.
 - [ ] Jika live provider belum dikonfigurasi atau gagal, simpan status analisis `not_evaluated`/`failed`. Submit dan review tetap berjalan; jangan mengarang hasil model.
-- [ ] Minimalkan/pseudonymize data sebelum dikirim ke model. Jangan kirim parent access code, password, email, telepon, atau nama lengkap bila tidak diperlukan.
+- [ ] Kirim hanya 8 field terstruktur sesi ke model. Jangan kirim parent access code, password, email, telepon, nama, materi, atau catatan.
 
 ## 5. Environment
 
@@ -60,7 +60,7 @@ Template satu-satunya: `backend/.env.example` (salin ke `backend/.env`). Ringkas
 - [ ] Admin/Tutor login username-password; Parent login dengan satu ID akses saja.
 - [ ] Parent ID tidak disimpan mentah, login rate-limited, kode salah tidak mengungkap apakah akun ada.
 - [ ] Tutor submit satu sesi ke Neon dengan status `pending`.
-- [ ] Anomaly service dipanggil melalui adapter; fake test dan live Gemini dibedakan dengan jelas.
+- [ ] Anomaly service dipanggil melalui adapter; fake test dan model ML live dibedakan dengan jelas.
 - [ ] Admin dapat review sesi; hanya `approved` masuk Honor/Progress Anak.
 - [ ] Tarif Rp50.000 per sesi dipakai sebagai tarif aktif (D-22); tarif yang ditandai demo berbadge "Tarif demo".
 - [ ] Parent hanya dapat melihat siswa yang terhubung.
@@ -83,4 +83,4 @@ Palet, typography, logo, dan referensi dashboard spesifik ditentukan tim pada me
 - Drizzle + Neon: https://orm.drizzle.team/docs/get-started/neon-existing
 - Google Sheets API: https://developers.google.com/workspace/sheets/api/guides/values
 - Google credentials: https://developers.google.com/workspace/guides/create-credentials
-- Gemini API: https://ai.google.dev/gemini-api/docs/models
+- AI service (FastAPI ML): https://github.com/KEBAB-SHIIII/AI-MODEL-MUMTAZ

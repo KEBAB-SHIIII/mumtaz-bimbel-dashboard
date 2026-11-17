@@ -28,7 +28,7 @@ FastAPI:
    ↓
 FastAPI mengembalikan JSON { validity, validity_reason, findings } ke Backend
    ↓
-Backend menyimpan hasil → Dashboard menampilkan status Hijau / Biru / Merah
+Backend menyimpan hasil → Dashboard menampilkan status Hijau / Kuning / Merah
 ```
 
 ### Perubahan dari kontrak Gemini lama
@@ -47,7 +47,7 @@ Backend menyimpan hasil → Dashboard menampilkan status Hijau / Biru / Merah
 | Label (`validity`) | Warna UI | Kondisi                                                                                              | Efek di Aplikasi                                                   |
 | ------------------ | -------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | `valid`            | Hijau    | Tidak ada anomali                                                                                    | Langsung `approved` dan **masuk rekap gaji & tagihan**             |
-| `needs_revision`   | Biru     | `duration_minutes > 180` **ATAU** `start_time > "21:00"` (tepat 180 atau tepat 21:00 **tidak** kena) | Ditahan dari rekap. Tutor bisa edit, Admin bisa approve hasil edit |
+| `needs_revision`   | Kuning   | `duration_minutes > 180` **ATAU** `start_time > "21:00"` (tepat 180 atau tepat 21:00 **tidak** kena) | Ditahan dari rekap. Tutor bisa edit, Admin bisa approve hasil edit |
 | `rejected`         | Merah    | Data duplikat (`>= 2` catatan sesi yang sama)                                                        | Ditahan dari rekap. Tutor tidak bisa edit, Admin punya opsi hapus  |
 
 - Jika suatu sesi memiliki **duplikat sekaligus** masalah durasi/jam mulai, `validity` akhir wajib **`rejected`**, namun semua temuan tetap ditulis di `findings`.

@@ -30,17 +30,19 @@ Referensi: https://developers.google.com/workspace/sheets/api/guides/values, htt
 
 ## 3. AI anomaly classification
 
-Modul anomaly adalah bagian dari baseline development. Gemini adalah provider yang direncanakan; adapter dibuat agar unit test tidak memerlukan credential live dan provider dapat diganti tanpa mengubah business service.
+Provider tunggal adalah **layanan FastAPI model ML** milik tim AI (repo `KEBAB-SHIIII/AI-MODEL-MUMTAZ`: LightGBM 19 fitur + guardrail deterministik). Baseline Gemini sudah dihapus. Backend memanggilnya lewat adapter `HttpAnomalyDetector` (`backend/src/integrations/anomaly/http-detector.ts`, provider `ml_fastapi`) sehingga unit test tetap memakai fake detector.
 
-- Gunakan SDK resmi `@google/genai` di backend. Saat live integration disiapkan, baca `GEMINI_API_KEY` dan `GEMINI_MODEL` dari environment.
-- Validasi field, murid/mapel aktif, tanggal dan durasi dilakukan secara deterministik oleh backend.
-- Kandidat duplikasi dibuat dari kombinasi data yang relevan, misalnya tutor, siswa, mapel, tanggal dan durasi. Modul AI mengklasifikasikan/menjelaskan kandidat; jangan mengirim nama lengkap atau PII yang tidak diperlukan.
-- Jenis finding baseline: `suspected_duplicate`, `duration_outlier`, `unusual_pattern`. Input invalid ditangani validasi deterministik dan tidak menjadi finding model pada submit baru.
+- Endpoint: `POST {ANOMALY_SERVICE_URL}/v1/anomaly/analyze` dengan body `{ target, comparisons, config }`; health check `GET /health`.
+- `target` & `comparisons` hanya berisi 8 field terstruktur (`id`, `tutor_id`, `student_id`, `subject_ids` terurut, `lesson_date`, `start_time`, `duration_minutes`, `submitted_at`). Materi, catatan, nama, dan kontak tidak pernah dikirim.
+- `comparisons`: sesi dengan tutor ATAU murid yang sama, ±30 hari dari `lesson_date`, di-submit lebih awal dari target, maksimal 500.
+- `config`: `ANOMALY_DURATION_OUTLIER_MINUTES`, `ANOMALY_DURATION_MIN_MINUTES`, `ANOMALY_LATE_START_AFTER`, `ANOMALY_EARLY_START_BEFORE`.
+- Response `{ validity, validity_reason, findings }` divalidasi Zod sebelum ditulis. Aturan lengkap & 19 fitur: `docs/IMPLEMENTASI AI MODEL + COMPARISON.md`.
+- Jenis finding: `suspected_duplicate`, `duration_outlier`, `late_start`, `unusual_pattern`. Validasi field, murid/mapel aktif, tanggal dan durasi tetap dilakukan deterministik oleh backend sebelum sesi disimpan.
 - Finding masuk `anomaly_flags` dan harus ditinjau Admin. Finding tidak otomatis mengubah `lesson_sessions.status`, tidak menghapus data, dan tidak menentukan honor.
 - Jika provider belum dikonfigurasi/tidak dijalankan, statusnya `not_evaluated`. Jika provider dipanggil lalu gagal, statusnya `failed`. Alur submit tetap berfungsi; jangan menampilkan hasil fake seolah hasil live. Status analisis ditentukan backend.
 - Unit test memakai fake detector deterministik; dokumentasikan mana mock test dan mana live smoke test.
 
-Referensi: https://github.com/googleapis/js-genai, https://ai.google.dev/gemini-api/docs/models, https://ai.google.dev/api/generate-content
+Referensi: https://github.com/KEBAB-SHIIII/AI-MODEL-MUMTAZ (README & `docker-compose.yml`)
 
 ## 4. PDF/CSV dan output file
 

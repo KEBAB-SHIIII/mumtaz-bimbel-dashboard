@@ -17,7 +17,7 @@ Dari seluruh **7.557 baris** pada `features_dataset.csv`, model `anomaly_model.p
 | `start_minute` (#3)                | `495` (pukul `08:15` pagi)                             |
 | `comparisons_count` (#6)           | `41` sesi                                              |
 | `exact_dup_count` (#7)             | `0`                                                    |
-| **Label Sebenarnya (`validity`)**  | **`needs_revision` (Biru)**                            |
+| **Label Sebenarnya (`validity`)**  | **`needs_revision` (Kuning)**                            |
 | **Prediksi Mentah Model (`pred`)** | **`valid` (Hijau)** _(Meleset 1 menit di garis batas)_ |
 
 ---

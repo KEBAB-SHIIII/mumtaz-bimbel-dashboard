@@ -8,7 +8,7 @@ Dokumen ini ditujukan untuk rekan tim **Fullstack Developer** agar dapat memaham
 
 - **Database PostgreSQL (`schema.ts` & migrasi Drizzle):** **0 perubahan** (tidak perlu jalankan `db:generate` atau `db:migrate` baru). Semua 9 kondisi aturan bisnis dari model ML dipetakan ke 4 nilai enum `finding_type` yang sudah ada (`suspected_duplicate`, `duration_outlier`, `late_start`, `unusual_pattern`).
 - **Arsitektur Integrasi AI:** Backend kini memiliki adapter HTTP baru **`HttpAnomalyDetector`** (`provider = 'ml_fastapi'`) yang menembak endpoint `POST /v1/anomaly/analyze` pada layanan FastAPI ML (`anomaly_model.pkl`).
-- **Kompatibilitas Mundur (*Backward-Compatible*):** Selama `ANOMALY_SERVICE_URL` di `backend/.env` belum diisi (atau masih dikomentari `#`), backend otomatis *fallback* ke `GeminiAnomalyDetector` (atau `not_evaluated` jika tanpa kredensial). Jadi tidak akan merusak jalannya aplikasi saat pengembangan lokal.
+- **Gemini Dihapus Total (update 2026-11-17):** `GeminiAnomalyDetector`, `gemini-schema.ts`, `pseudonymize.ts`, dependency `@google/genai`, dan env `GEMINI_API_KEY`/`GEMINI_MODEL` sudah dihapus. Model ML FastAPI adalah satu-satunya provider; bila `ANOMALY_SERVICE_URL` kosong, sesi berstatus `not_evaluated` dan divalidasi manual oleh Admin. Label provider di dialog Admin kini generik: **"Klasifikasi AI Model"** (termasuk temuan lama dari Gemini).
 
 ---
 

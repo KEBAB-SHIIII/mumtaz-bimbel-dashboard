@@ -14,10 +14,10 @@ Membangun aplikasi full-stack TypeScript berbasis role (Admin, Tutor, Orang Tua)
 
 1. **Source of Truth Operasional**: Neon PostgreSQL adalah satu-satunya sumber kebenaran operasional data.
 2. **Alur Submit Tutor**:
-   - Tutor Dashboard $\rightarrow$ Express API $\rightarrow$ validasi Zod $\rightarrow$ Simpan ke Neon dengan `status='pending'` dan `anomaly_analysis_status='pending'`. Tutor mengisi jam mulai–selesai (durasi dihitung backend) dan 1–3 mata pelajaran per sesi.
+   - Tutor Dashboard $\rightarrow$ Express API $\rightarrow$ validasi Zod $\rightarrow$ Simpan ke Neon dengan `status='pending'` dan `anomaly_analysis_status='pending'`. Tutor mengisi jam mulai–selesai (durasi dihitung backend) dan 1–5 mata pelajaran per sesi.
    - **Dilarang keras**: Submit tutor TIDAK BOLEH memanggil Google Sheets API.
 3. **Validitas Data (keputusan owner D-25)**:
-   - Setelah submit, AI (baseline LLM Gemini, akan diganti model tim AI) melabeli validitas: **Valid** langsung dihitung ke honor & tagihan; **Perlu revisi** (durasi > 180 menit / mulai di atas 21.00) ditahan — Tutor dapat mengedit, Admin memilih status approval (hasil banding via WA); **Ditolak** (duplikat) ditahan, Tutor tidak dapat mengedit, Admin dapat menghapus.
+   - Setelah submit, model ML tim AI (layanan FastAPI) melabeli validitas: **Valid** langsung dihitung ke honor & tagihan; **Perlu revisi** (durasi < 30 / > 180 menit, mulai < 07.00 / > 21.00, duplikat samar beda jam mulai, atau jadwal bentrok tutor/murid/sesi sendiri) ditahan — Tutor dapat mengedit, Admin memilih status approval (hasil banding via WA); **Ditolak** (duplikat persis 6 atribut) ditahan, Tutor tidak dapat mengedit, Admin dapat menghapus.
    - Hanya sesi berstatus efektif `approved` yang dihitung. Admin memiliki CRUD penuh atas sesi dan dapat mengoreksi label AI kapan saja.
 4. **Ekspor Google Sheets (Admin On-Demand)**:
    - Google Sheets HANYA menerima data saat Admin menekan tombol ekspor bulanan (berdasarkan `lesson_date` bulan `YYYY-MM`).
@@ -31,15 +31,15 @@ Membangun aplikasi full-stack TypeScript berbasis role (Admin, Tutor, Orang Tua)
    - Session berbasis cookie HttpOnly/SameSite dengan server-side session store (Neon PostgreSQL). Jangan simpan credential sesi di `localStorage`.
    - CSRF protection wajib untuk setiap request mutasi (`GET /auth/csrf` -> memory token).
 6. **Modul Deteksi Anomali & Validitas**:
-   - Rule engine membentuk kandidat (duplikat, durasi, jam mulai); tanpa kandidat sesi langsung Valid tanpa memanggil model. Temuan disimpan di `anomaly_flags`.
-   - LLM memberi label validitas untuk sesi berkandidat (D-25). Label AI tidak pernah menimpa keputusan Admin, dan Admin selalu dapat mengoreksinya.
+   - Setiap sesi dievaluasi oleh layanan FastAPI model ML (repo `AI-MODEL-MUMTAZ`, LightGBM 19 fitur + guardrail) lewat `HttpAnomalyDetector`. Backend mengirim `{ target, comparisons (±30 hari, maks 500, di-submit lebih awal), config }` berisi 8 field terstruktur saja. Temuan disimpan di `anomaly_flags`. Spesifikasi: `docs/IMPLEMENTASI AI MODEL + COMPARISON.md`.
+   - Tanpa `ANOMALY_SERVICE_URL` sesi berstatus `not_evaluated`; Gemini tidak lagi dipakai. Label AI tidak pernah menimpa keputusan Admin, dan Admin selalu dapat mengoreksinya.
    - Kegagalan AI/screening tidak boleh membatalkan penyimpanan sesi absensi; sesi tetap menunggu validasi dan Admin menetapkan manual.
    - Unit tests offline WAJIB menggunakan deterministic fake detector, bukan fake live.
 7. **Tarif & Honor (D-25)**:
    - Tarif les per jenjang (`backend/src/services/billing/tariff.ts`): PAUD–TK Rp40.000/jam, SD 1–3 Rp60.000/jam, SD 4–6 Rp80.000/jam, SMP Rp100.000/jam, SMA Rp120.000/jam; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×. Jenjang mencakup PAUD sampai SMA. Potongan Admin Rp10.000 untuk jam pertama dan setiap jam berikutnya; sisa lebih dari atau sama dengan 30 menit menambah Rp10.000 (termasuk tepat 30 menit); honor tutor = tarif kotor − potongan. Tarif telah dikonfirmasi owner (D-26); pembulatan tagihan durasi pecahan tetap mengikuti perilaku sebelumnya.
    - Tarif kotor & potongan dikunci ke `rate_amount_snapshot` / `admin_fee_snapshot` saat sesi dihitung. Tidak ada penugasan tutor maupun tabel tarif (D-24).
 8. **Satu Mode: Production** (keputusan owner D-23):
-   - Aplikasi selalu berjalan dengan `NODE_ENV=production`, satu file env `backend/.env`, satu database Neon (branch production), Gemini, dan spreadsheet yang sama — termasuk saat development.
+   - Aplikasi selalu berjalan dengan `NODE_ENV=production`, satu file env `backend/.env`, satu database Neon (branch production), layanan model ML, dan spreadsheet yang sama — termasuk saat development.
    - Tidak ada mode demo/dev, seed sintetis, atau reset data. Jangan menghapus/TRUNCATE data atau menulis data sintetis ke Neon tanpa persetujuan eksplisit owner. Test otomatis memakai PGlite + fixture, bukan Neon.
 
 ---
@@ -54,7 +54,7 @@ Membangun aplikasi full-stack TypeScript berbasis role (Admin, Tutor, Orang Tua)
 | **HTTP Client** | Axios terpusat (`frontend/src/lib/api-client.ts`)                                     | **DILARANG** menggunakan native `fetch` untuk request API aplikasi. Wajib menyertakan CSRF header dan `withCredentials: true`.                                  |
 | **Backend**     | Express 5, Node.js 22+, Zod, `tsx`                                                    | Validasi Zod di backend adalah otoritas tertinggi.                                                                                                              |
 | **Database**    | Neon PostgreSQL, Drizzle ORM, Drizzle Kit, `pg`                                       | Tidak boleh ada hard delete pada histori master data yang berelasi; gunakan soft deactivation (`is_active`).                                                    |
-| **Integrasi**   | Google Sheets API (`googleapis`), Gemini API (`@google/genai`)                        | Sheets dipanggil backend saja saat Admin ekspor. Gemini untuk anomaly screening saat kredensial tersedia.                                                       |
+| **Integrasi**   | Google Sheets API (`googleapis`), layanan FastAPI model ML (HTTP)                     | Sheets dipanggil backend saja saat Admin ekspor. Model ML (`ANOMALY_SERVICE_URL`) untuk anomaly screening setiap sesi.                                          |
 | **Testing**     | Vitest, Supertest, React Testing Library, jsdom                                       | Test harus deterministik tanpa bergantung kredensial live.                                                                                                      |
 
 ---
