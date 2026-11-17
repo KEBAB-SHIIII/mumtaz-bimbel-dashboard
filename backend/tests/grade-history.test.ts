@@ -11,6 +11,7 @@ import { getBilling } from '../src/services/billing/billing-service.js';
 import { analyzeSession } from '../src/services/anomaly/anomaly-service.js';
 import { createLogger } from '../src/lib/logger.js';
 import type { ServiceContext } from '../src/services/context.js';
+import { FakeAnomalyDetector } from './fakes/fake-anomaly-detector.js';
 
 let handle: Awaited<ReturnType<typeof createTestDatabase>>;
 let ctx:ServiceContext;
@@ -74,7 +75,7 @@ describe('dated class history',()=>{
   await changeGrade(ctx,studentId,correction,{token:preview.preview_token,userId:USER_IDS.admin});
   const saved=await getAdminAttendanceDetail(ctx,pending.id);
   expect(saved.grade).toBe('3 SD');expect(saved.gross_amount).toBeNull();
-  await analyzeSession({db:handle.db,detector:null,config:{durationOutlierMinutes:180,lateStartAfter:'21:00'},timeoutMs:2000,logger:createLogger({silent:true})},pending.id);
+  await analyzeSession({db:handle.db,detector:new FakeAnomalyDetector(),config:{durationOutlierMinutes:180,durationMinMinutes:30,lateStartAfter:'21:00',earlyStartBefore:'07:00'},timeoutMs:2000,logger:createLogger({silent:true})},pending.id);
   expect(Number((await getAdminAttendanceDetail(ctx,pending.id)).gross_amount)).toBe(60000);
  });
  it('preview is rejected when an affected session changes, and direct master grade edits cannot bypass history',async()=>{

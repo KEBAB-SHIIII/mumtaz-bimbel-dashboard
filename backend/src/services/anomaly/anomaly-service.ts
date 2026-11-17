@@ -13,7 +13,7 @@ import {
 import { gradeAtDate } from '../master-data/grade-history.js';
 import { validityUpdate } from '../attendance/attendance-service.js';
 import { hhmm, sessionSubjects } from '../attendance/session-query.js';
-import { COMPARISON_WINDOW_DAYS, generateCandidates, selectComparisons } from './candidates.js';
+import { COMPARISON_WINDOW_DAYS, MAX_COMPARISONS, generateCandidates, selectComparisons } from './candidates.js';
 
 export interface AnomalyServiceDeps {
   db: Database;
@@ -61,6 +61,22 @@ const toSnapshot = (row: SnapshotRow): AnomalySessionSnapshot => ({
   submitted_at: row.submitted_at.toISOString(),
 });
 
+/**
+ * Menghapus field privat (`learning_material`, `learning_notes`, `next_focus`, `end_time`)
+ * di batas service sebelum payload dikirim ke detektor AI mana pun (FastAPI, Gemini, atau fake test).
+ * Field privat hanya dipakai di dalam memori backend oleh `generateCandidates` (legacy fallback).
+ */
+const toDetectorSnapshot = (s: AnomalySessionSnapshot): AnomalySessionSnapshot => ({
+  id: s.id,
+  tutor_id: s.tutor_id,
+  student_id: s.student_id,
+  subject_ids: [...s.subject_ids].sort(),
+  lesson_date: s.lesson_date,
+  start_time: s.start_time,
+  duration_minutes: s.duration_minutes,
+  submitted_at: s.submitted_at,
+});
+
 function shiftDate(isoDate: string, days: number): string {
   const date = new Date(`${isoDate}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
@@ -79,7 +95,12 @@ async function loadTarget(db: Database, sessionId: string) {
   return snapshot ? { ...row, snapshot } : undefined;
 }
 
-/** Sesi di sekitar tanggal yang sama untuk tutor atau siswa yang sama (bukan seluruh histori). */
+/**
+ * Mengambil kandidat pool sesi pembanding di sekitar `lesson_date` (+-30 hari)
+ * untuk tutor yang sama ATAU siswa yang sama (maksimal 500 sesi).
+ * Pool ini nantinya disaring lagi oleh `selectComparisons` agar hanya memuat sesi
+ * yang di-submit lebih awal dari `target`.
+ */
 async function loadComparisonPool(db: Database, target: AnomalySessionSnapshot): Promise<AnomalySessionSnapshot[]> {
   const rows = await selectSnapshots(db)
     .where(
@@ -91,7 +112,7 @@ async function loadComparisonPool(db: Database, target: AnomalySessionSnapshot):
       ),
     )
     .orderBy(asc(lessonSessions.submitted_at), asc(lessonSessions.id))
-    .limit(200);
+    .limit(MAX_COMPARISONS);
   return rows.map(toSnapshot);
 }
 
@@ -131,14 +152,16 @@ async function withTimeout<T>(timeoutMs: number, run: (signal: AbortSignal) => P
 }
 
 /**
- * Analisis & validasi satu sesi (docs/03 §5, docs/05 §6; revisi PM). Status analisis ditetapkan backend:
- * - rule engine tidak menemukan kandidat → `completed`, sesi **Valid** tanpa memanggil model;
- * - ada kandidat, provider tidak dikonfigurasi → `not_evaluated`, sesi tetap menunggu validasi;
- * - provider dipanggil lalu timeout/error/output invalid → `failed`, sesi tetap menunggu validasi;
- * - selesai → `completed` + finding di `anomaly_flags` + label validitas dari model.
- * Label validitas hanya ditulis bila sesi masih `pending` (keputusan Admin tidak ditimpa), dan
- * semua penulisan kondisional terhadap payload yang dianalisis, sehingga revisi yang terjadi di
- * tengah analisis tidak tertimpa hasil lama.
+ * Analisis & validasi satu sesi oleh worker (FastAPI ML / fallback Gemini).
+ *
+ * Perubahan penting migrasi ML:
+ * - Gerbang lama `if (candidates.length === 0)` DIHAPUS karena aturan baru (< 30 menit,
+ *   < 07:00, fuzzy duplicate beda jam, dan 3 jenis bentrok jadwal) dihitung langsung oleh
+ *   19 fitur di layanan FastAPI, bukan di `generateCandidates`.
+ * - Jika `deps.detector` belum dikonfigurasi (`null`), sesi langsung ditandai `not_evaluated`
+ *   agar tetap menunggu validasi manual Admin (tidak pernah otomatis dianggap `valid`).
+ * - Semua hasil tetap menghormati keputusan Admin (hanya menulis validitas bila status masih `pending`)
+ *   dan membuang hasil lama (`stale`) bila tutor merevisi sesi di tengah analisis.
  */
 export async function analyzeSession(deps: AnomalyServiceDeps, sessionId: string): Promise<AnalysisOutcome> {
   const loaded = await loadTarget(deps.db, sessionId);
@@ -177,12 +200,12 @@ export async function analyzeSession(deps: AnomalyServiceDeps, sessionId: string
         );
       }
       if (result.validity) {
-        const [pricing] = await tx.select().from(lessonSessions).where(eq(lessonSessions.id,sessionId));
+        const [pricing] = await tx.select().from(lessonSessions).where(eq(lessonSessions.id, sessionId));
         if (!pricing) return 'stale' as const;
         await tx
           .update(lessonSessions)
           .set({
-            ...validityUpdate({ ...pricing, grade:pricing?.grade_snapshot ?? loaded.grade, duration_minutes: target.duration_minutes }, result.validity),
+            ...validityUpdate({ ...pricing, grade: pricing?.grade_snapshot ?? loaded.grade, duration_minutes: target.duration_minutes }, result.validity),
             validity_reason: result.reason ?? null,
             reviewed_by_user_id: null,
             reviewed_at: new Date(),
@@ -192,19 +215,20 @@ export async function analyzeSession(deps: AnomalyServiceDeps, sessionId: string
       return status;
     });
 
-  const pool = await loadComparisonPool(deps.db, target);
-  const candidates = generateCandidates(target, pool, deps.config);
-  // Tidak ada kandidat dari rule engine → data bersih: Valid tanpa memanggil model.
-  if (candidates.length === 0) return finish('completed', { validity: 'valid', reason: null });
+  // Bila belum ada provider AI yang dikonfigurasi di .env, jangan menebak `valid` secara diam-diam.
   if (!deps.detector) return finish('not_evaluated');
 
+  const pool = await loadComparisonPool(deps.db, target);
+  const candidates = generateCandidates(target, pool, deps.config);
   const comparisons = selectComparisons(target, pool, candidates);
+  const publicTarget = toDetectorSnapshot(target);
+  const publicComparisons = comparisons.map(toDetectorSnapshot);
   const detector = deps.detector;
   try {
     const detection = await withTimeout(deps.timeoutMs, (signal) =>
-      detector.detect({ target, comparisons, candidates, config: deps.config }, { signal }),
+      detector.detect({ target: publicTarget, comparisons: publicComparisons, candidates, config: deps.config }, { signal }),
     );
-    const findings = validateFindings(detection.findings, target, new Set(comparisons.map((s) => s.id)));
+    const findings = validateFindings(detection.findings, publicTarget, new Set(publicComparisons.map((s) => s.id)));
     return await finish('completed', { findings, validity: detection.validity, reason: detection.validity_reason, detector });
   } catch (error) {
     deps.logger.warn('anomaly_analysis_failed', {

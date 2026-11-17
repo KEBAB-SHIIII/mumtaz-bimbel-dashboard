@@ -7,7 +7,7 @@ import {
   resolveFixtureSession,
 } from '@mumtaz/contracts/fixtures';
 import type { AnomalySessionSnapshot } from '../src/integrations/anomaly/types.js';
-import { generateCandidates, selectComparisons } from '../src/services/anomaly/candidates.js';
+import { COMPARISON_WINDOW_DAYS, MAX_COMPARISONS, generateCandidates, selectComparisons } from '../src/services/anomaly/candidates.js';
 import { FakeAnomalyDetector } from './fakes/fake-anomaly-detector.js';
 
 const october: AnomalySessionSnapshot[] = fixtureSessions
@@ -28,7 +28,12 @@ const october: AnomalySessionSnapshot[] = fixtureSessions
     submitted_at: session.submitted_at,
   }));
 
-const config = { durationOutlierMinutes: FIXTURE_DURATION_OUTLIER_MINUTES, lateStartAfter: '21:00' };
+const config = {
+  durationOutlierMinutes: FIXTURE_DURATION_OUTLIER_MINUTES,
+  durationMinMinutes: 30,
+  lateStartAfter: '21:00',
+  earlyStartBefore: '07:00',
+};
 const signal = new AbortController().signal;
 
 function sessionAt(index: number): AnomalySessionSnapshot {
@@ -103,12 +108,16 @@ describe('candidate generator (rule engine deterministik)', () => {
     expect((await new FakeAnomalyDetector('dismiss_all').detect(input('duration_above_threshold'), { signal })).validity).toBe('valid');
   });
 
-  it('pembanding: kandidat terkait diprioritaskan dan jumlahnya dibatasi', () => {
+  it('pembanding: jendela 30 hari / maks 500, kandidat terkait diprioritaskan, dan hanya sesi yang disubmit lebih awal', () => {
+    expect(COMPARISON_WINDOW_DAYS).toBe(30);
+    expect(MAX_COMPARISONS).toBe(500);
+
     const target = sessionAt(-1);
     const candidates = [{ finding_type: 'suspected_duplicate' as const, signal: 'same_tutor_student_subject_date_duration' as const, related_lesson_session_id: sessionAt(1).id, default_severity: 'medium' as const }];
     const comparisons = selectComparisons(target, october, candidates);
     expect(comparisons[0]?.id).toBe(sessionAt(1).id);
     expect(comparisons.map((c) => c.id)).not.toContain(target.id);
+    expect(comparisons.every((c) => c.submitted_at < target.submitted_at || (c.submitted_at === target.submitted_at && c.id < target.id))).toBe(true);
   });
 });
 

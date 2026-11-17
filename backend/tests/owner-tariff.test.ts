@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { lessonSessions } from '../src/db/schema.js';
 import { createLogger } from '../src/lib/logger.js';
 import { analyzeSession } from '../src/services/anomaly/anomaly-service.js';
+import { FakeAnomalyDetector } from './fakes/fake-anomaly-detector.js';
 import { as, createTestApp, type TestApp, type TestClient } from './helpers/test-app.js';
 
 let t: TestApp;
@@ -63,8 +64,11 @@ describe('tarif owner melalui API dan snapshot', () => {
     }).expect(201);
     const id = created.body.id as string;
     await analyzeSession({
-      db: t.database.db, detector: null, config: { durationOutlierMinutes: 180, lateStartAfter: '21:00' },
-      timeoutMs: 2_000, logger: createLogger({ silent: true }),
+      db: t.database.db,
+      detector: new FakeAnomalyDetector(),
+      config: { durationOutlierMinutes: 180, durationMinMinutes: 30, lateStartAfter: '21:00', earlyStartBefore: '07:00' },
+      timeoutMs: 2_000,
+      logger: createLogger({ silent: true }),
     }, id);
     const [row] = await t.database.db.select().from(lessonSessions).where(eq(lessonSessions.id, id));
     expect(row?.status).toBe('approved');

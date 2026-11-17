@@ -24,7 +24,12 @@ const logger = createLogger({ silent: true });
 const deps = (detector: AnomalyDetector | null, timeoutMs = 2_000): AnomalyServiceDeps => ({
   db: t.database.db,
   detector,
-  config: { durationOutlierMinutes: 180, lateStartAfter: '21:00' },
+  config: {
+    durationOutlierMinutes: 180,
+    durationMinMinutes: 30,
+    lateStartAfter: '21:00',
+    earlyStartBefore: '07:00',
+  },
   timeoutMs,
   logger,
 });
@@ -58,8 +63,8 @@ const duplicateOfS08 = { lesson_date: '2026-10-10', ...lessonTimes(60) };
 const sessionRow = async (id: string) => (await t.database.db.select().from(lessonSessions).where(eq(lessonSessions.id, id)))[0];
 const flagsOf = (id: string) => t.database.db.select().from(anomalyFlags).where(eq(anomalyFlags.lesson_session_id, id));
 
-describe('analyzeSession — validasi oleh AI (baseline LLM, fake detector di test)', () => {
-  it('ada kandidat tapi provider belum dikonfigurasi → not_evaluated, tetap menunggu validasi Admin', async () => {
+describe('analyzeSession — validasi oleh AI (FastAPI ML / LLM, fake detector di test)', () => {
+  it('provider belum dikonfigurasi → not_evaluated, tetap menunggu validasi Admin', async () => {
     const id = await submit(duplicateOfS08);
     expect(await analyzeSession(deps(null), id)).toBe('not_evaluated');
     expect(await sessionRow(id)).toMatchObject({ anomaly_analysis_status: 'not_evaluated', status: 'pending', validity: null });
@@ -113,16 +118,16 @@ describe('analyzeSession — validasi oleh AI (baseline LLM, fake detector di te
     expect([Number(row?.rate_amount_snapshot), Number(row?.admin_fee_snapshot)]).toEqual([80000, 10000]);
   });
 
-  it('tanpa kandidat → Valid tanpa memanggil model (hemat & PII minimum), juga tanpa provider', async () => {
+  it('sesi normal tetap dikirim ke detektor (untuk cek 19 fitur ML) → Valid jika bersih; tanpa provider → not_evaluated', async () => {
     const detector = new FakeAnomalyDetector();
     const id = await submit({ lesson_date: '2026-11-05', ...lessonTimes(30) });
     expect(await analyzeSession(deps(detector), id)).toBe('completed');
-    expect(detector.calls).toHaveLength(0);
-    expect(await sessionRow(id)).toMatchObject({ validity: 'valid', status: 'approved', validity_reason: null });
+    expect(detector.calls).toHaveLength(1);
+    expect(await sessionRow(id)).toMatchObject({ validity: 'valid', status: 'approved' });
 
     const noProvider = await submit({ lesson_date: '2026-11-09', ...lessonTimes(30) });
-    expect(await analyzeSession(deps(null), noProvider)).toBe('completed');
-    expect(await sessionRow(noProvider)).toMatchObject({ validity: 'valid', status: 'approved' });
+    expect(await analyzeSession(deps(null), noProvider)).toBe('not_evaluated');
+    expect(await sessionRow(noProvider)).toMatchObject({ anomaly_analysis_status: 'not_evaluated', status: 'pending', validity: null });
   });
 
   it('keputusan Admin saat AI belum selesai tidak ditimpa hasil AI', async () => {

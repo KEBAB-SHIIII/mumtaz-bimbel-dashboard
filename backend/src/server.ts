@@ -22,6 +22,8 @@ function main() {
     onError: (message) => logger.error('session_store_error', { error_message: message }),
   });
 
+  // Memilih provider AI aktif dari .env: `HttpAnomalyDetector` (FastAPI ML) jika
+  // `ANOMALY_SERVICE_URL` diset, atau fallback Gemini, atau `null`.
   const detector = createAnomalyDetector(env);
   const anomalyWorker = new AnomalyWorker(
     (sessionId) =>
@@ -29,9 +31,12 @@ function main() {
         {
           db: database.db,
           detector,
+          // Ke-4 parameter ambang batas ini dikirim ke FastAPI untuk menghitung fitur batas durasi & jam mulai.
           config: {
             durationOutlierMinutes: env.ANOMALY_DURATION_OUTLIER_MINUTES,
+            durationMinMinutes: env.ANOMALY_DURATION_MIN_MINUTES,
             lateStartAfter: env.ANOMALY_LATE_START_AFTER,
+            earlyStartBefore: env.ANOMALY_EARLY_START_BEFORE,
           },
           timeoutMs: env.ANOMALY_PROVIDER_TIMEOUT_MS,
           logger,
