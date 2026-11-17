@@ -118,7 +118,7 @@ describe('Admin: validitas data (label AI)', () => {
     // s10: durasi 240 menit dengan temuan duration_outlier, belum divalidasi.
     await user.click(await screen.findByRole('button', { name: 'Detail sesi Citra 12 Okt 2026' }));
     const dialog = await screen.findByRole('dialog', { name: 'Detail sesi' });
-    expect(within(dialog).getByText('Durasi > 180 menit')).toBeInTheDocument();
+    expect(within(dialog).getByText('Durasi di luar batas (30–180 menit)')).toBeInTheDocument();
     expect(within(dialog).getByText('Hasil uji (fake detector), bukan AI live')).toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: 'Review temuan' })).not.toBeInTheDocument();
 
