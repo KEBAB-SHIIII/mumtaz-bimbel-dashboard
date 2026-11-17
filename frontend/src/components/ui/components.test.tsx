@@ -2,6 +2,7 @@ import { act, render, renderHook, screen, waitFor, within } from '@testing-libra
 import userEvent from '@testing-library/user-event';
 import type { ColumnDef } from '@tanstack/react-table';
 import { LazyMotion, MotionConfig, domMax } from 'motion/react';
+import { hasReducedMotionListener } from 'motion-dom';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -43,6 +44,9 @@ function mockMatchMedia(matcher: (query: string) => boolean) {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
+  // Motion membaca prefers-reduced-motion sekali lalu menyimpannya global; reset agar mock
+  // `matchMedia` di satu test tidak bocor ke test berikutnya.
+  hasReducedMotionListener.current = false;
 });
 
 describe('Avatar (DiceBear critters)', () => {
