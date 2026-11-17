@@ -118,26 +118,33 @@ describe('POST /tutor/attendance', () => {
     expect(subjects.map((subject) => subject.subject_id)).toEqual(validSubmitRequest.subject_ids);
   });
 
-  it('satu sesi bisa mencakup beberapa mapel (maksimal 3), tarif tetap per sesi', async () => {
+  it('satu sesi bisa mencakup beberapa mapel (maksimal 5), tarif tetap per sesi', async () => {
     const res = await tutorA.post('/tutor/attendance', {
       ...validSubmitRequest,
       client_submission_id: uuid(212),
       lesson_date: '2026-10-19',
-      subject_ids: [SUBJECT_IDS.matematika, SUBJECT_IDS.ipa, SUBJECT_IDS.bahasaIndonesia],
+      subject_ids: [SUBJECT_IDS.matematika, SUBJECT_IDS.ipa, SUBJECT_IDS.bahasaIndonesia, SUBJECT_IDS.bahasaInggris],
     });
     expect(res.status).toBe(201);
     const list = await admin.get(`/admin/attendance/${res.body.session.id}`).expect(200);
     expect(adminAttendanceDetailSchema.parse(list.body)).toMatchObject({
-      subject_name: 'Bahasa Indonesia, IPA, Matematika',
+      subject_name: 'Bahasa Indonesia, Bahasa Inggris, IPA, Matematika',
       start_time: '16:00',
       end_time: '17:30',
     });
-    const four = await tutorA.post('/tutor/attendance', {
+    const six = await tutorA.post('/tutor/attendance', {
       ...validSubmitRequest,
       client_submission_id: uuid(213),
-      subject_ids: [SUBJECT_IDS.matematika, SUBJECT_IDS.ipa, SUBJECT_IDS.bahasaIndonesia, SUBJECT_IDS.bahasaInggris],
+      subject_ids: [
+        SUBJECT_IDS.matematika,
+        SUBJECT_IDS.ipa,
+        SUBJECT_IDS.bahasaIndonesia,
+        SUBJECT_IDS.bahasaInggris,
+        uuid(991),
+        uuid(992),
+      ],
     });
-    expect(four.status).toBe(422);
+    expect(six.status).toBe(422);
   });
 
   it('retry identik (client_submission_id sama) → sesi sama, tidak ada duplikat', async () => {

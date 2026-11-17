@@ -41,8 +41,12 @@ export function durationBetween(startTime: string, endTime: string): number | nu
   return minutes > 0 ? minutes : null;
 }
 
-/** Maksimal mapel per sesi (revisi PM: tutor bisa mengajar beberapa mapel dalam 1 sesi; tarif tetap per sesi). */
-export const MAX_SUBJECTS_PER_SESSION = 3;
+/**
+ * Maksimal mata pelajaran per sesi = 5.
+ * Diselaraskan dengan kontrak dataset & model ML 19 fitur (`subject_count` 1–5 mapel);
+ * tarif tetap dihitung per sesi (bukan per mapel).
+ */
+export const MAX_SUBJECTS_PER_SESSION = 5;
 
 const subjectIdsSchema = z
   .array(uuidSchema, 'Pilih minimal 1 mata pelajaran')
