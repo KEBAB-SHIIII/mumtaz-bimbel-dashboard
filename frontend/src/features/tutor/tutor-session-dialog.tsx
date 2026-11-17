@@ -1,3 +1,4 @@
+import { cn } from '../../lib/cn';
 import { useNotification } from '../../components/ui/feedback/notification-provider';
 import { SessionDetailSkeleton } from '../../components/ui/feedback/skeleton';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -125,20 +126,13 @@ export function TutorSessionDialog({ session, onClose }: { session: TutorSession
       <div className="flex flex-col gap-4">
         {!revised && (session.validity_reason || session.admin_note) && (session.status === 'revision_requested' || session.status === 'rejected') && (
           <InlineAlert tone={session.status === 'rejected' ? 'danger' : 'warning'} title={session.status === 'rejected' ? 'Alasan penolakan' : 'Yang perlu diperbaiki'}>
-            <div className="flex flex-col gap-2">
-              {session.validity_reason && (
-                <div>
-                  <p className="font-semibold text-text">Hasil pemeriksaan AI</p>
-                  <p><EmphasizeFacts text={stripReasonPrefix(session.validity_reason)} /></p>
-                </div>
-              )}
-              {session.admin_note && (
-                <div>
-                  <p className="font-semibold text-text">Pesan Admin</p>
-                  <p className="whitespace-pre-line">{session.admin_note}</p>
-                </div>
-              )}
-            </div>
+            {session.validity_reason && <p><EmphasizeFacts text={stripReasonPrefix(session.validity_reason)} /></p>}
+            {session.admin_note && (
+              <p className={cn('whitespace-pre-line', session.validity_reason && 'mt-2 border-t border-current/10 pt-2')}>
+                <span className="font-medium text-text">Pesan Admin: </span>
+                {session.admin_note}
+              </p>
+            )}
           </InlineAlert>
         )}
         {editing ? (
