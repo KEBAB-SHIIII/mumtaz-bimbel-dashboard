@@ -30,20 +30,20 @@ const runCount = async () => (await t.database.db.select({ n: count() }).from(sh
 const sessionSnapshot = () => t.database.db.select().from(lessonSessions).orderBy(lessonSessions.id);
 
 describe('POST /admin/reports/google-sheets/attendance', () => {
-  it('ekspor pertama membuat tab Absensi 2026-10 dengan 8 kolom & SEMUA status (O-08)', async () => {
+  it('ekspor pertama membuat tab Absensi Oktober 2026 dengan 8 kolom & SEMUA status (O-08)', async () => {
     const res = await admin.post(PATH, { period: '2026-10' });
     expect(res.status).toBe(200);
     const { export: run } = sheetExportResponseSchema.parse(res.body);
     expect(run).toMatchObject({
       period: '2026-10',
-      sheet_title: 'Absensi 2026-10',
+      sheet_title: 'Absensi Oktober 2026',
       spreadsheet_id: 'demo-spreadsheet-id',
       spreadsheet_url: 'https://docs.google.com/spreadsheets/d/demo-spreadsheet-id/edit',
       records_exported: 9,
       status: 'succeeded',
     });
 
-    const tab = exporter.getTab('Absensi 2026-10');
+    const tab = exporter.getTab('Absensi Oktober 2026');
     expect(tab?.[0]).toEqual([...SHEET_EXPORT_HEADERS]);
     expect(tab?.slice(1)).toEqual(EXPECTED_EXPORT_ROWS_2026_10);
     // Tidak ada status, materi, ID internal, atau honor di laporan.
@@ -53,41 +53,41 @@ describe('POST /admin/reports/google-sheets/attendance', () => {
   it('re-export bulan sama mengganti isi tab (tanpa duplikasi) dan membuat run baru', async () => {
     const before = await runCount();
     await admin.post(PATH, { period: '2026-10' }).expect(200);
-    expect(exporter.getTab('Absensi 2026-10')).toHaveLength(10);
-    expect(exporter.tabTitles().filter((title) => title === 'Absensi 2026-10')).toHaveLength(1);
+    expect(exporter.getTab('Absensi Oktober 2026')).toHaveLength(10);
+    expect(exporter.tabTitles().filter((title) => title === 'Absensi Oktober 2026')).toHaveLength(1);
     expect(await runCount()).toBe(before + 1);
   });
 
   it('periode memakai lesson_date: sesi 31 Okt (disubmit Nov) masuk Oktober, bukan November', async () => {
     await admin.post(PATH, { period: '2026-11' }).expect(200);
-    const november = exporter.getTab('Absensi 2026-11') ?? [];
+    const november = exporter.getTab('Absensi November 2026') ?? [];
     expect(november.slice(1).map((row) => row[6])).toEqual(['01/11/2026']);
   });
 
   it('periode kosong + tab berisi → 409 tanpa menulis dan TANPA meninggalkan log run', async () => {
-    exporter.seedTab('Absensi 2026-12', [[...SHEET_EXPORT_HEADERS], [1, 'Lama', 'Lama', '1 SD', 'X', 'IPA', '01/12/2026', '60 menit']]);
+    exporter.seedTab('Absensi Desember 2026', [[...SHEET_EXPORT_HEADERS], [1, 'Lama', 'Lama', '1 SD', 'X', 'IPA', '01/12/2026', '60 menit']]);
     const before = await runCount();
 
     const res = await admin.post(PATH, { period: '2026-12' });
     expect(res.status).toBe(409);
     expect(errorResponseSchema.parse(res.body).error.code).toBe('EMPTY_EXPORT_CONFIRMATION_REQUIRED');
-    expect(exporter.getTab('Absensi 2026-12')).toHaveLength(2);
+    expect(exporter.getTab('Absensi Desember 2026')).toHaveLength(2);
     expect(await runCount()).toBe(before);
 
     // Konfirmasi eksplisit → tab diganti header saja.
     const confirmed = await admin.post(PATH, { period: '2026-12', confirm_empty_replace: true }).expect(200);
     expect(confirmed.body.export).toMatchObject({ records_exported: 0, status: 'succeeded' });
-    expect(exporter.getTab('Absensi 2026-12')).toEqual([[...SHEET_EXPORT_HEADERS]]);
+    expect(exporter.getTab('Absensi Desember 2026')).toEqual([[...SHEET_EXPORT_HEADERS]]);
   });
 
   it('periode kosong + tab belum ada → langsung membuat tab header saja (tidak perlu konfirmasi)', async () => {
     const res = await admin.post(PATH, { period: '2027-01' }).expect(200);
     expect(res.body.export.records_exported).toBe(0);
-    expect(exporter.getTab('Absensi 2027-01')).toEqual([[...SHEET_EXPORT_HEADERS]]);
+    expect(exporter.getTab('Absensi Januari 2027')).toEqual([[...SHEET_EXPORT_HEADERS]]);
   });
 
   it('write gagal → 503 pesan aman, run `failed`, laporan lama utuh, data Neon tidak berubah', async () => {
-    const tabBefore = exporter.getTab('Absensi 2026-10');
+    const tabBefore = exporter.getTab('Absensi Oktober 2026');
     const neonBefore = await sessionSnapshot();
     exporter.failNext('write');
 
@@ -95,7 +95,7 @@ describe('POST /admin/reports/google-sheets/attendance', () => {
     expect(res.status).toBe(503);
     expect(res.body.error).toMatchObject({ code: 'INTEGRATION_UNAVAILABLE' });
     expect(JSON.stringify(res.body)).not.toMatch(/stack|key|token/i);
-    expect(exporter.getTab('Absensi 2026-10')).toEqual(tabBefore);
+    expect(exporter.getTab('Absensi Oktober 2026')).toEqual(tabBefore);
     expect(await sessionSnapshot()).toEqual(neonBefore);
 
     const failed = await t.database.db

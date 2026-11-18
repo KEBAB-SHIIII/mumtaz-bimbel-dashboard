@@ -32,13 +32,23 @@ export type SheetExportRow = z.infer<typeof sheetExportRowSchema>;
 
 export const SHEET_TITLE_PREFIX = 'Absensi ';
 
+const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
 export function sheetTitleForPeriod(period: Period): string {
-  return `${SHEET_TITLE_PREFIX}${periodSchema.parse(period)}`;
+  const [year, month] = periodSchema.parse(period).split('-');
+  return `${SHEET_TITLE_PREFIX}${MONTHS[Number(month) - 1]} ${year}`;
 }
 
-/** Hanya tab dengan pola ini yang boleh disentuh fitur ekspor. */
+export function periodFromSheetTitle(title: string): Period | undefined {
+  const match = /^Absensi ([A-Za-z]+) (\d{4})$/.exec(title);
+  if (!match) return undefined;
+  const month = MONTHS.indexOf(match[1] ?? '') + 1;
+  if (!month) return undefined;
+  return `${match[2]}-${String(month).padStart(2, '0')}`;
+}
+
 export function isManagedSheetTitle(title: string): boolean {
-  return /^Absensi \d{4}-(0[1-9]|1[0-2])$/.test(title);
+  return periodFromSheetTitle(title) !== undefined;
 }
 
 /** Working default O-11: `DD/MM/YYYY`; operasi string agar tanggal tidak bergeser timezone. */

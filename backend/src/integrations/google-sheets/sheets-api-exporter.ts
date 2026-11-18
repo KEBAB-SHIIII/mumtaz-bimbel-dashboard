@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { google, type sheets_v4 } from 'googleapis';
-import { isManagedSheetTitle, periodSchema } from '@mumtaz/contracts';
+import { reportLayout, REPORT_HEADER_ROWS } from './report-layout.js';
+import { formatPeriodLabel, isManagedSheetTitle, periodFromSheetTitle, periodSchema } from '@mumtaz/contracts';
 import type { Env } from '../../config/env.js';
 import type { Logger } from '../../lib/logger.js';
 import {
@@ -28,8 +29,8 @@ interface SheetMeta {
 /** Antarmuka minimal Google Sheets API yang dipakai exporter (di-inject agar bisa dites offline). */
 export interface SheetsApiClient {
   listSheets(spreadsheetId: string): Promise<SheetMeta[]>;
-  /** Jumlah baris berisi pada rentang A:H tab (termasuk header). */
-  countRows(spreadsheetId: string, title: string): Promise<number>;
+  /** Nilai A:H termasuk kop dan header. */
+  readRows(spreadsheetId: string, title: string): Promise<unknown[][]>;
   batchUpdate(spreadsheetId: string, requests: sheets_v4.Schema$Request[]): Promise<void>;
 }
 
@@ -37,7 +38,7 @@ export interface SheetsApiClient {
 const a1Range = (title: string) => `'${title.replace(/'/g, "''")}'!A:H`;
 
 export function sheetIdForTitle(title: string): number {
-  const period = periodSchema.parse(title.replace(/^Absensi /, ''));
+  const period = periodSchema.parse(periodFromSheetTitle(title));
   return SHEET_ID_BASE + Number(period.replace('-', ''));
 }
 
@@ -81,7 +82,7 @@ const EMPTY_ROW: sheets_v4.Schema$RowData = { values: Array.from({ length: COLUM
 
 /**
  * Exporter live via Google Sheets API (docs/16 §4–§6).
- * - Hanya tab berpola `Absensi YYYY-MM` yang disentuh.
+ * - Tab lama dengan nama numerik diganti namanya saat ekspor ulang.
  * - Report ditulis dalam SATU `spreadsheets.batchUpdate` (all-or-nothing): membuat tab bila
  *   belum ada, menulis header + data, dan menimpa sisa baris lama dengan sel kosong. Report
  *   lama tidak pernah dikosongkan sebelum payload baru siap.
@@ -95,15 +96,17 @@ export class SheetsApiExporter implements GoogleSheetsExporter {
 
   private async findTab(title: string): Promise<SheetMeta | undefined> {
     const sheets = await this.client.listSheets(this.spreadsheetId);
-    return sheets.find((sheet) => sheet.title === title);
+    const period = periodFromSheetTitle(title);
+    return sheets.find((sheet) => sheet.title === title)
+      ?? sheets.find((sheet) => period && sheet.title === `Absensi ${period}`);
   }
 
   async getTabState(sheetTitle: string): Promise<SheetTabState> {
     try {
       const tab = await this.findTab(sheetTitle);
       if (!tab) return { exists: false, dataRowCount: 0 };
-      const rows = await this.client.countRows(this.spreadsheetId, sheetTitle);
-      return { exists: true, dataRowCount: Math.max(rows - 1, 0) };
+      const rows = await this.client.readRows(this.spreadsheetId, tab.title);
+      return { exists: true, dataRowCount: rows.filter(([no]) => typeof no === 'number').length };
     } catch (error) {
       throw toSheetsExportError('read', error);
     }
@@ -129,8 +132,8 @@ export class SheetsApiExporter implements GoogleSheetsExporter {
 
   private async buildRequests({ sheetTitle, header, rows }: WriteReportInput): Promise<sheets_v4.Schema$Request[]> {
     const tab = await this.findTab(sheetTitle);
-    const previousRows = tab ? await this.client.countRows(this.spreadsheetId, sheetTitle) : 0;
-    const nextRows = rows.length + 1;
+    const previousRows = tab ? (await this.client.readRows(this.spreadsheetId, tab.title)).length : 0;
+    const nextRows = rows.length + REPORT_HEADER_ROWS;
     const span = Math.max(previousRows, nextRows);
     const sheetId = tab?.sheetId ?? sheetIdForTitle(sheetTitle);
     const requests: sheets_v4.Schema$Request[] = [];
@@ -157,7 +160,15 @@ export class SheetsApiExporter implements GoogleSheetsExporter {
       });
     }
 
+    if (tab && tab.title !== sheetTitle) {
+      requests.push({ updateSheetProperties: { properties: { sheetId, title: sheetTitle }, fields: 'title' } });
+    }
+    if (tab) {
+      requests.push({ unmergeCells: { range: { sheetId, startRowIndex: 0, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: COLUMN_COUNT } } });
+    }
+    const periodLabel = formatPeriodLabel(periodSchema.parse(periodFromSheetTitle(sheetTitle)));
     const dataRows: sheets_v4.Schema$RowData[] = [
+      { values: [textCell(`Laporan Absensi · ${periodLabel}`), {}, {}, {}, textCell('MUMTAZ BIMBEL')] },
       { values: header.map(textCell) },
       ...rows.map(([no, ...rest]) => ({ values: [numberCell(no), ...rest.map(textCell)] })),
       // Sel kosong menimpa sisa report lama yang lebih panjang (bagian dari batch yang sama).
@@ -167,9 +178,10 @@ export class SheetsApiExporter implements GoogleSheetsExporter {
       updateCells: {
         range: { sheetId, startRowIndex: 0, endRowIndex: span, startColumnIndex: 0, endColumnIndex: COLUMN_COUNT },
         rows: dataRows,
-        fields: 'userEnteredValue',
+        fields: 'userEnteredValue,userEnteredFormat',
       },
     });
+    requests.push(...reportLayout(sheetId, nextRows));
     return requests;
   }
 }
@@ -205,9 +217,9 @@ export function createSheetsApiClient(credentials: ServiceAccountKey, timeoutMs:
         columnCount: sheet.properties?.gridProperties?.columnCount ?? 0,
       }));
     },
-    async countRows(spreadsheetId, title) {
-      const { data } = await sheets.spreadsheets.values.get({ spreadsheetId, range: a1Range(title), majorDimension: 'ROWS' });
-      return data.values?.length ?? 0;
+    async readRows(spreadsheetId, title) {
+      const { data } = await sheets.spreadsheets.values.get({ spreadsheetId, range: a1Range(title), majorDimension: 'ROWS', valueRenderOption: 'UNFORMATTED_VALUE' });
+      return data.values ?? [];
     },
     async batchUpdate(spreadsheetId, requests) {
       await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } });

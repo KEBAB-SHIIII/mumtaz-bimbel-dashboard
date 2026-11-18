@@ -32,14 +32,14 @@ describe('Ekspor Google Sheets (Data Absensi)', () => {
     await user.click(exportButton());
     const dialog = await screen.findByRole('dialog', { name: 'Ekspor absensi ke Google Sheets' });
     expect(within(dialog).getByText('Oktober 2026')).toBeInTheDocument();
-    expect(within(dialog).getByText('Absensi 2026-10')).toBeInTheDocument();
+    expect(within(dialog).getByText('Absensi Oktober 2026')).toBeInTheDocument();
     expect(within(dialog).getByText('9')).toBeInTheDocument();
     expect(within(dialog).getByText(/termasuk data yang belum disetujui/)).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole('button', { name: 'Ekspor sekarang' }));
     expect(await screen.findByText('Ekspor berhasil')).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByText(/9 baris ditulis ke tab Absensi 2026-10/)).toBeInTheDocument();
+    expect(screen.getByText(/9 baris ditulis ke tab Absensi Oktober 2026/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Buka spreadsheet/ })).toHaveAttribute('href', 'https://docs.google.com/spreadsheets/d/demo-spreadsheet-id/edit');
 
     const history = await screen.findByRole('table', { name: 'Riwayat ekspor Google Sheets' });
@@ -49,7 +49,7 @@ describe('Ekspor Google Sheets (Data Absensi)', () => {
 
   it('periode kosong + tab berisi → konfirmasi kedua (danger) sebelum mengganti dengan laporan kosong', async () => {
     const backend = useFakeBackend();
-    backend.seedSheetTab('Absensi 2026-12', 4);
+    backend.seedSheetTab('Absensi Desember 2026', 4);
     const user = await openEmptyAttendance('2026-12');
     await screen.findByText('Belum ada sesi');
 
@@ -60,7 +60,7 @@ describe('Ekspor Google Sheets (Data Absensi)', () => {
     expect(screen.queryByText('Ekspor berhasil')).not.toBeInTheDocument();
 
     await user.click(within(second).getByRole('button', { name: 'Ya, ganti dengan laporan kosong' }));
-    expect(await screen.findByText(/0 baris ditulis ke tab Absensi 2026-12/)).toBeInTheDocument();
+    expect(await screen.findByText(/0 baris ditulis ke tab Absensi Desember 2026/)).toBeInTheDocument();
   });
 
   it('periode kosong + tab belum ada → langsung sukses tanpa konfirmasi kedua', async () => {
@@ -68,7 +68,7 @@ describe('Ekspor Google Sheets (Data Absensi)', () => {
     const user = await openEmptyAttendance('2026-12');
     await user.click(exportButton());
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Ekspor sekarang' }));
-    expect(await screen.findByText(/0 baris ditulis ke tab Absensi 2026-12/)).toBeInTheDocument();
+    expect(await screen.findByText(/0 baris ditulis ke tab Absensi Desember 2026/)).toBeInTheDocument();
   });
 
   it('Google gagal → pesan aman di dialog, run gagal di riwayat, "Coba lagi" membuka konfirmasi lagi', async () => {

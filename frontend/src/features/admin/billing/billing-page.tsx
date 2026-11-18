@@ -1,3 +1,4 @@
+import { PaginatedReportList } from '../../shared/paginated-report-list';
 import { SessionDisclosure } from '../../shared/session-disclosure';
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -173,9 +174,9 @@ export function BillingPage() {
               </Card>
             ) : (
               <div className={cn('flex flex-col gap-3 transition-opacity duration-200 sm:gap-4 motion-reduce:transition-none', billing.isFetching && 'opacity-60')} aria-busy={billing.isFetching || undefined}>
-                {data.students.map((student) => (
+                <PaginatedReportList items={data.students} renderItem={(student) => (
                   <StudentInvoice key={student.student_id} student={student} period={data.period} />
-                ))}
+                )} />
               </div>
             )}
           </>

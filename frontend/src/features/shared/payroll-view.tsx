@@ -1,3 +1,4 @@
+import { PaginatedReportList } from './paginated-report-list';
 import { CalendarCheck, CalendarClock, HandCoins, Landmark, Wallet } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { SessionDisclosure } from './session-disclosure';
@@ -146,7 +147,7 @@ export function AdminPayrollView({ payroll, tutorId = '' }: { payroll: PayrollPr
           <EmptyState title="Belum ada sesi" description={`Tidak ada sesi pada ${formatPeriod(payroll.period)}.`} />
         </Card>
       ) : (
-        tutors.map((tutor) => <TutorPayrollCard key={tutor.tutor_id} tutor={tutor} />)
+        <PaginatedReportList items={tutors} renderItem={(tutor) => <TutorPayrollCard key={tutor.tutor_id} tutor={tutor} />} />
       )}
     </>
   );

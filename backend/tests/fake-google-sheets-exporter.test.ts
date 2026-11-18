@@ -13,7 +13,7 @@ describe('FakeGoogleSheetsExporter (test double, bukan live)', () => {
 
     const result = await exporter.writeReport({ sheetTitle: OCT, header: SHEET_EXPORT_HEADERS, rows: EXPECTED_EXPORT_ROWS_2026_10 });
 
-    expect(result).toEqual({ spreadsheetId: 'fake-spreadsheet-id', sheetTitle: 'Absensi 2026-10', recordsExported: 9 });
+    expect(result).toEqual({ spreadsheetId: 'fake-spreadsheet-id', sheetTitle: 'Absensi Oktober 2026', recordsExported: 9 });
     const tab = exporter.getTab(OCT);
     expect(tab?.[0]).toEqual([...SHEET_EXPORT_HEADERS]);
     expect(tab).toHaveLength(10);

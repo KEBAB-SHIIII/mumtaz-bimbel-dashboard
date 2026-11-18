@@ -35,7 +35,7 @@ describe('fake API adapter mengikuti kontrak (data sintetis)', () => {
       await admin.fetchMasterData(entity, { page: 1, page_size: 20 });
     }
     const exported = await admin.exportAttendanceToSheets({ period: '2026-10', confirm_empty_replace: false });
-    expect(exported).toMatchObject({ sheet_title: 'Absensi 2026-10', records_exported: 9, status: 'succeeded' });
+    expect(exported).toMatchObject({ sheet_title: 'Absensi Oktober 2026', records_exported: 9, status: 'succeeded' });
     expect((await admin.fetchExportHistory({ page_size: 10 })).items).toHaveLength(1);
   });
 

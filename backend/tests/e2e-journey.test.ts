@@ -124,7 +124,7 @@ describe('perjalanan end-to-end lintas role', () => {
     const first = await admin.post('/admin/reports/google-sheets/attendance', { period: PERIOD }).expect(200);
     const total = await sessionsInOctober();
     expect(first.body.export.records_exported).toBe(total);
-    const tab = exporter.getTab('Absensi 2026-10') ?? [];
+    const tab = exporter.getTab('Absensi Oktober 2026') ?? [];
     expect(tab).toHaveLength(total + 1);
     expect(tab.every((row) => row.length === 8)).toBe(true);
     expect(tab.filter((row) => row[6] === '29/10/2026' && row[7] === '60 menit')).toHaveLength(1);
@@ -133,7 +133,7 @@ describe('perjalanan end-to-end lintas role', () => {
     await farhan.post('/tutor/attendance', { ...SUBMIT, client_submission_id: '00000000-0000-4000-9000-000000000e2f', lesson_date: '2026-10-30', end_time: '17:30' }).expect(201);
     const second = await admin.post('/admin/reports/google-sheets/attendance', { period: PERIOD }).expect(200);
     expect(second.body.export.records_exported).toBe(total + 1);
-    expect(exporter.getTab('Absensi 2026-10')).toHaveLength(total + 2);
-    expect(exporter.tabTitles().filter((title) => title === 'Absensi 2026-10')).toHaveLength(1);
+    expect(exporter.getTab('Absensi Oktober 2026')).toHaveLength(total + 2);
+    expect(exporter.tabTitles().filter((title) => title === 'Absensi Oktober 2026')).toHaveLength(1);
   });
 });

@@ -207,10 +207,10 @@ describe('ekspor Google Sheets', () => {
   });
 
   it('nama tab deterministik dan hanya pola yang dikelola', () => {
-    expect(sheetTitleForPeriod('2026-10')).toBe('Absensi 2026-10');
-    expect(isManagedSheetTitle('Absensi 2026-10')).toBe(true);
+    expect(sheetTitleForPeriod('2026-10')).toBe('Absensi Oktober 2026');
+    expect(isManagedSheetTitle('Absensi Oktober 2026')).toBe(true);
     expect(isManagedSheetTitle('Sheet1')).toBe(false);
-    expect(isManagedSheetTitle('Absensi 2026-10 (copy)')).toBe(false);
+    expect(isManagedSheetTitle('Absensi Oktober 2026 (copy)')).toBe(false);
   });
 
   it('confirm_empty_replace default false', () => {

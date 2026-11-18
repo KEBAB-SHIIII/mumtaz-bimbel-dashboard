@@ -53,7 +53,7 @@ export function useSheetsExport() {
     onSuccess: (run) => {
       notify({
         status: 'success', title: 'Ekspor berhasil',
-        description: <>{run.records_exported} baris ditulis ke tab {run.sheet_title}. <SpreadsheetLink href={run.spreadsheet_url} /></>,
+        description: <>{run.records_exported} baris ditulis ke tab {sheetTitleForPeriod(run.period)}. <SpreadsheetLink href={run.spreadsheet_url} /></>,
       });
       setDialog(null);
     },
@@ -167,7 +167,7 @@ export function SheetsExportHistory({ exporter }: { exporter: SheetsExport }) {
   const columns: ColumnDef<SheetExportRun, unknown>[] = [
     { id: 'started', header: 'Waktu', cell: ({ row }) => formatTimestamp(row.original.started_at) },
     { id: 'period', header: 'Periode', cell: ({ row }) => formatPeriod(row.original.period) },
-    { accessorKey: 'sheet_title', header: 'Tab' },
+    { id: 'sheet_title', header: 'Tab', accessorFn: (run) => sheetTitleForPeriod(run.period) },
     {
       id: 'status',
       header: 'Status',
