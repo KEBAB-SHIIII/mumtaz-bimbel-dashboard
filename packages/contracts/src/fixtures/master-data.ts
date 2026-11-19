@@ -6,8 +6,7 @@ import {
   USER_IDS,
 } from './ids.js';
 
-// Master data sintetis. Harus identik dengan `examples/seed-data.json`
-// (dijaga oleh test `fixtures.test.ts`).
+// Master data sintetis untuk test (sumber tunggal; integritasnya dijaga test `fixtures.test.ts`).
 
 export interface FixtureUser {
   id: string;

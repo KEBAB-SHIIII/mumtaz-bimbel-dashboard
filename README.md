@@ -135,19 +135,15 @@ Jangan pasang shadcn/ui tanpa persetujuan owner. Palet warna, typography, logo, 
 
 ## Impor data asli (data historis owner)
 
-Data absensi asli hasil cleaning tim DS (`docs/dataset/data clean bimbel from ds.csv`) dimasukkan lewat `npm run db:import-real-data -w backend` (preview, tanpa menulis). Tambah `-- --apply` untuk mengganti seluruh data operasional dengan data asli; akun Admin dipertahankan, backup data lama dan daftar password sementara tutor ditulis ke folder sementara (bukan repo). Masalah data dan penanganannya: [docs/dataset/MASALAH-DATA-MIGRASI.md](docs/dataset/MASALAH-DATA-MIGRASI.md).
+Data absensi asli hasil cleaning tim DS (`docs/dataset/data clean bimbel from ds.csv`) dimasukkan lewat `npm run db:import-real-data -w backend` (preview, tanpa menulis). Tambah `-- --apply` untuk mengganti seluruh data operasional dengan data asli; akun Admin dipertahankan, backup data lama dan daftar password sementara tutor ditulis ke folder sementara (bukan repo). Masalah data dan penanganannya didokumentasikan di `docs/dataset/MASALAH-DATA-MIGRASI.md` (dokumen lokal).
 
 ## Tarif honor
 
 Tarif les per jenjang: **PAUD–TK Rp40.000/jam, SD 1–3 Rp60.000/jam, SD 4–6 Rp80.000/jam, SMP Rp100.000/jam, SMA Rp120.000/jam** (≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×), dengan **potongan Admin Rp10.000 untuk jam pertama dan setiap jam berikutnya; sisa lebih dari 30 menit menambah Rp10.000 (tepat 30 menit belum)** (keputusan owner D-26 di `backend/src/services/billing/tariff.ts`). Tarif kotor ditagihkan ke orang tua (Penagihan + invoice PDF); honor tutor = kotor − potongan. Nilainya dikunci ke sesi saat dihitung sehingga bulan lalu tidak berubah. Tidak ada penugasan tutor maupun master tarif (D-24). Aturan durasi pecahan tagihan dipertahankan dari implementasi sebelumnya karena belum ada ketentuan baru. Batas potongan: 90 menit Rp10.000, 91–150 menit Rp20.000, 151–210 menit Rp30.000. Tidak ada hitung ulang massal histori; koreksi atau approval ulang sesi tetap membuat snapshot memakai tarif baru.
 
-## Mulai dari dokumentasi
+## Dokumentasi
 
-1. Baca [`docs/00-START-HERE.md`](./docs/00-START-HERE.md).
-2. Baca [`docs/01-PRD.md`](./docs/01-PRD.md), [`docs/02-AGENT-CONTEXT.md`](./docs/02-AGENT-CONTEXT.md), dan [`docs/03-TECHNICAL-ARCHITECTURE.md`](./docs/03-TECHNICAL-ARCHITECTURE.md).
-3. Sinkronkan API/data contracts dengan ERD dan breakdown tabs: `docs/04-API-CONTRACT.md`, `docs/05-DATA-CONTRACT.md`, `docs/14-ERD-AND-DATA-DICTIONARY.md`, `docs/15-DASHBOARD-TABS.md`.
-4. Ikuti user flow, spesifikasi ekspor Sheets, testing, dan phase docs.
-5. Baca `docs/17-DECISIONS-AND-OPEN-QUESTIONS.md` untuk keputusan owner dan hal yang masih terbuka, serta `docs/20-QA-REPORT.md` untuk hasil QA.
+Dokumentasi spesifikasi (PRD, arsitektur, kontrak API/data, ERD, keputusan owner, QA) disimpan di folder `docs/` **lokal tim** dan tidak di-commit, karena repo ini publik dan sebagian dokumen memuat data owner. Minta salinannya ke anggota tim bila diperlukan.
 
 ## Keamanan dan integrasi
 

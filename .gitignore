@@ -35,7 +35,5 @@ yarn-error.log*
 *.sw?
 
 
-# Data asli owner (berisi data pribadi; repo publik)
-docs/dataset/*.csv
-docs/dataset/*.xlsx
-docs/dataset/*.local.md
+# Dokumentasi internal & data asli owner (berisi data pribadi; repo publik) — hanya lokal
+docs/
