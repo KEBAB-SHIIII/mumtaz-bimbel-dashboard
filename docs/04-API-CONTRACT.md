@@ -106,6 +106,10 @@ Backend memverifikasi `current_password` terhadap hash, memvalidasi `new_passwor
 
 Admin only. Mengembalikan total tutor/siswa aktif, sesi untuk periode, status review, jumlah anomaly finding pending review, dan estimasi honor dari sesi approved (`honor: { estimated_amount }`, tarif tunggal per sesi — D-24). Jangan menampilkan pemasukan bisnis tanpa sumber data pemasukan.
 
+### `GET /admin/dashboard/revenue?year=2026`
+
+Admin only. Grafik "Pendapatan per bulan" satu tahun penuh: `{ year, years, months }` dengan `months` selalu 12 entri Januari–Desember (`period`, `gross_revenue`, `tutor_salary` = Σ kotor − potongan, `net_revenue` = Σ potongan Admin) dari snapshot sesi `approved`; bulan tanpa sesi bernilai `"0"`. `years` = tahun yang punya sesi dihitung (baru → lama) untuk filter tahun. Tanpa `year`, dipakai tahun terbaru yang punya data. Tahun tidak valid → `422`.
+
 ### `GET /tutor/dashboard/summary?period=2026-10`
 
 Tutor only. Hanya untuk tutor dari session: jumlah sesi per status dan estimasi honor sesi approved miliknya.

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   adminDashboardSummarySchema,
+  adminRevenueSchema,
   parentDashboardSummarySchema,
   payrollPreviewResponseSchema,
   tutorPayrollResponseSchema,
@@ -208,10 +209,24 @@ describe('Ringkasan dashboard', () => {
       total_sessions: 9,
       gross_revenue: '340000',
     });
-    // Grafik pendapatan: 6 bulan s.d. Oktober dari snapshot sesi yang dihitung.
-    expect(body.revenue_by_month.map((month) => month.period)).toEqual(['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10']);
-    expect(body.revenue_by_month.at(-1)).toEqual({ period: '2026-10', gross_revenue: '340000', tutor_salary: '280000', net_revenue: '60000' });
-    expect(body.revenue_by_month[0]).toEqual({ period: '2026-05', gross_revenue: '0', tutor_salary: '0', net_revenue: '0' });
+  });
+
+  it('Admin: grafik pendapatan satu tahun penuh (Jan–Des) dengan filter tahun', async () => {
+    // Tanpa `year`: tahun terbaru yang punya sesi dihitung.
+    const body = adminRevenueSchema.parse((await admin.get('/admin/dashboard/revenue').expect(200)).body);
+    expect(body.year).toBe(2026);
+    expect(body.years).toEqual([2026]);
+    expect(body.months.map((month) => month.period)).toEqual(Array.from({ length: 12 }, (_, i) => `2026-${String(i + 1).padStart(2, '0')}`));
+    expect(body.months[9]).toEqual({ period: '2026-10', gross_revenue: '340000', tutor_salary: '280000', net_revenue: '60000' });
+    expect(body.months[0]).toEqual({ period: '2026-01', gross_revenue: '0', tutor_salary: '0', net_revenue: '0' });
+
+    const other = adminRevenueSchema.parse((await admin.get('/admin/dashboard/revenue?year=2025').expect(200)).body);
+    expect(other.months.map((month) => month.period)[0]).toBe('2025-01');
+    expect(other.months.every((month) => month.gross_revenue === '0')).toBe(true);
+
+    await admin.get('/admin/dashboard/revenue?year=abc').expect(422);
+    const tutorA = await as.tutorA(t.app);
+    await tutorA.get('/admin/dashboard/revenue').expect(403);
   });
 
   it('Tutor: hanya data miliknya', async () => {

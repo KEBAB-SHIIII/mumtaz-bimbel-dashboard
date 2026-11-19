@@ -25,20 +25,32 @@ export const adminDashboardSummarySchema = z.object({
   students_with_sessions: z.number().int().min(0),
   total_sessions: z.number().int().min(0),
   gross_revenue: moneyStringSchema,
-  /**
-   * Grafik pendapatan: 6 bulan terakhir s.d. periode (urut lama → baru), dari snapshot sesi yang dihitung.
-   * `tutor_salary` = Σ (kotor − potongan); `net_revenue` = Σ potongan Admin (pendapatan bersih bimbel).
-   */
-  revenue_by_month: z.array(
+});
+export type AdminDashboardSummary = z.infer<typeof adminDashboardSummarySchema>;
+
+const yearSchema = z.coerce.number().int().min(2000).max(2100);
+
+/** `GET /admin/dashboard/revenue?year=2026` — tanpa `year` dipakai tahun terbaru yang punya sesi dihitung. */
+export const adminRevenueQuerySchema = z.object({ year: yearSchema.optional() });
+
+/**
+ * Grafik pendapatan satu tahun penuh (Januari–Desember, bulan tanpa sesi = 0) dari snapshot sesi yang dihitung.
+ * `tutor_salary` = Σ (kotor − potongan); `net_revenue` = Σ potongan Admin (pendapatan bersih bimbel).
+ * `years`: tahun yang punya sesi dihitung (baru → lama), untuk filter tahun.
+ */
+export const adminRevenueSchema = z.object({
+  year: yearSchema,
+  years: z.array(yearSchema),
+  months: z.array(
     z.object({
       period: periodSchema,
       gross_revenue: moneyStringSchema,
       tutor_salary: moneyStringSchema,
       net_revenue: moneyStringSchema,
     }),
-  ),
+  ).length(12),
 });
-export type AdminDashboardSummary = z.infer<typeof adminDashboardSummarySchema>;
+export type AdminRevenue = z.infer<typeof adminRevenueSchema>;
 
 /** `GET /tutor/dashboard/summary` — hanya tutor dari session. */
 export const tutorDashboardSummarySchema = z.object({

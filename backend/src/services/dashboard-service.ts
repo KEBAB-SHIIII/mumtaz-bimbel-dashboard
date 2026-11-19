@@ -1,8 +1,9 @@
-import { and, count, eq, gte, lt, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, lt, sql } from 'drizzle-orm';
 import { Decimal } from 'decimal.js';
-import { periodDateRange, trailingPeriods } from '@mumtaz/contracts';
+import { todayInBusinessTimeZone, trailingPeriods } from '@mumtaz/contracts';
 import type {
   AdminDashboardSummary,
+  AdminRevenue,
   ParentDashboardSummary,
   Period,
   SessionStatusCounts,
@@ -24,11 +25,16 @@ function statusCounts(rows: SessionView[]): SessionStatusCounts {
   return counts;
 }
 
-const REVENUE_MONTHS = 6;
-
-/** Pendapatan per bulan (6 bulan s.d. periode) dari snapshot sesi yang dihitung; bulan tanpa sesi = 0. */
-async function revenueByMonth(ctx: ServiceContext, period: Period): Promise<AdminDashboardSummary['revenue_by_month']> {
-  const periods = trailingPeriods(period, REVENUE_MONTHS);
+/**
+ * Pendapatan satu tahun penuh (Januari–Desember) dari snapshot sesi yang dihitung; bulan tanpa sesi = 0.
+ * Tanpa `year` dipakai tahun terbaru yang punya sesi dihitung (atau tahun berjalan bila belum ada).
+ */
+export async function getAdminRevenue(ctx: ServiceContext, requestedYear?: number): Promise<AdminRevenue> {
+  const yearOf = sql<number>`extract(year from ${lessonSessions.lesson_date})::int`;
+  const years = (await ctx.db.selectDistinct({ year: yearOf }).from(lessonSessions)
+    .where(eq(lessonSessions.status, 'approved')).orderBy(desc(yearOf))).map((row) => Number(row.year));
+  const year = requestedYear ?? years[0] ?? Number(todayInBusinessTimeZone(ctx.now()).slice(0, 4));
+  const periods = trailingPeriods(`${year}-12`, 12);
   const month = sql<string>`to_char(${lessonSessions.lesson_date}, 'YYYY-MM')`;
   const rows = await ctx.db
     .select({
@@ -40,28 +46,31 @@ async function revenueByMonth(ctx: ServiceContext, period: Period): Promise<Admi
     .where(
       and(
         eq(lessonSessions.status, 'approved'),
-        gte(lessonSessions.lesson_date, periodDateRange(periods[0] ?? period).start),
-        lt(lessonSessions.lesson_date, periodDateRange(period).endExclusive),
+        gte(lessonSessions.lesson_date, `${year}-01-01`),
+        lt(lessonSessions.lesson_date, `${year + 1}-01-01`),
       ),
     )
     .groupBy(month);
-  return periods.map((item) => {
-    const row = rows.find((r) => r.period === item);
-    const gross = new Decimal(row?.gross ?? 0);
-    const fee = new Decimal(row?.fee ?? 0);
-    return { period: item, gross_revenue: money(gross), tutor_salary: money(gross.minus(fee)), net_revenue: money(fee) };
-  });
+  return {
+    year,
+    years,
+    months: periods.map((item) => {
+      const row = rows.find((r) => r.period === item);
+      const gross = new Decimal(row?.gross ?? 0);
+      const fee = new Decimal(row?.fee ?? 0);
+      return { period: item, gross_revenue: money(gross), tutor_salary: money(gross.minus(fee)), net_revenue: money(fee) };
+    }),
+  };
 }
 
 export async function getAdminDashboardSummary(ctx: ServiceContext, period: Period): Promise<AdminDashboardSummary> {
-  const [rows, [activeTutors], revenue] = await Promise.all([
+  const [rows, [activeTutors]] = await Promise.all([
     sessionsInPeriod(ctx.db, period),
     ctx.db
       .select({ value: count() })
       .from(tutors)
       .innerJoin(users, eq(users.id, tutors.user_id))
       .where(and(eq(tutors.is_active, true), eq(users.is_active, true))),
-    revenueByMonth(ctx, period),
   ]);
 
   // Omzet kotor = Σ tarif les terkunci (snapshot) sesi yang dihitung = total tagihan orang tua.
@@ -75,7 +84,6 @@ export async function getAdminDashboardSummary(ctx: ServiceContext, period: Peri
     students_with_sessions: new Set(rows.map((row) => row.student_id)).size,
     total_sessions: rows.length,
     gross_revenue: money(gross),
-    revenue_by_month: revenue,
   };
 }
 

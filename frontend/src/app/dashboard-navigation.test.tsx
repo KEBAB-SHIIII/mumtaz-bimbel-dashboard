@@ -21,6 +21,10 @@ describe('dashboard mengarahkan ke data di balik angka', () => {
     expect(await screen.findAllByText('Data contoh')).toHaveLength(4);
     const revenue = screen.getByRole('heading', { name: 'Pendapatan per bulan' }).closest('section');
     expect(revenue).not.toHaveTextContent('Data contoh');
+    // Grafik pendapatan satu tahun penuh dengan filter tahun (default: tahun terbaru yang punya data).
+    if (!revenue) throw new Error('kartu pendapatan tidak ada');
+    await waitFor(() => expect(revenue).toHaveTextContent('Januari–Desember 2026'));
+    expect(within(revenue as HTMLElement).getByRole('button', { name: /Tahun/ })).toHaveTextContent('2026');
 
     await user.click(screen.getByRole('link', { name: 'Total sesi bulan ini' }));
     await screen.findByRole('heading', { name: 'Data Absensi', level: 1 });

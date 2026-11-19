@@ -487,10 +487,24 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
           students_with_sessions: new Set(rows.map((r) => r.student_id)).size,
           total_sessions: rows.length,
           gross_revenue: String(gross),
-          revenue_by_month: trailingPeriods(req.params.period ?? '', 6).map((month) => {
-            const counted = inPeriod(month).filter((r) => r.status === 'approved' && r.rate_amount_snapshot !== null);
-            const monthGross = counted.reduce((sum, r) => sum + Number(r.rate_amount_snapshot), 0);
-            const fee = counted.reduce((sum, r) => sum + Number(r.admin_fee_snapshot ?? 0), 0);
+        });
+      },
+    ],
+    [
+      'get',
+      /^\/admin\/dashboard\/revenue$/,
+      (req) => {
+        requireRole('admin');
+        const counted = sessions.filter((r) => r.status === 'approved' && r.rate_amount_snapshot !== null);
+        const years = [...new Set(counted.map((r) => Number(r.lesson_date.slice(0, 4))))].sort((a, b) => b - a);
+        const year = req.params.year ? Number(req.params.year) : (years[0] ?? 2026);
+        return ok({
+          year,
+          years,
+          months: trailingPeriods(`${year}-12`, 12).map((month) => {
+            const inMonth = counted.filter((r) => r.lesson_date.startsWith(month));
+            const monthGross = inMonth.reduce((sum, r) => sum + Number(r.rate_amount_snapshot), 0);
+            const fee = inMonth.reduce((sum, r) => sum + Number(r.admin_fee_snapshot ?? 0), 0);
             return { period: month, gross_revenue: String(monthGross), tutor_salary: String(monthGross - fee), net_revenue: String(fee) };
           }),
         });

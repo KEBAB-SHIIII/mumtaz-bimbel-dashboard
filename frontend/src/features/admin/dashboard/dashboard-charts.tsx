@@ -1,4 +1,5 @@
-import { useSyncExternalStore, type ReactNode } from 'react';
+import { useState, useSyncExternalStore, type ReactNode } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   Area,
   AreaChart,
@@ -15,10 +16,13 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { AdminDashboardSummary } from '@mumtaz/contracts';
+import type { AdminRevenue } from '@mumtaz/contracts';
 import { Chip } from '../../../components/ui/data-display/chip';
 import { Card } from '../../../components/ui/surfaces/layout-primitives';
-import { formatRupiah } from '../../../lib/format';
+import { FilterSelect } from '../../../components/ui/forms/filter-select';
+import { formatPeriod, formatRupiah } from '../../../lib/format';
+import { queryKeys } from '../../../lib/query-keys';
+import { fetchAdminRevenue } from '../api';
 import { useThemeColors, type ThemeColors } from '../../../hooks/use-theme-colors';
 import {
   SAMPLE_GRADE_COMPOSITION,
@@ -132,9 +136,9 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 }
 
 /** Kartu grafik; `sample` memberi label "Data contoh" kecil untuk angka yang belum dari data operasional. */
-function ChartCard({ title, subtitle, summary, wide = false, sample = true, children }: { title: string; subtitle: string; summary: string; wide?: boolean; sample?: boolean; children: ReactNode }) {
+function ChartCard({ title, subtitle, summary, wide = false, sample = true, actions, children }: { title: string; subtitle: string; summary: string; wide?: boolean; sample?: boolean; actions?: ReactNode; children: ReactNode }) {
   return (
-    <Card title={title} description={subtitle} actions={sample ? <Chip variant="caption">Data contoh</Chip> : undefined} className={wide ? 'lg:col-span-2' : ''}>
+    <Card title={title} description={subtitle} actions={sample ? <Chip variant="caption">Data contoh</Chip> : actions} className={wide ? 'lg:col-span-2' : ''}>
       <figure className="m-0 px-2 py-4 sm:px-4" aria-label={`${title}${sample ? ' (data contoh)' : ''}: ${summary}`}>
         <div className="h-64 w-full">{children}</div>
       </figure>
@@ -143,16 +147,17 @@ function ChartCard({ title, subtitle, summary, wide = false, sample = true, chil
 }
 
 const monthLabel = new Intl.DateTimeFormat('id-ID', { month: 'short', timeZone: 'UTC' });
-/** "2026-10" → "Okt 26". */
+/** "2026-10" → "Okt" (tahun sudah tampil di filter). */
 const formatMonth = (period: string) => {
   const [year, month] = period.split('-').map(Number) as [number, number];
-  return `${monthLabel.format(new Date(Date.UTC(year, month - 1, 1)))} ${String(year).slice(2)}`;
+  return monthLabel.format(new Date(Date.UTC(year, month - 1, 1)));
 };
 
-/** Pendapatan 6 bulan dari API (data asli); nominal string desimal → angka hanya untuk sumbu grafik. */
-function toRevenueChart(revenue: AdminDashboardSummary['revenue_by_month']) {
-  return revenue.map((month) => ({
+/** Pendapatan Jan–Des dari API (data asli); nominal string desimal → angka hanya untuk sumbu grafik. */
+function toRevenueChart(months: AdminRevenue['months']) {
+  return months.map((month) => ({
     month: formatMonth(month.period),
+    title: formatPeriod(month.period),
     gross: Number(month.gross_revenue),
     salary: Number(month.tutor_salary),
     net: Number(month.net_revenue),
@@ -162,12 +167,12 @@ function toRevenueChart(revenue: AdminDashboardSummary['revenue_by_month']) {
 type RevenuePoint = ReturnType<typeof toRevenueChart>[number];
 
 /** Tooltip pendapatan dengan penanda warna yang sama seperti seri grafik. */
-function RevenueTooltip({ active, payload, label }: { active?: boolean; payload?: { payload?: RevenuePoint }[]; label?: string | number }) {
+function RevenueTooltip({ active, payload }: { active?: boolean; payload?: { payload?: RevenuePoint }[] }) {
   const point = payload?.[0]?.payload;
   if (!active || !point) return null;
   return (
     <div className="rounded-[0.625rem] border border-border bg-surface px-3 py-2 text-meta shadow-md animate-pop-in motion-reduce:animate-none">
-      <p className="font-semibold text-text">{label}</p>
+      <p className="font-semibold text-text">{point.title}</p>
       <dl className="mt-1 grid grid-cols-[auto_auto] gap-x-4 gap-y-0.5 tabular-nums">
         <dt className="flex items-center gap-2 font-medium text-text"><span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: CHART_PALETTE.revenue }} />Omzet kotor</dt>
         <dd className="text-end font-semibold text-text">{formatRupiah(String(point.gross))}</dd>
@@ -184,11 +189,21 @@ function RevenueTooltip({ active, payload, label }: { active?: boolean; payload?
  * Seri grafik mengikuti warna kategori pada kartu ringkasan.
  * Pendapatan: tiga seri tidak ditumpuk agar setiap garis menunjukkan nominal sebenarnya.
  */
-export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['revenue_by_month'] }) {
+export function DashboardCharts() {
   const animate = !usePrefersReducedMotion();
   const colors = useThemeColors();
   const style = chartStyle(colors, animate);
-  const revenueData = toRevenueChart(revenue);
+  // Tanpa pilihan, backend memakai tahun terbaru yang punya sesi dihitung.
+  const [year, setYear] = useState<number | undefined>(undefined);
+  const revenue = useQuery({
+    queryKey: queryKeys.admin.revenue(year ?? 'latest'),
+    queryFn: () => fetchAdminRevenue(year),
+    placeholderData: keepPreviousData,
+    refetchInterval: 60_000,
+  });
+  const shownYear = revenue.data?.year ?? year;
+  const yearOptions = (revenue.data?.years.length ? revenue.data.years : shownYear ? [shownYear] : []).map((y) => ({ value: String(y), label: String(y) }));
+  const revenueData = revenue.data ? toRevenueChart(revenue.data.months) : [];
 
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
@@ -196,12 +211,16 @@ export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['r
         <ChartCard
           wide
           title="Pendapatan per bulan"
-          subtitle="6 bulan terakhir · sesi yang dihitung"
-          summary="pendapatan bersih bimbel, gaji tutor, dan omzet kotor enam bulan terakhir"
+          subtitle={`Januari–Desember${shownYear ? ` ${shownYear}` : ''} · sesi yang dihitung`}
+          summary={`pendapatan bersih bimbel, gaji tutor, dan omzet kotor per bulan sepanjang tahun${shownYear ? ` ${shownYear}` : ''}`}
           sample={false}
+          actions={yearOptions.length > 0 && <FilterSelect label="Tahun" value={String(shownYear ?? '')} onChange={(value) => setYear(Number(value))} options={yearOptions} />}
         >
           <div className="flex h-full flex-col gap-2">
-            <div className="min-h-0 flex-1">
+            <div className="relative min-h-0 flex-1">
+              {revenue.isError && !revenue.data && (
+                <p role="alert" className="absolute inset-0 grid place-items-center text-sm text-muted">Gagal memuat grafik pendapatan.</p>
+              )}
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={revenueData} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
                   <defs>
@@ -215,7 +234,7 @@ export function DashboardCharts({ revenue }: { revenue: AdminDashboardSummary['r
                     </linearGradient>
                   </defs>
                   <CartesianGrid stroke={colors.border} vertical={false} />
-                  <XAxis dataKey="month" {...style.axis} />
+                  <XAxis dataKey="month" {...style.axis} interval="preserveStartEnd" minTickGap={4} />
                   <YAxis {...style.axis} width={72} tickFormatter={formatCompactRupiah} />
                   <Tooltip {...style.tooltip} content={<RevenueTooltip />} />
                   <Area type="monotone" dataKey="net" name="Pendapatan bersih bimbel" stroke={CHART_PALETTE.sessions} strokeWidth={3} fill="url(#revenueNetFill)" activeDot={style.activeDot(CHART_PALETTE.sessions)} isAnimationActive={animate} />

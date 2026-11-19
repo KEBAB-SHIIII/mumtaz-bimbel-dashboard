@@ -5,6 +5,7 @@ import {
   adminAttendanceListItemSchema,
   adminAttendanceOptionsSchema,
   adminDashboardSummarySchema,
+  adminRevenueSchema,
   paginatedSchema,
   parentAccessCodeIssuedSchema,
   parentSchema,
@@ -41,6 +42,10 @@ async function get<S extends z.ZodType>(schema: S, url: string, params?: QueryPa
 
 export const fetchAdminDashboard = (period: string) =>
   get(adminDashboardSummarySchema, '/admin/dashboard/summary', { period });
+
+/** Grafik pendapatan Jan–Des; tanpa `year` backend memilih tahun terbaru yang punya data. */
+export const fetchAdminRevenue = (year?: number) =>
+  get(adminRevenueSchema, '/admin/dashboard/revenue', { year });
 
 export const fetchBilling = (period: string, studentId?: string) =>
   get(billingResponseSchema, '/admin/billing', { period, student_id: studentId });
