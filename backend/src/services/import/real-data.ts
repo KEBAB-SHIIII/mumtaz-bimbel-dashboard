@@ -77,9 +77,15 @@ export function mapGrade(kelas: string): (typeof GRADE_OPTIONS)[number] {
   throw new Error(`Kelas tidak dikenali: "${kelas}"`);
 }
 
+/** Nama mapel yang dipersingkat atas permintaan user (kunci huruf kecil). */
+export const SUBJECT_ALIASES: Record<string, string> = {
+  'pendidikan pancasila dan kewarganegaraan': 'PKN',
+};
+
 /** Mapel dipisah `;` (nama mapel sendiri boleh memuat koma, mis. "Mengaji, Tajwid, dan Hafalan"). */
 export function splitSubjects(value: string): string[] {
-  return [...new Set(value.split(';').map((s) => s.trim().replace(/\s+/g, ' ')).filter(Boolean))];
+  return [...new Set(value.split(';').map((s) => s.trim().replace(/\s+/g, ' ')).filter(Boolean)
+    .map((s) => SUBJECT_ALIASES[s.toLowerCase()] ?? s))];
 }
 
 /** UUID v5-style deterministik dari teks. */

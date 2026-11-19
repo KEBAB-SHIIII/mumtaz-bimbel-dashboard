@@ -145,6 +145,7 @@ Bila sama, Admin dapat memindahkan sesi ke satu tutor lalu menonaktifkan akun ya
 | Kelas 7–9 | 1–3 SMP | SMP |
 | Kelas 10 | 1 SMA | SMA |
 
+- Mapel "Pendidikan Pancasila dan Kewarganegaraan" disingkat menjadi **PKN** (permintaan user).
 - Asal sekolah "Belum diketahui" (109 baris) dipertahankan apa adanya.
 - Data orang tua tidak ada di CSV. Semua akun orang tua dummy dihapus; Admin membuat akun orang tua
   asli lewat dashboard (ID Akses dibuat sistem).

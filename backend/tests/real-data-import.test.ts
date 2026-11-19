@@ -35,6 +35,8 @@ describe('perencanaan impor CSV', () => {
 
   it('memisah mapel dengan titik koma tanpa memecah nama mapel berkoma', () => {
     expect(splitSubjects("Mengaji, Tajwid, dan Hafalan; Muroja'ah")).toEqual(['Mengaji, Tajwid, dan Hafalan', "Muroja'ah"]);
+    // Nama panjang dipersingkat (permintaan user).
+    expect(splitSubjects('Matematika; Pendidikan Pancasila dan Kewarganegaraan')).toEqual(['Matematika', 'PKN']);
   });
 
   it('username unik dan valid', () => {
