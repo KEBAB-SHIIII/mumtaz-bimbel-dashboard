@@ -43,7 +43,7 @@ function sessionAt(index: number): AnomalySessionSnapshot {
 }
 
 describe('candidate generator (rule engine deterministik)', () => {
-  it('menghasilkan kandidat Oktober sesuai expected outcome fixture & examples/anomaly-response.json', async () => {
+  it('menghasilkan kandidat Oktober sesuai expected outcome fixture', async () => {
     const detector = new FakeAnomalyDetector();
     const findings = [];
     for (const target of october) {

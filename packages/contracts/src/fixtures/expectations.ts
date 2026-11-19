@@ -75,8 +75,7 @@ export const FIXTURE_DURATION_OUTLIER_MINUTES = 180;
 
 /**
  * Hasil fake detector deterministik untuk sesi Oktober bila setiap sesi
- * dibandingkan dengan sesi yang disubmit lebih awal. Selaras dengan
- * `examples/anomaly-response.json`.
+ * dibandingkan dengan sesi yang disubmit lebih awal.
  */
 export const EXPECTED_FAKE_DETECTOR_FINDINGS_2026_10 = [
   {

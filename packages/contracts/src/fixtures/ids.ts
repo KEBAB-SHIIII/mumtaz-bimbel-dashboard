@@ -1,7 +1,6 @@
 /**
  * UUID sintetis yang stabil untuk fixture. Segmen ke-4 menandai jenis entitas;
- * sesi test memakai `8000` agar selaras dengan `examples/anomaly-response.json`,
- * sesi dataset dev memakai `8100`.
+ * sesi test memakai `8000`, sesi dataset dev memakai `8100`.
  *
  * Kunci `tutorA/tutorB`, `murid1..3`, `parentA/parentB` dipertahankan (dipakai test)
  * walau nama tampilannya kini nama depan Indonesia — lihat `master-data.ts`.

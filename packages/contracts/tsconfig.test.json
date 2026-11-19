@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    // Test boleh memakai API Node (fs) untuk membaca examples/; source tidak.
+    // Test boleh memakai API Node; source tidak.
     "types": ["node"],
     "noEmit": true
   },

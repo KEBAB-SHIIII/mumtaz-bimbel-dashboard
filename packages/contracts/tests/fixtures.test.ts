@@ -1,9 +1,7 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   SHEET_EXPORT_HEADERS,
   gradeSchema,
-  anomalyAnalysisResultSchema,
   anomalyAnalysisStatusSchema,
   anomalyReviewStatusSchema,
   formatSheetDate,
@@ -19,7 +17,6 @@ import {
 import {
   EXPECTED_EXPORT_ROWS_2026_10,
   EXPECTED_EXPORT_SESSION_ORDER_2026_10,
-  EXPECTED_FAKE_DETECTOR_FINDINGS_2026_10,
   EXPECTED_PAYROLL_2026_10,
   EXPECTED_SESSION_IDS_BY_PERIOD,
   TEST_ONLY_CREDENTIALS,
@@ -32,33 +29,6 @@ import {
   fixtureUsers,
   resolveFixtureSession,
 } from '../src/fixtures/index.js';
-
-const examplesDir = new URL('../../../examples/', import.meta.url);
-const readExample = (name: string) => readFileSync(new URL(name, examplesDir), 'utf8');
-
-describe('examples/seed-data.json selaras dengan fixtures', () => {
-  const seed = JSON.parse(readExample('seed-data.json')) as Record<string, unknown> & {
-    users: Record<string, unknown>[];
-    development_auth_fixtures: { parent_access_codes: Record<string, string> };
-  };
-
-  it('ditandai sintetis', () => {
-    expect(String(seed.warning)).toMatch(/SYNTHETIC/);
-  });
-
-  it('master data identik (users tanpa catatan credential_setup)', () => {
-    expect(seed.users.map(({ credential_setup: _note, ...user }) => user)).toEqual(fixtureUsers);
-    expect(seed.tutors).toEqual(fixtureTutors);
-    expect(seed.students).toEqual(fixtureStudents);
-    expect(seed.parent_students).toEqual(fixtureParentStudents);
-    expect(seed.subjects).toEqual(fixtureSubjects);
-    expect(seed.development_auth_fixtures.parent_access_codes).toEqual(TEST_ONLY_CREDENTIALS.parentAccessCodes);
-  });
-
-  it('tidak menyimpan password atau hash', () => {
-    expect(readExample('seed-data.json')).not.toMatch(/password_hash|"password"\s*:/);
-  });
-});
 
 describe('integritas fixtures', () => {
   const ids = [
@@ -195,22 +165,5 @@ describe('expected outcomes', () => {
       admin_fee_amount: String(totals.fee),
       net_amount: String(totals.gross - totals.fee),
     });
-  });
-
-  it('examples/anomaly-response.json valid dan cocok dengan expected fake detector', () => {
-    const example = anomalyAnalysisResultSchema.parse(JSON.parse(readExample('anomaly-response.json')));
-    expect(example.notice).toMatch(/SINTETIS/);
-    expect(
-      example.findings.map(({ lesson_session_id, related_lesson_session_id, finding_type, severity }) => ({
-        lesson_session_id, related_lesson_session_id, finding_type, severity,
-      })),
-    ).toEqual(EXPECTED_FAKE_DETECTOR_FINDINGS_2026_10);
-  });
-});
-
-describe('examples/attendance-sample.csv (referensi header saja)', () => {
-  it('header persis delapan kolom ekspor', () => {
-    const header = readExample('attendance-sample.csv').replace(/^\uFEFF/, '').split(/\r?\n/)[0];
-    expect(header?.split(',')).toEqual([...SHEET_EXPORT_HEADERS]);
   });
 });

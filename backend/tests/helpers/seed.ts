@@ -38,7 +38,7 @@ type ReviewerMap = (id: string | null) => string | null;
 /**
  * KHUSUS TEST (PGlite). Aplikasi production tidak memuat data sintetis.
  *
- * Master data sintetis (= `examples/seed-data.json`): akun, tutor, siswa, wali,
+ * Master data sintetis (fixture `@mumtaz/contracts/fixtures`): akun, tutor, siswa, wali,
  * dan mapel. Snapshot sesi contoh mengikuti tarif owner D-26. Idempoten (`ON CONFLICT DO NOTHING`).
  */
 async function seedMasterData(tx: Transaction, options: SeedOptions): Promise<ReviewerMap> {
