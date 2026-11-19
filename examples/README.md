@@ -9,4 +9,3 @@ Semua data dalam folder ini sepenuhnya sintetis. Jangan mengganti nama contoh de
 
 Format pada CSV contoh: tanggal `DD/MM/YYYY`, durasi `N menit`. Kolom `no` hanya urutan tampilan. Jangan mengasumsikan format nilai itu sama dengan spreadsheet UMKM tanpa konfirmasi.
 
-- `tariff-review-scenarios.md`: dataset pemeriksaan November–Desember 2026 yang diminta pengguna untuk aplikasi, dengan 108 sesi per bulan seimbang SD/SMP/SMA, tabel hasil tarif, dan perintah preview/apply. Terpisah dari fixture kecil untuk unit/integration test.

@@ -133,9 +133,9 @@ Semua source aplikasi ditulis dalam TypeScript:
 
 Jangan pasang shadcn/ui tanpa persetujuan owner. Palet warna, typography, logo, dan referensi visual final belum diputuskan tim; gunakan semantic design tokens yang mudah diganti.
 
-## Pemeriksaan tarif dengan dummy November–Desember
+## Impor data asli (data historis owner)
 
-Seed khusus atas permintaan pengguna tersedia melalui `npm run db:seed-tariff-review -w backend` (preview). Dataset dan perintah apply dijelaskan di [skenario pemeriksaan tarif](examples/tariff-review-scenarios.md). Ini penggantian data periode November–Desember 2026 yang disengaja, bukan seed otomatis saat startup.
+Data absensi asli hasil cleaning tim DS (`docs/dataset/data clean bimbel from ds.csv`) dimasukkan lewat `npm run db:import-real-data -w backend` (preview, tanpa menulis). Tambah `-- --apply` untuk mengganti seluruh data operasional dengan data asli; akun Admin dipertahankan, backup data lama dan daftar password sementara tutor ditulis ke folder sementara (bukan repo). Masalah data dan penanganannya: [docs/dataset/MASALAH-DATA-MIGRASI.md](docs/dataset/MASALAH-DATA-MIGRASI.md).
 
 ## Tarif honor
 

@@ -34,3 +34,8 @@ yarn-error.log*
 *.sln
 *.sw?
 
+
+# Data asli owner (berisi data pribadi; repo publik)
+docs/dataset/*.csv
+docs/dataset/*.xlsx
+docs/dataset/*.local.md
