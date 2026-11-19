@@ -34,6 +34,7 @@ Blueprint untuk coding agent membangun aplikasi role-based Bimbel Mumtaz Sampit.
 9. [`07-DESIGN-GUIDELINES.md`](./07-DESIGN-GUIDELINES.md), [`06-TESTING-STRATEGY.md`](./06-TESTING-STRATEGY.md), [`08-IMPLEMENTATION-CHECKLIST.md`](./08-IMPLEMENTATION-CHECKLIST.md).
 10. [`09-REAL-INTEGRATIONS.md`](./09-REAL-INTEGRATIONS.md), [`11-ENVIRONMENT-SETUP.md`](./11-ENVIRONMENT-SETUP.md), [`13-DEPENDENCIES-AND-UI-LIBRARY.md`](./13-DEPENDENCIES-AND-UI-LIBRARY.md), [`17-DECISIONS-AND-OPEN-QUESTIONS.md`](./17-DECISIONS-AND-OPEN-QUESTIONS.md).
 11. `docs/19-OWNER-CLARIFICATIONS-V5.md` — keputusan terbaru tentang tiga route utama, ekspor semua status, dan prinsip UX.
+12. `docs/20-QA-REPORT.md` — hasil QA Phase 09 (otomatis + live), acceptance criteria, dan risiko.
 12. Kerjakan `docs/phases/` sesuai urutan dan acceptance criteria.
 
 ## Label informasi

@@ -1,5 +1,7 @@
 # Phase 06 — Attendance Submission, Anomaly Review, and Admin Verification
 
+> **Catatan D-24 (30 Okt 2026):** penugasan tutor dan tarif per penugasan sudah dihapus. Istilah *assignment/penugasan/tarif demo* di dokumen fase ini bersifat historis; Tutor kini memilih murid dan mapel sendiri dan honor memakai satu tarif tunggal dari konfigurasi. Lihat `docs/17` D-24.
+
 ## Prerequisites
 
 Phase 01–04 selesai untuk repository, kontrak, backend core, dan frontend shell. Phase 05 dapat dikerjakan paralel, tetapi anomaly screening harus terhubung pada integrasi baseline.

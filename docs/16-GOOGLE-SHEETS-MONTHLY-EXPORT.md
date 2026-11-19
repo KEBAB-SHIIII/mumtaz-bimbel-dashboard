@@ -35,7 +35,7 @@ Mapping delapan kolom:
 | `nama murid` | `students.full_name` | Nama siswa. |
 | `kelas` | `students.grade` | Nilai dari Master Data siswa. |
 | `asal sekolah` | `students.school_name` | Nilai dari Master Data siswa. |
-| `mata pelajaran` | `subjects.name` melalui assignment | Nama mata pelajaran pada penugasan sesi. |
+| `mata pelajaran` | `subjects.name` melalui `lesson_sessions.subject_id` | Nama mata pelajaran yang dipilih Tutor pada sesi. |
 | `tanggal les` | `lesson_sessions.lesson_date` | Working default text `DD/MM/YYYY`; jangan menggeser tanggal karena timezone. Cocokkan dengan format spreadsheet asli sebelum live export (O-11). |
 | `durasi les` | `lesson_sessions.duration_minutes` | Working default `N menit`, contoh `90 menit`; cocokkan format/unit spreadsheet asli sebelum live export (O-11). |
 

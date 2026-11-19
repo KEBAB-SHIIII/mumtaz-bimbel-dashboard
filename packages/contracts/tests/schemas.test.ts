@@ -1,0 +1,240 @@
+import { describe, expect, it } from 'vitest';
+import {
+  PAGE_SIZE_MAX,
+  formatCalendarDate,
+  formatPeriodLabel,
+  formatTimeRange,
+  timeToMinutes,
+  GRADE_OPTIONS,
+  createStudentRequestSchema,
+  updateStudentRequestSchema,
+  SHEET_EXPORT_HEADERS,
+  changePasswordRequestSchema,
+  createParentRequestSchema,
+  createTutorRequestSchema,
+  formatSheetDate,
+  formatSheetDuration,
+  isDateInPeriod,
+  isFutureLessonDate,
+  isManagedSheetTitle,
+  isoDateSchema,
+  approvalStatusOf,
+  durationBetween,
+  trailingPeriods,
+  sessionStatusFor,
+  setValidityRequestSchema,
+  loginRequestSchema,
+  normalizeParentAccessCode,
+  paginationQuerySchema,
+  parentProgressItemSchema,
+  periodDateRange,
+  periodOfDate,
+  periodSchema,
+  sheetExportRequestSchema,
+  sheetTitleForPeriod,
+  submitAttendanceRequestSchema,
+  todayInBusinessTimeZone,
+} from '../src/index.js';
+import { UNKNOWN_ID, schemaInvalidSubmitCases, validSubmitRequest } from '../src/fixtures/index.js';
+
+describe('periode (lesson_date)', () => {
+  it('memvalidasi format YYYY-MM', () => {
+    expect(periodSchema.safeParse('2026-10').success).toBe(true);
+    for (const bad of ['2026-13', '2026-1', '10-2026', '2026-10-01', '']) {
+      expect(periodSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+
+  it('membentuk rentang [awal bulan, awal bulan berikutnya)', () => {
+    expect(periodDateRange('2026-10')).toEqual({ start: '2026-10-01', endExclusive: '2026-11-01' });
+    expect(periodDateRange('2026-12')).toEqual({ start: '2026-12-01', endExclusive: '2027-01-01' });
+  });
+
+  it('31 Oktober termasuk Oktober, 1 November tidak', () => {
+    expect(isDateInPeriod('2026-10-31', '2026-10')).toBe(true);
+    expect(isDateInPeriod('2026-11-01', '2026-10')).toBe(false);
+    expect(isDateInPeriod('2026-09-30', '2026-10')).toBe(false);
+    expect(periodOfDate('2026-10-31')).toBe('2026-10');
+  });
+
+  it('menolak tanggal kalender yang tidak ada', () => {
+    expect(isoDateSchema.safeParse('2026-02-28').success).toBe(true);
+    expect(isoDateSchema.safeParse('2028-02-29').success).toBe(true);
+    expect(isoDateSchema.safeParse('2026-02-29').success).toBe(false);
+    expect(isoDateSchema.safeParse('2026-04-31').success).toBe(false);
+  });
+
+  it('menghitung "hari ini" menurut Asia/Jakarta (UTC+7)', () => {
+    // 29 Okt 16:59 UTC = 29 Okt 23:59 WIB; 17:00 UTC = 30 Okt 00:00 WIB.
+    expect(todayInBusinessTimeZone(new Date('2026-10-29T16:59:59Z'))).toBe('2026-10-29');
+    expect(todayInBusinessTimeZone(new Date('2026-10-29T17:00:00Z'))).toBe('2026-10-30');
+  });
+
+  it('working default O-14: tanggal masa depan menurut WIB terdeteksi', () => {
+    const now = new Date('2026-10-29T17:30:00Z'); // 30 Okt 00:30 WIB
+    expect(isFutureLessonDate('2026-10-30', now)).toBe(false);
+    expect(isFutureLessonDate('2026-10-31', now)).toBe(true);
+    expect(isFutureLessonDate('2026-01-15', now)).toBe(false);
+  });
+});
+
+describe('auth', () => {
+  it('normalisasi kode akses parent sebelum HMAC', () => {
+    expect(normalizeParentAccessCode('  abcd-efgh ijkl-mn ')).toBe('ABCDEFGHIJKLMN');
+    expect(normalizeParentAccessCode('MUMTAZ-DEMO-PARENT-ACCESS-ONLY')).toBe(
+      normalizeParentAccessCode('mumtaz demo parent access only'),
+    );
+  });
+
+  it('login menolak field tambahan', () => {
+    expect(loginRequestSchema.safeParse({ username: 'farhan', password: 'x' }).success).toBe(true);
+    expect(loginRequestSchema.safeParse({ username: 'a', password: 'x', role: 'admin' }).success).toBe(false);
+  });
+
+  it('ganti password: password baru minimal 6 dan berbeda dari lama', () => {
+    expect(changePasswordRequestSchema.safeParse({ current_password: 'lama-123', new_password: 'baru12' }).success).toBe(true);
+    expect(changePasswordRequestSchema.safeParse({ current_password: 'lama-123', new_password: 'short' }).success).toBe(false);
+    const same = changePasswordRequestSchema.safeParse({ current_password: 'sama-12345', new_password: 'sama-12345' });
+    expect(same.success).toBe(false);
+    expect(same.error?.issues[0]?.path).toEqual(['new_password']);
+  });
+});
+
+describe('submit absensi', () => {
+  it('menerima payload valid', () => {
+    expect(submitAttendanceRequestSchema.parse(validSubmitRequest)).toEqual(validSubmitRequest);
+  });
+
+  it('notes/fokus kosong dinormalisasi menjadi null (O-13 opsional)', () => {
+    const parsed = submitAttendanceRequestSchema.parse({ ...validSubmitRequest, learning_notes: '  ', next_focus: undefined });
+    expect(parsed.learning_notes).toBeNull();
+    expect(parsed.next_focus).toBeUndefined();
+  });
+
+  it.each(schemaInvalidSubmitCases)('menolak $name pada field $field', ({ body, field }) => {
+    const result = submitAttendanceRequestSchema.safeParse(body);
+    expect(result.success).toBe(false);
+    const paths = result.error?.issues.flatMap((issue) =>
+      issue.code === 'unrecognized_keys' ? issue.keys : issue.path.map(String),
+    );
+    expect(paths).toContain(field);
+  });
+});
+
+describe('validitas data & status approval (revisi PM)', () => {
+  it('Valid langsung dihitung; Ditolak ditahan; Perlu revisi mengikuti approval Admin', () => {
+    expect(sessionStatusFor('valid')).toBe('approved');
+    expect(sessionStatusFor('rejected')).toBe('rejected');
+    expect(sessionStatusFor('needs_revision')).toBe('revision_requested');
+    expect(sessionStatusFor('needs_revision', 'approved')).toBe('approved');
+    expect(sessionStatusFor('needs_revision', 'rejected')).toBe('rejected');
+    expect(approvalStatusOf('needs_revision', 'revision_requested')).toBe('pending');
+    expect(approvalStatusOf('needs_revision', 'approved')).toBe('approved');
+    expect(approvalStatusOf('valid', 'approved')).toBeNull();
+  });
+
+  it('label validitas Admin tanpa field approval; catatan Admin opsional', () => {
+    expect(setValidityRequestSchema.safeParse({ validity: 'valid' }).success).toBe(true);
+    expect(setValidityRequestSchema.safeParse({ validity: 'needs_revision' }).success).toBe(true);
+    expect(setValidityRequestSchema.safeParse({ validity: 'needs_revision', admin_note: 'Perbaiki durasi' }).success).toBe(true);
+    expect(setValidityRequestSchema.safeParse({ validity: 'needs_revision', approval: 'approved' }).success).toBe(false);
+    expect(setValidityRequestSchema.safeParse({ validity: 'valid', approval: 'approved' }).success).toBe(false);
+    expect(setValidityRequestSchema.safeParse({ validity: 'pending' }).success).toBe(false);
+  });
+
+  it('trailingPeriods: N bulan terakhir s.d. periode, urut lama → baru, melewati pergantian tahun', () => {
+    expect(trailingPeriods('2026-10', 3)).toEqual(['2026-08', '2026-09', '2026-10']);
+    expect(trailingPeriods('2027-02', 4)).toEqual(['2026-11', '2026-12', '2027-01', '2027-02']);
+  });
+
+  it('durasi dihitung dari jam mulai–selesai pada hari yang sama', () => {
+    expect(durationBetween('18:45', '19:45')).toBe(60);
+    expect(durationBetween('16:00', '17:30')).toBe(90);
+    expect(durationBetween('19:00', '19:00')).toBeNull();
+    expect(durationBetween('21:00', '08:00')).toBeNull();
+  });
+});
+
+describe('master data', () => {
+  it('tutor dibuat tanpa password dari Admin (password acak dibuat sistem)', () => {
+    expect(createTutorRequestSchema.safeParse({ full_name: 'Tutor Baru', username: 'tutor.baru' }).success).toBe(true);
+    expect(createTutorRequestSchema.safeParse({ full_name: 'Tutor Baru', username: 'tutor.baru', initial_password: 'abcdefgh1234' }).success).toBe(false);
+  });
+
+  it('parent membutuhkan relasi siswa unik', () => {
+    const link = { student_id: UNKNOWN_ID, relationship: 'ibu' };
+    expect(createParentRequestSchema.safeParse({ full_name: 'Wali', student_links: [link] }).success).toBe(true);
+    expect(createParentRequestSchema.safeParse({ full_name: 'Wali', student_links: [] }).success).toBe(false);
+    expect(createParentRequestSchema.safeParse({ full_name: 'Wali', student_links: [link, link] }).success).toBe(false);
+  });
+
+  it('pagination default 20 dan maksimum 100', () => {
+    expect(paginationQuerySchema.parse({})).toEqual({ page: 1, page_size: 20 });
+    expect(paginationQuerySchema.parse({ page: '2', page_size: '50' })).toEqual({ page: 2, page_size: 50 });
+    expect(paginationQuerySchema.safeParse({ page_size: String(PAGE_SIZE_MAX + 1) }).success).toBe(false);
+  });
+});
+
+describe('Progress Anak', () => {
+  it('menolak field internal (admin_note, status anomali, honor)', () => {
+    const item = {
+      id: UNKNOWN_ID,
+      lesson_date: '2026-10-01',
+      tutor_name: 'Farhan',
+      subject_name: 'Matematika',
+      duration_minutes: 90,
+      learning_material: 'Penjumlahan',
+      learning_notes: null,
+      next_focus: null,
+    };
+    expect(parentProgressItemSchema.safeParse(item).success).toBe(true);
+    expect(parentProgressItemSchema.safeParse({ ...item, admin_note: 'internal' }).success).toBe(false);
+    expect(parentProgressItemSchema.safeParse({ ...item, rate_amount_snapshot: '50000' }).success).toBe(false);
+  });
+});
+
+describe('ekspor Google Sheets', () => {
+  it('header tepat delapan kolom dengan urutan tetap', () => {
+    expect(SHEET_EXPORT_HEADERS).toEqual([
+      'no', 'nama tutor', 'nama murid', 'kelas', 'asal sekolah', 'mata pelajaran', 'tanggal les', 'durasi les',
+    ]);
+  });
+
+  it('format tanggal/durasi working default O-11 tanpa pergeseran timezone', () => {
+    expect(formatSheetDate('2026-10-31')).toBe('31/10/2026');
+    expect(formatSheetDate('2026-01-01')).toBe('01/01/2026');
+    expect(formatSheetDuration(90)).toBe('90 menit');
+  });
+
+  it('nama tab deterministik dan hanya pola yang dikelola', () => {
+    expect(sheetTitleForPeriod('2026-10')).toBe('Absensi Oktober 2026');
+    expect(isManagedSheetTitle('Absensi Oktober 2026')).toBe(true);
+    expect(isManagedSheetTitle('Sheet1')).toBe(false);
+    expect(isManagedSheetTitle('Absensi Oktober 2026 (copy)')).toBe(false);
+  });
+
+  it('confirm_empty_replace default false', () => {
+    expect(sheetExportRequestSchema.parse({ period: '2026-10' })).toEqual({ period: '2026-10', confirm_empty_replace: false });
+  });
+});
+
+
+describe('kelas siswa PAUD sampai SMA', () => {
+  it.each(GRADE_OPTIONS)('menerima %s untuk create dan update', (grade) => {
+    expect(createStudentRequestSchema.safeParse({ full_name: 'Siswa uji', grade, school_name: 'Sekolah uji' }).success).toBe(true);
+    expect(updateStudentRequestSchema.safeParse({ grade }).success).toBe(true);
+  });
+  it.each(['7 SD', '4 SMP', '4 SMA', 'SMP', 'SMA', ''])('menolak kelas di luar pilihan: %s', (grade) => {
+    expect(updateStudentRequestSchema.safeParse({ grade }).success).toBe(false);
+  });
+});
+
+describe('format tampilan bersama', () => {
+  it('tanggal kalender, periode, jam, dan menit', () => {
+    expect(formatCalendarDate('2026-11-17')).toBe('17 November 2026');
+    expect(formatCalendarDate('2026-11-17', 'short')).toBe('17 Nov 2026');
+    expect(formatPeriodLabel('2026-10')).toBe('Oktober 2026');
+    expect(formatTimeRange('16:00', '17:30')).toBe('16.00–17.30 WIB');
+    expect(timeToMinutes('14:30')).toBe(870);
+  });
+});

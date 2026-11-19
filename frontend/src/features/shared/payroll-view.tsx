@@ -1,0 +1,177 @@
+import { PaginatedReportList } from './paginated-report-list';
+import { CalendarCheck, CalendarClock, HandCoins, Landmark, Wallet } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { SessionDisclosure } from './session-disclosure';
+import type { PayrollPreviewResponse, PayrollTutorSummary, TutorPayrollResponse } from '@mumtaz/contracts';
+import { Avatar } from '../../components/ui/data-display/avatar';
+import { ValidityBadge } from '../../components/ui/data-display/status-badge';
+import { EmptyState, InlineAlert } from '../../components/ui/feedback/states';
+import { Card, StatCard } from '../../components/ui/surfaces/layout-primitives';
+import { cn } from '../../lib/cn';
+import { formatDuration, formatLessonDate, formatPeriod, formatRupiah } from '../../lib/format';
+
+/** Kolom nominal sesi: angka bila dihitung, selain itu alasan eksplisit (tidak ada angka palsu). */
+function AmountCell({ amount, counted }: { amount: string | null; counted: boolean }) {
+  if (amount) return <span className="tabular-nums">{formatRupiah(amount)}</span>;
+  return <span className="text-meta text-muted">{counted ? 'Tarif belum terkunci' : 'Tidak dihitung'}</span>;
+}
+
+interface SessionRow {
+  session_id: string;
+  lesson_date: string;
+  student_name: string;
+  student_grade: string;
+  hourly_rate?: string | null | undefined;
+  grade_source?: string | undefined;
+  subject_name: string;
+  duration_minutes: number;
+  validity: PayrollTutorSummary['sessions'][number]['validity'];
+  counted: boolean;
+  amount: string | null;
+}
+
+/** Rincian sesi untuk crosscheck dengan tutor. `amountLabel`: tarif kotor (Admin) atau honor bersih (Tutor). */
+function SessionLines({ caption, rows, amountLabel }: { caption: string; rows: SessionRow[]; amountLabel: string }) {
+  return (
+    // Di layar sempit tabel digeser; wadah dapat difokus agar bisa digulir dengan keyboard.
+    <div tabIndex={0} role="region" aria-label={caption} className="overflow-x-auto focus-visible:-outline-offset-2">
+      <table className="w-full text-sm">
+        <caption className="sr-only">{caption}</caption>
+        <thead>
+          <tr className="border-b border-border bg-surface-muted text-start text-meta text-muted [&>th]:h-10 [&>th]:px-4 [&>th]:font-medium [&>th]:whitespace-nowrap">
+            <th scope="col" className="text-start">Tanggal les</th>
+            <th scope="col" className="text-start">Siswa</th>
+            <th scope="col" className="text-start">Mata pelajaran</th>
+            <th scope="col" className="text-start">Durasi</th>
+            <th scope="col" className="text-start">Validitas</th>
+            <th scope="col" className="text-end">{amountLabel}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((line) => (
+            <tr key={line.session_id} className={cn('border-b border-border last:border-0 [&>td]:h-11 [&>td]:px-4 [&>td]:py-2.5', line.counted ? 'text-text' : 'text-muted')}>
+              <td className="whitespace-nowrap">{formatLessonDate(line.lesson_date)}</td>
+              <td>
+                {line.student_name} <span className="whitespace-nowrap text-muted">({line.student_grade})</span>
+              </td>
+              <td>{line.subject_name}</td>
+              <td className="whitespace-nowrap">{formatDuration(line.duration_minutes)}</td>
+              <td><ValidityBadge validity={line.validity} variant="caption" /></td>
+              <td className="text-end whitespace-nowrap"><AmountCell amount={line.amount} counted={line.counted} />{line.hourly_rate && <p className="text-meta text-muted">{formatRupiah(line.hourly_rate)}/jam</p>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Nominal Rupiah (string desimal dari backend) untuk CountUp; tampilan tetap `formatRupiah`. */
+function rupiahCount(amount: string) {
+  return { value: Number(amount), format: (value: number) => formatRupiah(String(value)) };
+}
+
+
+function Breakdown({ items }: { items: { label: string; value: ReactNode; strong?: boolean }[] }) {
+  return (
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-4 py-3 sm:grid-cols-4 sm:px-5">
+      {items.map((item) => (
+        <div key={item.label} className="min-w-0">
+          <dt className="text-meta text-muted">{item.label}</dt>
+          <dd className={cn('mt-0.5 tabular-nums', item.strong ? 'font-semibold text-text' : 'text-text')}>{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function TutorPayrollCard({ tutor }: { tutor: PayrollTutorSummary }) {
+  return (
+    <Card
+      className="[&>div:first-child]:bg-[#e9eeec]"
+      leading={<Avatar seed={tutor.tutor_id} name={tutor.tutor_name} size={40} decorative />}
+      title={tutor.tutor_name}
+      description={`${tutor.counted_sessions} sesi dihitung`}
+      actions={
+        <div className="flex items-center gap-3">
+          <span className="text-end">
+            <span className="block text-meta text-muted">Total pendapatan bersih tutor</span>
+            <span className="block text-base font-semibold tabular-nums text-text">{formatRupiah(tutor.net_amount)}</span>
+          </span>
+        </div>
+      }
+    >
+      <Breakdown
+        items={[
+          { label: 'Jumlah sesi valid', value: `${tutor.counted_sessions} sesi` },
+          { label: 'Subtotal (kotor)', value: formatRupiah(tutor.gross_amount) },
+          { label: 'Potongan admin', value: `− ${formatRupiah(tutor.admin_fee_amount)}` },
+          { label: 'Total (pendapatan bersih)', value: formatRupiah(tutor.net_amount), strong: true },
+        ]}
+      />
+      <SessionDisclosure count={tutor.sessions.length} defaultOpen={false}>
+        <SessionLines
+          caption={`Rincian sesi ${tutor.tutor_name}`}
+          amountLabel="Tarif (kotor)"
+          rows={tutor.sessions.map((line) => ({ ...line, amount: line.gross_amount }))}
+        />
+      </SessionDisclosure>
+    </Card>
+  );
+}
+
+function Warnings({ warnings }: { warnings: string[] }) {
+  return warnings.map((warning) => (
+    <InlineAlert key={warning} tone="warning" title="Tarif belum tersedia">
+      {warning}
+    </InlineAlert>
+  ));
+}
+
+/**
+ * Honor Tutor (Admin; revisi PM): crosscheck absensi dengan tutor. Semua nominal dari backend;
+ * frontend tidak menghitung ulang. Tidak ada status "sudah dibayar".
+ */
+export function AdminPayrollView({ payroll, tutorId = '' }: { payroll: PayrollPreviewResponse; tutorId?: string }) {
+  const tutors = tutorId ? payroll.tutors.filter((tutor) => tutor.tutor_id === tutorId) : payroll.tutors;
+  return (
+    <>
+      <Warnings warnings={payroll.warnings} />
+      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+        <StatCard index={0} icon={Wallet} accent="blue" label="Total pendapatan kotor" count={rupiahCount(payroll.totals.gross_amount)} hint="Total tarif les sesi valid" />
+        <StatCard index={1} icon={Landmark} accent="green" label="Total pendapatan bersih" count={rupiahCount(payroll.totals.admin_fee_amount)} hint="Potongan admin untuk bimbel" />
+        <StatCard index={2} icon={HandCoins} accent="orange" label="Total gaji yang harus dibayarkan" count={rupiahCount(payroll.totals.net_amount)} hint="Pendapatan bersih seluruh tutor" />
+      </dl>
+      {tutors.length === 0 ? (
+        <Card>
+          <EmptyState title="Belum ada sesi" description={`Tidak ada sesi pada ${formatPeriod(payroll.period)}.`} />
+        </Card>
+      ) : (
+        <PaginatedReportList items={tutors} renderItem={(tutor) => <TutorPayrollCard key={tutor.tutor_id} tutor={tutor} />} />
+      )}
+    </>
+  );
+}
+
+/** Honor Saya (Tutor; revisi PM): hanya pendapatan bersih setelah potongan admin. */
+export function TutorPayrollView({ payroll }: { payroll: TutorPayrollResponse }) {
+  return (
+    <>
+      <Warnings warnings={payroll.warnings} />
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+        <StatCard index={0} className="col-span-2 sm:col-span-1" icon={Wallet} accent="green" label="Pendapatan bersih bulan ini" count={rupiahCount(payroll.net_amount)} hint="Setelah potongan admin" />
+        <StatCard index={1} icon={CalendarCheck} accent="blue" label="Sesi valid (dihitung)" count={{ value: payroll.counted_sessions }} />
+        <StatCard index={2} icon={CalendarClock} accent="orange" label="Sesi belum dihitung" count={{ value: payroll.not_counted_sessions }} />
+      </dl>
+      {payroll.sessions.length === 0 ? (
+        <Card>
+          <EmptyState title="Belum ada sesi" description={`Tidak ada sesi pada ${formatPeriod(payroll.period)}.`} />
+        </Card>
+      ) : (
+        <Card title="Rincian honor">
+          <SessionLines caption="Rincian honor per sesi" amountLabel="Honor (bersih)" rows={payroll.sessions.map((line) => ({ ...line, amount: line.net_amount }))} />
+        </Card>
+      )}
+    </>
+  );
+}

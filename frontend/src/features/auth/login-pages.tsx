@@ -1,0 +1,200 @@
+import { PasswordInput } from '../../components/ui/forms/password-input';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { KeyRound, LogIn } from 'lucide-react';
+import { useEffect, type ReactNode } from 'react';
+import { useForm } from 'react-hook-form';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router';
+import { loginRequestSchema, parentAccessRequestSchema, type LoginRequest, type ParentAccessRequest, type Role } from '@mumtaz/contracts';
+import { Button } from '../../components/ui/actions/button';
+import { InlineAlert } from '../../components/ui/feedback/states';
+import { Skeleton, SkeletonRegion } from '../../components/ui/feedback/skeleton';
+import { FormField, Input, describedBy } from '../../components/ui/forms/field';
+import { SpotlightCard } from '../../components/ui/surfaces/spotlight-card';
+import { toApiError } from '../../lib/api-error';
+import { ROLE_HOME, useLoginMutation, useParentAccessMutation, useSession } from './session';
+
+function AuthLayout({ title, description, children, footer }: { title: string; description: string; children: ReactNode; footer: ReactNode }) {
+  useEffect(() => {
+    document.title = `${title} · Mumtaz Bimbel`;
+  }, [title]);
+  return (
+    <main className="relative isolate flex min-h-dvh items-center justify-center overflow-hidden bg-background px-4 py-10 pt-[max(2.5rem,env(safe-area-inset-top))]">
+      {/* Aksen gradien hijau lembut di satu sisi (bukan pelangi), dekoratif. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 -end-40 -z-10 size-[32rem] rounded-full bg-radial from-nav-active-from/35 via-nav-active-to/15 to-transparent blur-2xl"
+      />
+      <div className="w-full max-w-sm">
+        <div className="mb-6 flex items-center justify-center gap-2.5">
+          <span aria-hidden className="grid size-9 place-items-center rounded-md bg-primary text-base font-bold text-primary-foreground shadow-sm">M</span>
+          <p className="text-base font-semibold text-text">Mumtaz Bimbel</p>
+        </div>
+        <SpotlightCard className="rounded-xl border border-border bg-surface p-6 shadow-md sm:p-7">
+          <h1 className="text-page-title-mobile text-balance text-text">{title}</h1>
+          <p className="mt-1 text-sm text-pretty text-muted">{description}</p>
+          <div className="mt-6">{children}</div>
+        </SpotlightCard>
+        <div className="mt-5 text-center text-sm text-pretty text-muted">{footer}</div>
+      </div>
+    </main>
+  );
+}
+
+/** Halaman asal (`state.from`, diisi RequireRole) bila milik role yang sama, selain itu dashboard role. */
+function useDestination() {
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
+  return (role: Role) => {
+    const home = ROLE_HOME[role];
+    return from?.startsWith(home) ? from : home;
+  };
+}
+
+/** Setelah login: kembali ke halaman asal (lihat `useDestination`). */
+function useAfterLogin() {
+  const navigate = useNavigate();
+  const destination = useDestination();
+  return (role: Role) => navigate(destination(role), { replace: true });
+}
+
+/** Kerangka halaman login (refresh): geometri sama dengan `AuthLayout`, jadi form muncul tanpa lompatan. */
+function AuthSkeleton({ fields }: { fields: number }) {
+  return (
+    <SkeletonRegion label="Memuat…" className="flex min-h-dvh items-center justify-center bg-background px-4 py-10 pt-[max(2.5rem,env(safe-area-inset-top))]">
+      <div aria-hidden className="w-full max-w-sm animate-fade-up motion-reduce:animate-none">
+        <div className="mb-6 flex items-center justify-center gap-2.5">
+          <Skeleton className="size-9 rounded-md" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <div className="rounded-xl border border-border bg-surface p-6 shadow-md sm:p-7">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="mt-2 h-3.5 w-full" />
+          <div className="mt-6 flex flex-col gap-5">
+            {Array.from({ length: fields }, (_, index) => (
+              <div key={index} className="flex flex-col gap-1.5">
+                <Skeleton className="h-3.5 w-24" />
+                <Skeleton className="h-9 w-full pointer-coarse:h-11" />
+              </div>
+            ))}
+            <Skeleton className="mt-1 h-9 w-full pointer-coarse:h-11" />
+          </div>
+        </div>
+        <Skeleton className="mx-auto mt-5 h-3.5 w-52" />
+      </div>
+    </SkeletonRegion>
+  );
+}
+
+function AlreadySignedIn({ fields }: { fields: number }) {
+  const session = useSession();
+  const destination = useDestination();
+  if (session.isPending) return <AuthSkeleton fields={fields} />;
+  // Sesi baru terisi tepat setelah login berhasil: ikuti halaman asal, bukan selalu dashboard.
+  if (session.data) return <Navigate to={destination(session.data.role)} replace />;
+  return null;
+}
+
+export function StaffLoginPage() {
+  const session = useSession();
+  const mutation = useLoginMutation();
+  const afterLogin = useAfterLogin();
+  const form = useForm<LoginRequest>({ resolver: zodResolver(loginRequestSchema), defaultValues: { username: '', password: '' } });
+  const { errors } = form.formState;
+
+  if (session.isPending || session.data) return <AlreadySignedIn fields={2} />;
+
+  const onSubmit = form.handleSubmit((values) =>
+    mutation.mutate(values, { onSuccess: (user) => afterLogin(user.role) }),
+  );
+
+  return (
+    <AuthLayout
+      title="Masuk Admin / Tutor"
+      description="Gunakan username dan password akun Anda."
+      footer={
+        <>
+          Orang tua/wali? <Link className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4 sm:min-h-0" to="/login/orang-tua">Masuk dengan ID Akses</Link>
+        </>
+      }
+    >
+      <form noValidate onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-5">
+        {mutation.isError && <InlineAlert tone="danger" title={toApiError(mutation.error).message} />}
+        <FormField id="username" label="Username" required error={errors.username?.message}>
+          <Input
+            id="username"
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            aria-invalid={Boolean(errors.username)}
+            aria-describedby={describedBy('username', errors.username?.message)}
+            {...form.register('username')}
+          />
+        </FormField>
+        <FormField id="password" label="Password" required error={errors.password?.message}>
+          <PasswordInput
+            id="password"
+            autoComplete="current-password"
+            aria-invalid={Boolean(errors.password)}
+            aria-describedby={describedBy('password', errors.password?.message)}
+            {...form.register('password')}
+          />
+        </FormField>
+        <Button type="submit" loading={mutation.isPending} icon={<LogIn aria-hidden className="size-4" />} className="mt-1 w-full">
+          Masuk
+        </Button>
+      </form>
+    </AuthLayout>
+  );
+}
+
+export function ParentLoginPage() {
+  const session = useSession();
+  const mutation = useParentAccessMutation();
+  const afterLogin = useAfterLogin();
+  const form = useForm<ParentAccessRequest>({ resolver: zodResolver(parentAccessRequestSchema), defaultValues: { access_code: '' } });
+  const error = form.formState.errors.access_code?.message;
+  const hint = 'Kode diberikan Admin secara pribadi. Jangan bagikan kode ini kepada orang lain.';
+
+  if (session.isPending || session.data) return <AlreadySignedIn fields={1} />;
+
+  const onSubmit = form.handleSubmit((values) =>
+    mutation.mutate(values, {
+      onSuccess: (user) => {
+        // Kode tidak disimpan di UI setelah login.
+        form.reset({ access_code: '' });
+        afterLogin(user.role);
+      },
+    }),
+  );
+
+  return (
+    <AuthLayout
+      title="Masuk Orang Tua/Wali"
+      description="Masukkan ID Akses Orang Tua untuk melihat progres belajar anak."
+      footer={
+        <>
+          Admin atau tutor? <Link className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4 sm:min-h-0" to="/login">Masuk dengan username</Link>
+        </>
+      }
+    >
+      <form noValidate onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-5">
+        {mutation.isError && <InlineAlert tone="danger" title={toApiError(mutation.error).message} />}
+        <FormField id="access_code" label="ID Akses Orang Tua" required hint={hint} error={error}>
+          <Input
+            id="access_code"
+            type="password"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            aria-invalid={Boolean(error)}
+            aria-describedby={describedBy('access_code', error, hint)}
+            {...form.register('access_code')}
+          />
+        </FormField>
+        <Button type="submit" loading={mutation.isPending} icon={<KeyRound aria-hidden className="size-4" />} className="mt-1 w-full">
+          Masuk
+        </Button>
+      </form>
+    </AuthLayout>
+  );
+}

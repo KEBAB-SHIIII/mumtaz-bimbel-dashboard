@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Test boleh memakai API Node (fs) untuk membaca examples/; source tidak.
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["src", "tests", "vitest.config.ts"]
+}

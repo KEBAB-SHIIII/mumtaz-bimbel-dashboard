@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "sheet_export_runs_one_running_per_period" ON "sheet_export_runs" USING btree ("report_type","period") WHERE "sheet_export_runs"."status" = 'running';

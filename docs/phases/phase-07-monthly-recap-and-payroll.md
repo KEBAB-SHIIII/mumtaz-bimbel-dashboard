@@ -1,5 +1,7 @@
 # Phase 07 — Rekap Bulanan dan Honor Tutor
 
+> **Catatan D-24 (30 Okt 2026):** penugasan tutor dan tarif per penugasan sudah dihapus. Istilah *assignment/penugasan/tarif demo* di dokumen fase ini bersifat historis; Tutor kini memilih murid dan mapel sendiri dan honor memakai satu tarif tunggal dari konfigurasi. Lihat `docs/17` D-24.
+
 ## Tujuan
 
 Menyediakan rekap bulanan dan estimasi honor yang transparan, dihitung di backend, dan dapat ditelusuri ke sesi yang telah disetujui Admin. Ekspor PDF bukan bagian dari baseline; tambahkan hanya setelah owner menyetujui scope tambahan.
@@ -8,7 +10,7 @@ Menyediakan rekap bulanan dan estimasi honor yang transparan, dihitung di backen
 
 - Gunakan tarif demo **Rp50.000 per sesi** untuk seluruh assignment pada seed development.
 - Simpan rate di `tutor_rates`: `rate_type='per_session'`, `rate_amount=50000`, `is_demo_assumption=true`.
-- Semua UI yang memakai rate demo harus menampilkan `Simulasi — bukan tarif resmi UMKM`.
+- Nominal dari rate demo ditandai badge kecil **"Tarif demo"** di samping nominal pada halaman Honor. Label panjang "Simulasi — bukan tarif resmi UMKM" dihapus karena membingungkan (keputusan owner D-20).
 - Jangan hard-code Rp50.000 ke rumus atau komponen UI. Kalkulator membaca data tarif dan snapshot dari database.
 - Hanya sesi `approved` yang dihitung. `pending`, `revision_requested`, dan `rejected` ditampilkan terpisah serta tidak masuk total honor.
 - Honor adalah estimasi berdasarkan sesi disetujui, bukan catatan pembayaran aktual.
@@ -30,7 +32,7 @@ Menyediakan rekap bulanan dan estimasi honor yang transparan, dihitung di backen
 - [ ] Filter periode memakai `lesson_date`.
 - [ ] Pending/revision/rejected tidak masuk nominal estimasi.
 - [ ] Setiap sesi approved dalam seed demo bernilai Rp50.000 dari konfigurasi tarif.
-- [ ] UI memperlihatkan label simulasi.
+- [ ] UI menandai nominal tarif demo dengan badge "Tarif demo".
 - [ ] Frontend tidak menghitung ulang rumus.
 - [ ] Total dapat ditelusuri kembali ke daftar sesi approved.
 - [ ] Tidak ada klaim status pembayaran aktual palsu.

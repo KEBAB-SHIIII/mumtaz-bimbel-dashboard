@@ -11,7 +11,7 @@ Bangun aplikasi full-stack TypeScript untuk Bimbel Mumtaz Sampit: form absensi s
 - Semua dashboard membaca Neon melalui API dengan filter role/relasi server-side.
 - Catatan sesi satu tabel `lesson_sessions`; jangan menggandakan tabel hanya karena tampilan dashboard berbeda.
 - Status awal sesi selalu `pending`. Admin meninjau manual sebelum sesi dihitung untuk honor.
-- Tarif demo per sesi Rp50.000 disimpan di `tutor_rates` sebagai seed/config dengan `is_demo_assumption=true`. Tampilkan label simulasi; nominal bukan aturan resmi UMKM.
+- Tarif demo per sesi Rp50.000 disimpan di `tutor_rates` sebagai seed/config dengan `is_demo_assumption=true`. Tandai nominalnya dengan badge "Tarif demo" di halaman Honor (D-20); nominal bukan aturan resmi UMKM.
 - Data ekspor standar terdiri dari delapan kolom mentah UMKM. Semua status review ikut diekspor sesuai keputusan owner; materi/catatan/status/anomaly/honor tidak ikut report standar.
 - Anomaly module adalah bagian baseline dan wajib mengklasifikasikan kandidat anomali, terutama `suspected_duplicate`, lalu menyimpan finding di `anomaly_flags`. AI bukan penentu status/honor; Admin membuat keputusan terpisah. Kegagalan provider tidak boleh menggagalkan penyimpanan sesi dan harus terlihat sebagai `failed`/`not_evaluated`.
 - Admin/Tutor login dengan username + password. Orang Tua login hanya dengan ID Akses Orang Tua acak/rahasia, tanpa password, sesuai kebutuhan owner. ID tersebut harus berupa credential berentropi tinggi, bukan ID publik atau berurutan.
@@ -46,17 +46,17 @@ Bangun aplikasi full-stack TypeScript untuk Bimbel Mumtaz Sampit: form absensi s
 - Validasi Zod di backend adalah otoritatif; validasi frontend hanya untuk UX.
 - Payroll dihitung di backend menggunakan decimal-safe arithmetic; nominal di UI hanya dari API.
 - Gunakan `lesson_date` untuk filter harian/bulanan; `duration_minutes` adalah integer menit.
-- Gunakan soft deactivation untuk master data yang direferensikan; jangan hard-delete histori. `users.is_active` mengontrol login; `tutors.is_active`/`students.is_active` mengontrol eligibility untuk assignment/sesi baru.
+- Gunakan soft deactivation untuk master data yang direferensikan; jangan hard-delete histori. `users.is_active` mengontrol login; `tutors.is_active`/`students.is_active` mengontrol eligibility untuk sesi baru (pilihan Form Absensi).
 - Gunakan komentar Bahasa Indonesia yang singkat hanya untuk alasan/aturan non-obvious; tidak perlu docstring panjang.
 - Semua halaman memiliki loading, empty, error, success, disabled/loading states; pesan error tidak memaparkan detail internal.
 - UI harus nyaman, ringkas, responsive, accessible, dan mengurangi input berulang dengan auto-fill Master Data.
 
 ## Honor demo
 
-- Seed menggunakan `rate_type='per_session'`, `rate_amount=50000`, `is_demo_assumption=true` untuk assignment demo.
+- Honor tutor = tarif les per jenjang (PAUD–TK Rp40.000/jam, SD 1–3 Rp60.000/jam, SD 4–6 Rp80.000/jam, SMP Rp100.000/jam, SMA Rp120.000/jam; ≤ 60 menit = 1 jam, tiap 30 menit penuh berikutnya +0,5×) dikurangi potongan Admin Rp10.000 untuk jam pertama dan setiap jam berikutnya; sisa lebih dari atau sama dengan 30 menit menambah Rp10.000 (termasuk tepat 30 menit), dikunci ke `rate_amount_snapshot`/`admin_fee_snapshot` saat sesi dihitung (D-25); tidak ada tabel penugasan/tarif. Tutor hanya melihat pendapatan bersihnya.
 - Hanya sesi `approved` masuk honor estimasi.
 - Jangan menyebarkan angka 50000 sebagai konstanta ke komponen/service; kalkulasi membaca `tutor_rates`/snapshot.
-- Selalu tampilkan `Simulasi — bukan tarif resmi UMKM` jika nominal demo digunakan.
+- Tandai nominal dari tarif demo dengan badge kecil "Tarif demo" di halaman Honor (D-20); jangan memakai label panjang di dashboard/halaman lain.
 - Jangan menambahkan status pembayaran aktual pada MVP.
 
 ## Export Google Sheets
