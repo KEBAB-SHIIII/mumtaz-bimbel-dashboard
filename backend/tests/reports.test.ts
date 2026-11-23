@@ -89,6 +89,8 @@ describe('Payroll preview (estimasi honor)', () => {
           start_time: '16:00',
           end_time: '17:00',
           learning_material: 'Sesi tanpa penugasan (tutor memilih sendiri)',
+          learning_notes:
+            'Catatan sesi tanpa penugasan: siswa aktif mengikuti penjelasan materi IPA dan mampu menjawab latihan pemahaman konsep dasar.',
         })
         .expect(201);
       await admin.patch(`/admin/attendance/${res.body.session.id as string}/validity`, { validity: 'valid' }).expect(200);

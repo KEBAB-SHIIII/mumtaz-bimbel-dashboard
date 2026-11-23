@@ -27,6 +27,7 @@ describe('tarif owner melalui API dan snapshot', () => {
     const input = {
       tutor_id: TUTOR_IDS.tutorA, student_id: student.id, subject_ids: [SUBJECT_IDS.matematika],
       lesson_date: '2026-11-12', start_time: '16:00', end_time: '17:31', learning_material: 'Latihan berhitung',
+      learning_notes: 'Catatan latihan berhitung: siswa berlatih operasi hitung dengan cukup teliti dan menyelesaikan soal latihan tepat waktu.',
     };
     const created = await admin.post('/admin/attendance', input).expect(201);
     const id = created.body.id as string;
@@ -61,6 +62,7 @@ describe('tarif owner melalui API dan snapshot', () => {
     const created = await admin.post('/admin/attendance', {
       tutor_id: TUTOR_IDS.tutorA, student_id: student.id, subject_ids: [SUBJECT_IDS.matematika],
       lesson_date: '2026-11-13', start_time: '16:00', end_time: '17:31', learning_material: 'Persamaan kuadrat',
+      learning_notes: 'Catatan persamaan kuadrat: siswa memahami pemfaktoran dasar dan masih perlu latihan menentukan akar persamaan kuadrat.',
     }).expect(201);
     const id = created.body.id as string;
     await analyzeSession({

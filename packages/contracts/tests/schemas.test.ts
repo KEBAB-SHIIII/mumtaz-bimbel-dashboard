@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  LEARNING_NOTES_MIN,
   PAGE_SIZE_MAX,
   formatCalendarDate,
   formatPeriodLabel,
@@ -9,6 +10,7 @@ import {
   createStudentRequestSchema,
   updateStudentRequestSchema,
   SHEET_EXPORT_HEADERS,
+  adminCreateAttendanceRequestSchema,
   changePasswordRequestSchema,
   createParentRequestSchema,
   createTutorRequestSchema,
@@ -21,6 +23,7 @@ import {
   approvalStatusOf,
   durationBetween,
   trailingPeriods,
+  reviseAttendanceRequestSchema,
   sessionStatusFor,
   setValidityRequestSchema,
   loginRequestSchema,
@@ -105,10 +108,31 @@ describe('submit absensi', () => {
     expect(submitAttendanceRequestSchema.parse(validSubmitRequest)).toEqual(validSubmitRequest);
   });
 
-  it('notes/fokus kosong dinormalisasi menjadi null (O-13 opsional)', () => {
-    const parsed = submitAttendanceRequestSchema.parse({ ...validSubmitRequest, learning_notes: '  ', next_focus: undefined });
-    expect(parsed.learning_notes).toBeNull();
-    expect(parsed.next_focus).toBeUndefined();
+  it('fokus kosong dinormalisasi menjadi null; catatan pembelajaran wajib diisi', () => {
+    const parsed = submitAttendanceRequestSchema.parse({ ...validSubmitRequest, next_focus: '  ' });
+    expect(parsed.next_focus).toBeNull();
+    expect(submitAttendanceRequestSchema.safeParse({ ...validSubmitRequest, learning_notes: '  ' }).success).toBe(false);
+  });
+
+  it('catatan pembelajaran minimal 100 karakter setelah trim untuk submit, revisi, dan admin', () => {
+    const tooShort = `  ${'a'.repeat(LEARNING_NOTES_MIN - 1)}  `;
+    const exactMin = `  ${'a'.repeat(LEARNING_NOTES_MIN)}  `;
+    const { client_submission_id: _cid, ...editable } = validSubmitRequest;
+
+    const shortResult = submitAttendanceRequestSchema.safeParse({ ...validSubmitRequest, learning_notes: tooShort });
+    expect(shortResult.success).toBe(false);
+    expect(shortResult.error?.issues[0]).toMatchObject({
+      path: ['learning_notes'],
+      message: `Minimal ${LEARNING_NOTES_MIN} karakter`,
+    });
+
+    const parsed = submitAttendanceRequestSchema.parse({ ...validSubmitRequest, learning_notes: exactMin });
+    expect(parsed.learning_notes).toBe('a'.repeat(LEARNING_NOTES_MIN));
+
+    expect(reviseAttendanceRequestSchema.safeParse({ ...editable, learning_notes: tooShort }).success).toBe(false);
+    expect(reviseAttendanceRequestSchema.safeParse({ ...editable, learning_notes: exactMin }).success).toBe(true);
+    expect(adminCreateAttendanceRequestSchema.safeParse({ tutor_id: UNKNOWN_ID, ...editable, learning_notes: tooShort }).success).toBe(false);
+    expect(adminCreateAttendanceRequestSchema.safeParse({ tutor_id: UNKNOWN_ID, ...editable, learning_notes: exactMin }).success).toBe(true);
   });
 
   it.each(schemaInvalidSubmitCases)('menolak $name pada field $field', ({ body, field }) => {

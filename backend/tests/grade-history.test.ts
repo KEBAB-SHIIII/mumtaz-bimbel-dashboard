@@ -17,7 +17,7 @@ let handle: Awaited<ReturnType<typeof createTestDatabase>>;
 let ctx:ServiceContext;
 const studentId=STUDENT_IDS.murid1;
 const input={grade:'4 SD' as const,effective_from:'2026-11-01',reason:'Kenaikan kelas'};
-const payload=(date:string)=>({tutor_id:TUTOR_IDS.tutorA,student_id:studentId,subject_ids:[SUBJECT_IDS.matematika],lesson_date:date,start_time:'10:00',end_time:'11:00',learning_material:'Latihan'});
+const payload=(date:string)=>({tutor_id:TUTOR_IDS.tutorA,student_id:studentId,subject_ids:[SUBJECT_IDS.matematika],lesson_date:date,start_time:'10:00',end_time:'11:00',learning_material:'Latihan',learning_notes:'Catatan latihan: siswa menyelesaikan soal operasi hitung campuran dengan baik dan perlu latihan lanjutan pada soal cerita bertahap.'});
 const approve=(id:string)=>setAttendanceValidity(ctx,USER_IDS.admin,id,{validity:'valid'});
 beforeAll(async()=>{
  handle=await createTestDatabase();

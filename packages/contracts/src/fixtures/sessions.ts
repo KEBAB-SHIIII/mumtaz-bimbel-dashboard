@@ -90,7 +90,9 @@ export const fixtureSessions: FixtureLessonSession[] = [
     id: SESSION_IDS.s03, client_submission_id: submission(3), ...B3,
     lesson_date: '2026-10-05', duration_minutes: 90,
     learning_material: 'Sistem pencernaan manusia',
-    learning_notes: 'Siswa aktif bertanya.', next_focus: 'Sistem pernapasan.',
+    learning_notes:
+      'Siswa aktif bertanya selama pembahasan sistem pencernaan manusia dan mampu menjelaskan fungsi organ utama dengan cukup baik.',
+    next_focus: 'Sistem pernapasan.',
     ...legacy('revision_requested'), status: 'revision_requested', anomaly_analysis_status: 'completed', ...noSnapshot,
     reviewed_by_user_id: USER_IDS.admin, reviewed_at: '2026-10-06T03:00:00Z',
     admin_note: 'Durasi tidak sesuai jadwal; mohon periksa kembali.',

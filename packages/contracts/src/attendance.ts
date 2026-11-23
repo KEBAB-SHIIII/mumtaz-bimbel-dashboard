@@ -28,6 +28,7 @@ export const DURATION_MINUTES_TECHNICAL_MAX = 24 * 60;
 
 // Guard panjang teknis; `learning_material` adalah VARCHAR di ERD.
 const MATERIAL_MAX = 255;
+export const LEARNING_NOTES_MIN = 100;
 const NOTES_MAX = 5000;
 
 /** Jam les "HH:MM" (24 jam, WIB). */
@@ -68,8 +69,13 @@ const editableSessionFields = {
   end_time: lessonTimeSchema,
   /** Working default O-09: wajib. */
   learning_material: requiredText(MATERIAL_MAX),
-  /** O-13: opsional. */
-  learning_notes: optionalText(NOTES_MAX),
+  /** Revisi owner: catatan pembelajaran wajib diisi, minimal 100 karakter. */
+  learning_notes: z
+    .string()
+    .trim()
+    .min(1, 'Wajib diisi')
+    .min(LEARNING_NOTES_MIN, `Minimal ${LEARNING_NOTES_MIN} karakter`)
+    .max(NOTES_MAX),
   next_focus: optionalText(NOTES_MAX),
 };
 

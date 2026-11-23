@@ -9,13 +9,16 @@ import { AnomalyWorker } from '../src/services/anomaly/anomaly-worker.js';
 import { FakeAnomalyDetector } from './fakes/fake-anomaly-detector.js';
 import { as, createTestApp, type TestApp, type TestClient } from './helpers/test-app.js';
 
+const TEST_NOTES =
+  'Catatan pembelajaran untuk pengujian deteksi anomali: murid mengikuti sesi latihan soal dengan baik dan berlatih ketelitian pengerjaan.';
+
 let t: TestApp;
 let tutorA: TestClient;
 let counter = 0;
 
 beforeAll(async () => {
   t = await createTestApp();
-  await t.database.db.update(lessonSessions).set({ start_time: '16:00', end_time: '17:00', learning_material: 'Sesi uji anomali', learning_notes: null, next_focus: null }).where(eq(lessonSessions.id, SESSION_IDS.s08));
+  await t.database.db.update(lessonSessions).set({ start_time: '16:00', end_time: '17:00', learning_material: 'Sesi uji anomali', learning_notes: TEST_NOTES, next_focus: null }).where(eq(lessonSessions.id, SESSION_IDS.s08));
   tutorA = await as.tutorA(t.app);
 });
 afterAll(() => t.close());
@@ -51,6 +54,7 @@ async function submit(overrides: Record<string, unknown> = {}): Promise<string> 
       lesson_date: '2026-11-03',
       ...lessonTimes(45),
       learning_material: 'Sesi uji anomali',
+      learning_notes: TEST_NOTES,
       ...overrides,
     })
     .expect(201);
@@ -198,7 +202,7 @@ describe('AnomalyWorker', () => {
       },
     });
     try {
-      await app.database.db.update(lessonSessions).set({ start_time: '16:00', end_time: '17:00', learning_material: 'Sesi uji anomali', learning_notes: null, next_focus: null }).where(eq(lessonSessions.id, SESSION_IDS.s08));
+      await app.database.db.update(lessonSessions).set({ start_time: '16:00', end_time: '17:00', learning_material: 'Sesi uji anomali', learning_notes: TEST_NOTES, next_focus: null }).where(eq(lessonSessions.id, SESSION_IDS.s08));
       const tutor = await as.tutorA(app.app);
       const res = await tutor
         .post('/tutor/attendance', {
@@ -206,6 +210,7 @@ describe('AnomalyWorker', () => {
           student_id: STUDENT_IDS.murid2, subject_ids: [SUBJECT_IDS.bahasaInggris],
           ...duplicateOfS08,
           learning_material: 'Sesi uji anomali',
+          learning_notes: TEST_NOTES,
         })
         .expect(201);
       expect(res.body.session.anomaly_analysis_status).toBe('pending');
