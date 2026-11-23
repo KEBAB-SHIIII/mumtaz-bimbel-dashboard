@@ -64,3 +64,29 @@ export function createAuthRateLimiters(config: AuthRateLimitConfig): AuthRateLim
     passwordChange: [authLimiter(config, (req) => `password:user:${req.auth?.userId ?? clientIp(req)}`)],
   };
 }
+
+/**
+ * Limiter khusus generate ringkasan AI Orang Tua (20 req / 15 menit per akun/IP).
+ * Semua request (termasuk sukses) dihitung untuk melindungi kuota LLM.
+ */
+export function createLearningSummaryRateLimiter(
+  config: AuthRateLimitConfig = { max: 20, windowMinutes: 15 },
+): RequestHandler {
+  return rateLimit({
+    windowMs: config.windowMinutes * 60 * 1000,
+    limit: config.max,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    skipSuccessfulRequests: false,
+    keyGenerator: (req) => `learning-summary:user:${req.auth?.userId ?? clientIp(req)}`,
+    handler: (_req, _res, next) => {
+      next(
+        new HttpError(
+          429,
+          'RATE_LIMITED',
+          'Terlalu banyak permintaan ringkasan AI. Coba lagi beberapa saat lagi.',
+        ),
+      );
+    },
+  });
+}

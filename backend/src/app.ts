@@ -19,6 +19,7 @@ import { healthRouter } from './routes/health.js';
 import { parentRouter } from './routes/parent.js';
 import { tutorRouter } from './routes/tutor.js';
 import type { GoogleSheetsExporter } from './integrations/google-sheets/types.js';
+import type { LearningSummaryProvider } from './integrations/learning-summary/types.js';
 import type { AnomalyQueue } from './services/anomaly/anomaly-worker.js';
 import type { ServiceContext } from './services/context.js';
 
@@ -31,6 +32,8 @@ export interface AppDependencies {
   anomalyQueue?: AnomalyQueue;
   /** Exporter Google Sheets; `null`/tidak diisi = belum dikonfigurasi (endpoint → 503). */
   sheetsExporter?: GoogleSheetsExporter | null;
+  /** Provider Generative AI ringkasan belajar; `null`/tidak diisi = belum dikonfigurasi (POST → 503). */
+  learningSummaryProvider?: LearningSummaryProvider | null;
   /** Jam yang dapat di-inject (default: jam sistem). */
   now?: () => Date;
 }
@@ -48,6 +51,7 @@ export function createApp({
   logger,
   anomalyQueue = NO_ANOMALY_QUEUE,
   sheetsExporter = null,
+  learningSummaryProvider = null,
   now = () => new Date(),
 }: AppDependencies) {
   const ctx: ServiceContext = {
@@ -94,7 +98,13 @@ export function createApp({
   api.use(authRouter(ctx, limiters, sessionConfig));
   api.use(adminRouter(ctx, { exporter: sheetsExporter, logger }, anomalyQueue));
   api.use(tutorRouter(ctx, limiters, anomalyQueue));
-  api.use(parentRouter(ctx));
+  api.use(
+    parentRouter(ctx, {
+      provider: learningSummaryProvider,
+      timeoutMs: env.LEARNING_SUMMARY_TIMEOUT_MS,
+      logger,
+    }),
+  );
 
   app.use(env.API_PREFIX, api);
   if (env.FRONTEND_DIST_DIR) {

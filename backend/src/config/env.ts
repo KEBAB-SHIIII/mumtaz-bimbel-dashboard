@@ -118,6 +118,21 @@ export const envSchema = z
     ANOMALY_EARLY_START_BEFORE: lessonTimeSchema.default('07:00'),
     /** Batas waktu satu panggilan provider anomali (ms); lewat batas → status `failed`. */
     ANOMALY_PROVIDER_TIMEOUT_MS: positiveInt(20_000),
+
+    // =========================================================================
+    // Integrasi Generative AI Learning Summary (FastAPI)
+    // =========================================================================
+
+    /**
+     * URL dasar layanan FastAPI untuk ringkasan belajar orang tua (`POST /v1/learning-summary/summarize`).
+     * Boleh sama dengan `ANOMALY_SERVICE_URL` bila berada di satu service FastAPI.
+     * Jika kosong, endpoint generate mengembalikan 503 sementara `GET /summaries` tetap 200.
+     */
+    LEARNING_SUMMARY_SERVICE_URL: optionalUrl,
+    /** Nama model fallback untuk kolom audit `learning_summaries.model` bila AI service tidak mengirim `model`. */
+    LEARNING_SUMMARY_MODEL_NAME: optionalString,
+    /** Batas waktu satu panggilan provider ringkasan belajar (ms); default 30 detik. */
+    LEARNING_SUMMARY_TIMEOUT_MS: positiveInt(30_000),
   })
   .superRefine((env, ctx) => {
     if (env.SESSION_SECRET === env.PARENT_ACCESS_CODE_PEPPER) {
@@ -217,5 +232,6 @@ export function integrationStatus(env: Env) {
   return {
     googleSheetsExport: env.GOOGLE_SHEETS_EXPORT_ENABLED ? 'configured' : 'disabled',
     anomalyProvider: env.ANOMALY_SERVICE_URL ? 'ml_fastapi' : 'not_configured',
+    learningSummaryProvider: env.LEARNING_SUMMARY_SERVICE_URL ? 'genai_fastapi' : 'not_configured',
   } as const;
 }

@@ -7,6 +7,7 @@ import {
   index,
   integer,
   json,
+  jsonb,
   numeric,
   pgTable,
   primaryKey,
@@ -17,6 +18,7 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
+import type { LearningSummarySubjectHighlight } from '@mumtaz/contracts';
 
 /**
  * Skema Neon PostgreSQL — docs/14 (ERD & data dictionary).
@@ -271,6 +273,54 @@ export const anomalyFlags = pgTable(
     check(
       'anomaly_flags_not_self_related_check',
       sql`${t.related_lesson_session_id} IS NULL OR ${t.related_lesson_session_id} <> ${t.lesson_session_id}`,
+    ),
+  ],
+);
+
+/**
+ * Cache persisten ringkasan perkembangan belajar AI (per sesi & bulanan) untuk Orang Tua.
+ * Invalidasi berbasis SHA-256 `source_fingerprint` dari materi & catatan sesi approved.
+ */
+export const learningSummaries = pgTable(
+  'learning_summaries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    scope: varchar('scope', { length: 16 }).notNull(),
+    student_id: uuid('student_id')
+      .notNull()
+      .references(() => students.id, { onDelete: 'cascade' }),
+    period: varchar('period', { length: 7 }).notNull(),
+    lesson_session_id: uuid('lesson_session_id').references(() => lessonSessions.id, {
+      onDelete: 'cascade',
+    }),
+    source_fingerprint: varchar('source_fingerprint', { length: 64 }).notNull(),
+    overall_status: varchar('overall_status', { length: 24 }).notNull(),
+    summary: text('summary').notNull(),
+    strengths: jsonb('strengths').$type<string[]>().notNull(),
+    areas_to_improve: jsonb('areas_to_improve').$type<string[]>().notNull(),
+    subjects_covered: jsonb('subjects_covered').$type<LearningSummarySubjectHighlight[]>().notNull(),
+    provider: varchar('provider', { length: 40 }),
+    model: varchar('model', { length: 80 }),
+    generated_at: timestamp('generated_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('learning_summaries_student_period_idx').on(t.student_id, t.period),
+    uniqueIndex('learning_summaries_session_key')
+      .on(t.lesson_session_id)
+      .where(sql`${t.scope} = 'session'`),
+    uniqueIndex('learning_summaries_monthly_key')
+      .on(t.student_id, t.period)
+      .where(sql`${t.scope} = 'monthly'`),
+    check('learning_summaries_scope_check', sql`${t.scope} IN ('session', 'monthly')`),
+    check(
+      'learning_summaries_status_check',
+      sql`${t.overall_status} IN ('very_good', 'good', 'needs_attention')`,
+    ),
+    check('learning_summaries_period_check', sql`${t.period} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`),
+    check(
+      'learning_summaries_scope_session_check',
+      sql`(${t.scope} = 'session' AND ${t.lesson_session_id} IS NOT NULL) OR (${t.scope} = 'monthly' AND ${t.lesson_session_id} IS NULL)`,
     ),
   ],
 );

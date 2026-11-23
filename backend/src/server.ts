@@ -5,6 +5,7 @@ import { createSessionStore } from './config/session.js';
 import { createDatabase } from './db/client.js';
 import { createAnomalyDetector } from './integrations/anomaly/create-detector.js';
 import { createSheetsExporter } from './integrations/google-sheets/sheets-api-exporter.js';
+import { createLearningSummaryProvider } from './integrations/learning-summary/create-provider.js';
 import { safeErrorMessage } from './lib/db-errors.js';
 import { createLogger } from './lib/logger.js';
 import { analyzeSession, listPendingAnalysis } from './services/anomaly/anomaly-service.js';
@@ -47,7 +48,16 @@ function main() {
   );
 
   const sheetsExporter = createSheetsExporter(env, logger);
-  const app = createApp({ env, db: database.db, sessionStore, logger, anomalyQueue: anomalyWorker, sheetsExporter });
+  const learningSummaryProvider = createLearningSummaryProvider(env);
+  const app = createApp({
+    env,
+    db: database.db,
+    sessionStore,
+    logger,
+    anomalyQueue: anomalyWorker,
+    sheetsExporter,
+    learningSummaryProvider,
+  });
   const integrations = integrationStatus(env);
 
   const server = app.listen(env.PORT, () => {
@@ -57,6 +67,7 @@ function main() {
       node_env: env.NODE_ENV,
       google_sheets_export: sheetsExporter ? integrations.googleSheetsExport : 'disabled',
       anomaly_provider: integrations.anomalyProvider,
+      learning_summary_provider: integrations.learningSummaryProvider,
     });
     // Run ekspor yang tertinggal `running` akibat restart tidak boleh mengunci periode.
     expireStaleRuns(database.db, new Date())
