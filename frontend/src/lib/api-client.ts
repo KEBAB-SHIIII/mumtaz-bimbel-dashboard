@@ -6,7 +6,8 @@ import { csrfResponseSchema, errorResponseSchema } from '@mumtaz/contracts';
  * - Cookie session dikirim lewat `withCredentials`; tidak ada credential di localStorage.
  * - CSRF token hanya di memory modul ini, dikirim sebagai `X-CSRF-Token` pada mutasi.
  * - `403 CSRF_INVALID` → ambil token baru lalu ulangi request SEKALI.
- * - `401` → listener (AuthProvider) membersihkan state sesi.
+ * - `403` biasa → listener sesi dapat memverifikasi ulang `/auth/me` (antisipasi ganti akun di tab lain).
+ * - `401` → listener (SessionWatcher) membersihkan state sesi.
  */
 export const CSRF_HEADER = 'X-CSRF-Token';
 
@@ -32,18 +33,24 @@ export function attachCsrfHeader(config: InternalAxiosRequestConfig): InternalAx
   return config;
 }
 
-type UnauthenticatedListener = () => void;
-const unauthenticatedListeners = new Set<UnauthenticatedListener>();
-const passwordRequiredListeners = new Set<UnauthenticatedListener>();
+type SessionEventListener = () => void;
+const unauthenticatedListeners = new Set<SessionEventListener>();
+const passwordRequiredListeners = new Set<SessionEventListener>();
+const forbiddenListeners = new Set<SessionEventListener>();
 
-export function onPasswordChangeRequired(listener: UnauthenticatedListener): () => void {
+export function onPasswordChangeRequired(listener: SessionEventListener): () => void {
   passwordRequiredListeners.add(listener);
   return () => passwordRequiredListeners.delete(listener);
 }
 
-export function onUnauthenticated(listener: UnauthenticatedListener): () => void {
+export function onUnauthenticated(listener: SessionEventListener): () => void {
   unauthenticatedListeners.add(listener);
   return () => unauthenticatedListeners.delete(listener);
+}
+
+export function onForbidden(listener: SessionEventListener): () => void {
+  forbiddenListeners.add(listener);
+  return () => forbiddenListeners.delete(listener);
 }
 
 export const apiClient = axios.create({
@@ -80,6 +87,8 @@ apiClient.interceptors.response.use(undefined, async (error: unknown) => {
 
   if (status === 403 && code === 'PASSWORD_CHANGE_REQUIRED') {
     for (const listener of passwordRequiredListeners) listener();
+  } else if (status === 403 && code !== 'CSRF_INVALID') {
+    for (const listener of forbiddenListeners) listener();
   }
 
   if (status === 401 && !AUTH_PROBE_PATHS.some((path) => config.url?.startsWith(path))) {

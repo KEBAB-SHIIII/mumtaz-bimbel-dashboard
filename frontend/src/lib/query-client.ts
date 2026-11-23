@@ -16,7 +16,8 @@ export function createQueryClient() {
     defaultOptions: {
       queries: {
         retry: shouldRetry,
-        refetchOnWindowFocus: false,
+        // Otomatis segarkan data yang sudah lewat `staleTime` (30 dtk) saat pengguna kembali ke tab.
+        refetchOnWindowFocus: true,
         staleTime: 30_000,
       },
       mutations: { retry: false },
