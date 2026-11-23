@@ -62,12 +62,6 @@ function Timeline({ sessions }: { sessions: ParentProgressItem[] }) {
                   <dd className="text-pretty break-words text-text">{session.learning_notes}</dd>
                 </div>
               )}
-              {session.next_focus && (
-                <div>
-                  <dt className="text-meta text-muted">Fokus berikutnya</dt>
-                  <dd className="text-pretty break-words text-text">{session.next_focus}</dd>
-                </div>
-              )}
             </dl>
           </article>
         </m.li>

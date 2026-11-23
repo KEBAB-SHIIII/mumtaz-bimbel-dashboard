@@ -58,6 +58,8 @@ describe('fake API adapter mengikuti kontrak (data sintetis)', () => {
       start_time: '16:00',
       end_time: '17:30',
       learning_material: 'Materi demo',
+      learning_notes:
+        'Siswa mengikuti pembelajaran dengan baik, mampu menyelesaikan soal latihan inti, dan masih perlu pendampingan pada soal cerita.',
     };
     const created = await tutor.submitAttendance(body);
     expect(created.status).toBe('pending');
