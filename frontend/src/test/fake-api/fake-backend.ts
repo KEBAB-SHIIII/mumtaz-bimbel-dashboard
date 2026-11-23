@@ -41,6 +41,7 @@ import {
   fixtureUsers,
   type FixtureLessonSession,
 } from '@mumtaz/contracts/fixtures';
+import { createFakeLearningSummaryStore } from './learning-summary-fake';
 
 export interface FakeRequest {
   method: string;
@@ -112,6 +113,7 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
   const sheetTabs = new Map<string, number>();
   const exportRuns: SheetExportRun[] = [];
   let failNextExport = false;
+  const summaryStore = createFakeLearningSummaryStore();
 
   let csrfToken = 'demo-csrf-anonymous';
   let currentUserId: string | null = null;
@@ -145,6 +147,12 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
       .sort((a, b) => a.name.localeCompare(b.name));
     return { subject_ids: list.map((su) => su.id), subject_name: list.map((su) => su.name).join(', ') };
   };
+
+  const subjectNamesOf = (s: FixtureLessonSession): string[] =>
+    s.subject_ids
+      .map((id) => subjects.find((su) => su.id === id)?.name)
+      .filter((name): name is string => name !== undefined)
+      .sort((a, b) => a.localeCompare(b));
 
   const validityOf = (s: FixtureLessonSession) => ({
     validity: s.validity,
@@ -930,6 +938,62 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
         });
       },
     ],
+    [
+      'get',
+      /^\/parent\/students\/([^/]+)\/summaries$/,
+      (req, [studentId = '']) => {
+        const user = requireRole('parent');
+        const period = req.params.period ?? '';
+        const rows = linkedApproved(user.id, studentId, period);
+        return ok(summaryStore.getSummaries(studentId, period, rows, subjectNamesOf));
+      },
+    ],
+    [
+      'post',
+      /^\/parent\/students\/([^/]+)\/summaries\/monthly$/,
+      (req, [studentId = '']) => {
+        const user = requireRole('parent');
+        const period = String(req.body.period ?? '');
+        const rows = linkedApproved(user.id, studentId, period);
+        if (rows.length === 0) {
+          throw new FakeError(
+            422,
+            'VALIDATION_FAILED',
+            'Belum ada sesi yang disetujui pada periode ini untuk diringkas.',
+          );
+        }
+        if (summaryStore.consumeShouldFail()) {
+          throw new FakeError(
+            503,
+            'INTEGRATION_UNAVAILABLE',
+            'Layanan ringkasan AI sedang tidak tersedia. Silakan coba lagi nanti.',
+          );
+        }
+        return ok(summaryStore.generateMonthly(studentId, period, rows, subjectNamesOf, now));
+      },
+    ],
+    [
+      'post',
+      /^\/parent\/students\/([^/]+)\/sessions\/([^/]+)\/summary$/,
+      (_req, [studentId = '', sessionId = '']) => {
+        const user = requireRole('parent');
+        if (!links.some((l) => l.parent_user_id === user.id && l.student_id === studentId)) {
+          throw new FakeError(403, 'FORBIDDEN', 'Anda tidak memiliki akses ke resource ini');
+        }
+        const session = sessions.find(
+          (s) => s.id === sessionId && s.student_id === studentId && s.status === 'approved',
+        );
+        if (!session) throw new FakeError(404, 'NOT_FOUND', 'Sesi belajar tidak ditemukan');
+        if (summaryStore.consumeShouldFail()) {
+          throw new FakeError(
+            503,
+            'INTEGRATION_UNAVAILABLE',
+            'Layanan ringkasan AI sedang tidak tersedia. Silakan coba lagi nanti.',
+          );
+        }
+        return ok(summaryStore.generateSession(session, subjectNamesOf(session), now));
+      },
+    ],
   );
 
   return {
@@ -944,6 +1008,49 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
     /** Hook test: ekspor berikutnya gagal seperti Google menolak akses (503). */
     failNextSheetExport() {
       failNextExport = true;
+    },
+    /** Hook test: generate ringkasan belajar AI berikutnya gagal (503). */
+    failNextLearningSummary() {
+      summaryStore.failNext();
+    },
+    /** Hook test: tambahkan sesi approved sintetis (mis. untuk skenario > 3 mapel). */
+    seedApprovedSession(input: {
+      student_id: string;
+      tutor_id?: string;
+      subject_ids: string[];
+      lesson_date: string;
+      learning_material: string;
+      learning_notes?: string | null;
+      duration_minutes?: number;
+    }) {
+      const timestamp = now().toISOString();
+      const s: FixtureLessonSession = {
+        id: nextId('8000'),
+        client_submission_id: nextId('9000'),
+        tutor_id: input.tutor_id ?? tutors[0]?.id ?? '',
+        student_id: input.student_id,
+        subject_ids: input.subject_ids,
+        lesson_date: input.lesson_date,
+        start_time: '16:00',
+        end_time: '17:30',
+        duration_minutes: input.duration_minutes ?? 90,
+        learning_material: input.learning_material,
+        learning_notes: input.learning_notes ?? null,
+        next_focus: null,
+        status: 'approved',
+        validity: 'valid',
+        validity_reason: null,
+        anomaly_analysis_status: 'completed',
+        rate_amount_snapshot: '90000',
+        admin_fee_snapshot: '20000',
+        reviewed_by_user_id: users[0]?.id ?? null,
+        submitted_at: timestamp,
+        reviewed_at: timestamp,
+        updated_at: timestamp,
+        admin_note: null,
+      };
+      sessions.push(s);
+      return s;
     },
     handle(req: FakeRequest): FakeResponse {
       try {

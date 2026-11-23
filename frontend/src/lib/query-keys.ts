@@ -30,5 +30,6 @@ export const queryKeys = {
     students: ['parent', 'students'] as const,
     dashboard: (studentId: string, period: string) => ['parent', 'dashboard', studentId, period] as const,
     progress: (studentId: string, period: string) => ['parent', 'progress', studentId, period] as const,
+    summaries: (studentId: string, period: string) => ['parent', 'summaries', studentId, period] as const,
   },
 };

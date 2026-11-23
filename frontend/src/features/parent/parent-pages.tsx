@@ -1,8 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, CalendarCheck, Clock } from 'lucide-react';
 import { m } from 'motion/react';
-import type { ReactNode } from 'react';
-import type { ParentProgressItem, ParentStudent } from '@mumtaz/contracts';
+import { useState, type ReactNode } from 'react';
+import type {
+  LearningSummaryView,
+  ParentLearningSummariesResponse,
+  ParentProgressItem,
+  ParentStudent,
+} from '@mumtaz/contracts';
 import { itemEnter } from '../../components/ui/motion/animated-list';
 import { Avatar } from '../../components/ui/data-display/avatar';
 import { EmptyState, ErrorState } from '../../components/ui/feedback/states';
@@ -15,7 +20,18 @@ import { formatDuration, formatLessonDate, formatPeriod } from '../../lib/format
 import { usePeriodParam } from '../../hooks/use-period-param';
 import { queryKeys } from '../../lib/query-keys';
 import { useSearchState } from '../../hooks/use-search-state';
-import { fetchParentDashboard, fetchParentProgress, fetchParentStudents } from './api';
+import {
+  fetchParentDashboard,
+  fetchParentProgress,
+  fetchParentStudents,
+  fetchParentSummaries,
+  generateMonthlySummary,
+  generateSessionSummary,
+} from './api';
+import {
+  MonthlyLearningSummaryCard,
+  SessionLearningSummaryBlock,
+} from './learning-summary-card';
 
 /** Anak terpilih dari URL; default anak pertama yang terhubung. */
 function useSelectedStudent() {
@@ -33,8 +49,91 @@ function StudentSelector({ items, selected, onSelect }: { items: ParentStudent[]
   );
 }
 
+/** Query + mutasi ringkasan belajar AI (bulanan & per sesi) yang disinkronkan ke cache TanStack Query. */
+function useParentSummaries(studentId: string, period: string) {
+  const queryClient = useQueryClient();
+  const summariesKey = queryKeys.parent.summaries(studentId, period);
+  const summariesQuery = useQuery({
+    queryKey: summariesKey,
+    queryFn: () => fetchParentSummaries(studentId, period),
+  });
+
+  const monthlyMutation = useMutation({
+    mutationFn: () => generateMonthlySummary(studentId, period),
+    onSuccess: (res) => {
+      queryClient.setQueryData<ParentLearningSummariesResponse>(summariesKey, (prev) =>
+        prev
+          ? { ...prev, monthly: res.summary }
+          : {
+              student_id: studentId,
+              period,
+              approved_session_count: 1,
+              monthly: res.summary,
+              sessions: {},
+            },
+      );
+    },
+  });
+
+  const [pendingSessions, setPendingSessions] = useState<Record<string, boolean>>({});
+  const [sessionErrors, setSessionErrors] = useState<Record<string, unknown>>({});
+
+  async function triggerSessionSummary(sessionId: string) {
+    setPendingSessions((prev) => ({ ...prev, [sessionId]: true }));
+    setSessionErrors((prev) => {
+      if (!(sessionId in prev)) return prev;
+      return Object.fromEntries(Object.entries(prev).filter(([key]) => key !== sessionId));
+    });
+    try {
+      const res = await generateSessionSummary(studentId, sessionId);
+      queryClient.setQueryData<ParentLearningSummariesResponse>(summariesKey, (prev) =>
+        prev
+          ? { ...prev, sessions: { ...prev.sessions, [sessionId]: res.summary } }
+          : {
+              student_id: studentId,
+              period,
+              approved_session_count: 1,
+              monthly: null,
+              sessions: { [sessionId]: res.summary },
+            },
+      );
+    } catch (error) {
+      setSessionErrors((prev) => ({ ...prev, [sessionId]: error }));
+    } finally {
+      setPendingSessions((prev) => ({ ...prev, [sessionId]: false }));
+    }
+  }
+
+  return {
+    summariesQuery,
+    monthly: summariesQuery.data?.monthly ?? null,
+    sessions: summariesQuery.data?.sessions ?? {},
+    approvedSessionCount: summariesQuery.data?.approved_session_count,
+    monthlyGenerating: monthlyMutation.isPending,
+    monthlyError: monthlyMutation.error,
+    generateMonthly: () => monthlyMutation.mutate(),
+    pendingSessions,
+    sessionErrors,
+    generateSession: (sessionId: string) => {
+      void triggerSessionSummary(sessionId);
+    },
+  };
+}
+
 /** Timeline sesi (mobile-first): titik + garis pandu, tanggal di atas, isi sebagai kartu ringan. */
-function Timeline({ sessions }: { sessions: ParentProgressItem[] }) {
+function Timeline({
+  sessions,
+  sessionSummaries,
+  pendingSessions,
+  sessionErrors,
+  onGenerateSessionSummary,
+}: {
+  sessions: ParentProgressItem[];
+  sessionSummaries: Record<string, LearningSummaryView>;
+  pendingSessions: Record<string, boolean>;
+  sessionErrors: Record<string, unknown>;
+  onGenerateSessionSummary: (sessionId: string) => void;
+}) {
   return (
     <ol className="flex flex-col px-4 py-4 sm:px-5">
       {sessions.map((session, index) => (
@@ -63,6 +162,12 @@ function Timeline({ sessions }: { sessions: ParentProgressItem[] }) {
                 </div>
               )}
             </dl>
+            <SessionLearningSummaryBlock
+              summary={sessionSummaries[session.id]}
+              isGenerating={Boolean(pendingSessions[session.id])}
+              error={sessionErrors[session.id]}
+              onGenerate={() => onGenerateSessionSummary(session.id)}
+            />
           </article>
         </m.li>
       ))}
@@ -139,7 +244,9 @@ function ParentPageFrame({ title, description, children }: { title: string; desc
 export function ParentDashboardPage() {
   return (
     <ParentPageFrame title="Progress Anak" description="Ringkasan sesi belajar yang sudah diverifikasi.">
-      {(student, period) => <ProgressSummary studentId={student.id} period={period} />}
+      {(student, period) => (
+        <ProgressSummary key={`${student.id}:${period}`} studentId={student.id} period={period} />
+      )}
     </ParentPageFrame>
   );
 }
@@ -147,6 +254,7 @@ export function ParentDashboardPage() {
 function ProgressSummary({ studentId, period }: { studentId: string; period: string }) {
   const summary = useQuery({ queryKey: queryKeys.parent.dashboard(studentId, period), queryFn: () => fetchParentDashboard(studentId, period) });
   const progress = useQuery({ queryKey: queryKeys.parent.progress(studentId, period), queryFn: () => fetchParentProgress(studentId, period) });
+  const ai = useParentSummaries(studentId, period);
 
   const combined = {
     data: summary.data && progress.data ? { summary: summary.data, progress: progress.data } : undefined,
@@ -173,11 +281,25 @@ function ProgressSummary({ studentId, period }: { studentId: string; period: str
               hint={data.subjects.join(', ') || '—'}
             />
           </dl>
+          <MonthlyLearningSummaryCard
+            period={period}
+            approvedSessionCount={ai.approvedSessionCount ?? data.approved_sessions}
+            summary={ai.monthly}
+            isGenerating={ai.monthlyGenerating}
+            error={ai.monthlyError}
+            onGenerate={ai.generateMonthly}
+          />
           <Card title="Sesi terbaru" description={formatPeriod(period)}>
             {detail.sessions.length === 0 ? (
               <EmptyState title="Belum ada sesi terverifikasi" description={`Belum ada sesi yang diverifikasi pada ${formatPeriod(period)}.`} />
             ) : (
-              <Timeline sessions={detail.sessions.slice(0, 5)} />
+              <Timeline
+                sessions={detail.sessions.slice(0, 5)}
+                sessionSummaries={ai.sessions}
+                pendingSessions={ai.pendingSessions}
+                sessionErrors={ai.sessionErrors}
+                onGenerateSessionSummary={ai.generateSession}
+              />
             )}
           </Card>
         </>
@@ -189,13 +311,17 @@ function ProgressSummary({ studentId, period }: { studentId: string; period: str
 export function ParentHistoryPage() {
   return (
     <ParentPageFrame title="Riwayat Pembelajaran" description="Catatan sesi yang sudah diverifikasi.">
-      {(student, period) => <HistoryList studentId={student.id} period={period} />}
+      {(student, period) => (
+        <HistoryList key={`${student.id}:${period}`} studentId={student.id} period={period} />
+      )}
     </ParentPageFrame>
   );
 }
 
 function HistoryList({ studentId, period }: { studentId: string; period: string }) {
   const progress = useQuery({ queryKey: queryKeys.parent.progress(studentId, period), queryFn: () => fetchParentProgress(studentId, period) });
+  const ai = useParentSummaries(studentId, period);
+
   return (
     <QueryView query={progress} skeleton={<Card><SkeletonCardList count={4} /></Card>}>
       {(data) => (
@@ -203,7 +329,13 @@ function HistoryList({ studentId, period }: { studentId: string; period: string 
           {data.sessions.length === 0 ? (
             <EmptyState title="Belum ada sesi terverifikasi" description={`Belum ada sesi yang diverifikasi pada ${formatPeriod(period)}.`} />
           ) : (
-            <Timeline sessions={data.sessions} />
+            <Timeline
+              sessions={data.sessions}
+              sessionSummaries={ai.sessions}
+              pendingSessions={ai.pendingSessions}
+              sessionErrors={ai.sessionErrors}
+              onGenerateSessionSummary={ai.generateSession}
+            />
           )}
         </Card>
       )}
