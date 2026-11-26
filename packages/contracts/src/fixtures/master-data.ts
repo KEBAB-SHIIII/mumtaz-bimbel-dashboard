@@ -29,6 +29,7 @@ export interface FixtureStudent {
   full_name: string;
   grade: string;
   school_name: string;
+  registration_source: 'whatsapp' | 'instagram' | 'tiktok' | 'referral' | 'other' | null;
   is_active: boolean;
 }
 
@@ -101,27 +102,31 @@ const SCHOOL = {
   cendekia: 'SD Cendekia',
 } as const;
 
-const student = (id: string, full_name: string, grade: string, school_name: string): FixtureStudent => ({
+const student = (
+  id: string, full_name: string, grade: string, school_name: string,
+  registration_source: FixtureStudent['registration_source'] = 'whatsapp',
+): FixtureStudent => ({
   id,
   full_name,
   grade,
   school_name,
+  registration_source,
   is_active: true,
 });
 
 export const fixtureStudents: FixtureStudent[] = [
   student(STUDENT_IDS.murid1, 'Aisyah', '3 SD', SCHOOL.harapan),
-  student(STUDENT_IDS.murid2, 'Bima', '5 SD', SCHOOL.pelita),
-  student(STUDENT_IDS.murid3, 'Citra', '5 SD', SCHOOL.tunas),
-  student(STUDENT_IDS.dimas, 'Dimas', '1 SMP', 'SMP Harapan Bangsa'),
+  student(STUDENT_IDS.murid2, 'Bima', '5 SD', SCHOOL.pelita, 'instagram'),
+  student(STUDENT_IDS.murid3, 'Citra', '5 SD', SCHOOL.tunas, 'referral'),
+  student(STUDENT_IDS.dimas, 'Dimas', '1 SMP', 'SMP Harapan Bangsa', 'tiktok'),
   student(STUDENT_IDS.eka, 'Eka', '3 SMP', 'SMP Pelita Ilmu'),
   student(STUDENT_IDS.fikri, 'Fikri', '1 SMA', 'SMA Tunas Mulia'),
-  student(STUDENT_IDS.gita, 'Gita', '3 SMA', 'SMA Bina Insani'),
+  student(STUDENT_IDS.gita, 'Gita', '3 SMA', 'SMA Bina Insani', 'other'),
   student(STUDENT_IDS.hana, 'Hana', 'PAUD', 'PAUD Harapan Bangsa'),
   student(STUDENT_IDS.intan, 'Intan', 'TK', 'TK Cendekia'),
   student(STUDENT_IDS.joko, 'Joko', '5 SD', SCHOOL.pelita),
   student(STUDENT_IDS.kirana, 'Kirana', '2 SD', SCHOOL.cendekia),
-  student(STUDENT_IDS.lutfi, 'Lutfi', '4 SD', SCHOOL.harapan),
+  student(STUDENT_IDS.lutfi, 'Lutfi', '4 SD', SCHOOL.harapan, null),
 ];
 
 /** Sari → Aisyah; Budi → Citra (dipakai tes akses silang); wali lain bisa punya beberapa anak. */

@@ -1,15 +1,16 @@
 import { and, count, desc, eq, gte, lt, sql } from 'drizzle-orm';
 import { Decimal } from 'decimal.js';
-import { todayInBusinessTimeZone, trailingPeriods } from '@mumtaz/contracts';
+import { REGISTRATION_SOURCE_OPTIONS, todayInBusinessTimeZone, trailingPeriods } from '@mumtaz/contracts';
 import type {
   AdminDashboardSummary,
+  AdminRegistrationSources,
   AdminRevenue,
   ParentDashboardSummary,
   Period,
   SessionStatusCounts,
   TutorDashboardSummary,
 } from '@mumtaz/contracts';
-import { lessonSessions, tutors, users } from '../db/schema.js';
+import { lessonSessions, students, tutors, users } from '../db/schema.js';
 import { money } from '../lib/format.js';
 import type { ServiceContext } from './context.js';
 import { sessionsInPeriod, type SessionView } from './attendance/session-query.js';
@@ -23,6 +24,26 @@ function statusCounts(rows: SessionView[]): SessionStatusCounts {
     counts[status] += 1;
   }
   return counts;
+}
+
+/**
+ * Jumlah murid aktif per sumber pendaftaran. Semua kanal selalu tampil (0 bila kosong) agar urutan
+ * grafik stabil; murid lama tanpa sumber dikelompokkan `null` dan hanya tampil bila ada.
+ */
+export async function getAdminRegistrationSources(ctx: ServiceContext): Promise<AdminRegistrationSources> {
+  const rows = await ctx.db
+    .select({ source: students.registration_source, n: count() })
+    .from(students)
+    .where(eq(students.is_active, true))
+    .groupBy(students.registration_source);
+  const countOf = (source: string | null) => rows.find((row) => row.source === source)?.n ?? 0;
+  const unknown = countOf(null);
+  return {
+    sources: [
+      ...REGISTRATION_SOURCE_OPTIONS.map((source) => ({ source, students: countOf(source) })),
+      ...(unknown > 0 ? [{ source: null, students: unknown }] : []),
+    ],
+  };
 }
 
 /**

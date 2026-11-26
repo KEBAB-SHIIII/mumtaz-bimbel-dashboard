@@ -22,7 +22,7 @@ describe('tarif owner melalui API dan snapshot', () => {
     ['6 SD', 120_000], ['3 SMP', 150_000], ['3 SMA', 180_000],
   ])('%s: create siswa, approval, billing dan honor memakai pembulatan 91 menit (1,5 jam)', async (grade, gross) => {
     const student = studentSchema.parse((await admin.post('/admin/students', {
-      full_name: `Siswa ${grade}`, grade, school_name: 'Sekolah uji',
+      full_name: `Siswa ${grade}`, grade, school_name: 'Sekolah uji', registration_source: 'whatsapp',
     }).expect(201)).body);
     const input = {
       tutor_id: TUTOR_IDS.tutorA, student_id: student.id, subject_ids: [SUBJECT_IDS.matematika],
@@ -57,7 +57,7 @@ describe('tarif owner melalui API dan snapshot', () => {
     await t.database.db.update(lessonSessions).set({ rate_amount_snapshot: '50000', admin_fee_snapshot: '10000' })
       .where(eq(lessonSessions.id, SESSION_IDS.s01));
     const student = studentSchema.parse((await admin.post('/admin/students', {
-      full_name: 'Siswa SMA otomatis', grade: '1 SMA', school_name: 'Sekolah uji',
+      full_name: 'Siswa SMA otomatis', grade: '1 SMA', school_name: 'Sekolah uji', registration_source: 'whatsapp',
     }).expect(201)).body);
     const created = await admin.post('/admin/attendance', {
       tutor_id: TUTOR_IDS.tutorA, student_id: student.id, subject_ids: [SUBJECT_IDS.matematika],

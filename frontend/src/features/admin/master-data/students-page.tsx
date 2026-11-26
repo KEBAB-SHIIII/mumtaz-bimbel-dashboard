@@ -6,12 +6,12 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { GRADE_OPTIONS, createStudentRequestSchema, updateStudentRequestSchema, type Student } from '@mumtaz/contracts';
+import { GRADE_OPTIONS, REGISTRATION_SOURCE_LABELS, REGISTRATION_SOURCE_OPTIONS, createStudentRequestSchema, updateStudentRequestSchema, type Student } from '@mumtaz/contracts';
 import { Button } from '../../../components/ui/actions/button';
 import { DataTable } from '../../../components/ui/data-display/data-table';
 import { Modal } from '../../../components/ui/overlay/dialog';
 import { EmptyState, ErrorState, NoResultsState, InlineAlert } from '../../../components/ui/feedback/states';
-import { FormField, Input, SearchSelect, describedBy } from '../../../components/ui/forms/field';
+import { FormField, Input, SearchSelect, Select, describedBy } from '../../../components/ui/forms/field';
 import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/feedback/skeleton';
 import { Card } from '../../../components/ui/surfaces/layout-primitives';
 import { toApiError } from '../../../lib/api-error';
@@ -20,12 +20,13 @@ import { createMasterData, updateMasterData } from '../api';
 import { applyServerErrors, hasFieldErrors, validateWith } from '../../../lib/form';
 import { ActiveBadge, CheckboxField, MASTER_PAGE_SIZE, MasterToolbar, useMasterList } from './master-data-shared';
 
-const SERVER_FIELDS = ['full_name', 'grade', 'school_name'] as const;
+const SERVER_FIELDS = ['full_name', 'grade', 'school_name', 'registration_source'] as const;
 
 interface StudentFormValues {
   full_name: string;
   grade: string;
   school_name: string;
+  registration_source: string;
   is_active: boolean;
 }
 
@@ -38,6 +39,7 @@ function StudentFormDialog({ student, open, onClose }: { student: Student | null
       full_name: student?.full_name ?? '',
       grade: student?.grade ?? '',
       school_name: student?.school_name ?? '',
+      registration_source: student?.registration_source ?? '',
       is_active: student?.is_active ?? true,
     },
   });
@@ -55,7 +57,13 @@ function StudentFormDialog({ student, open, onClose }: { student: Student | null
 
   const onSubmit = form.handleSubmit(({ is_active, ...values }) => {
     const payload = isEdit
-      ? validateWith(form, updateStudentRequestSchema, { full_name:values.full_name, school_name:values.school_name, is_active })
+      ? validateWith(form, updateStudentRequestSchema, {
+          full_name: values.full_name,
+          school_name: values.school_name,
+          // Murid lama boleh tetap kosong; nilai hanya dikirim bila dipilih.
+          ...(values.registration_source ? { registration_source: values.registration_source } : {}),
+          is_active,
+        })
       : validateWith(form, createStudentRequestSchema, values);
     if (payload) mutation.mutate(payload);
   });
@@ -93,6 +101,14 @@ function StudentFormDialog({ student, open, onClose }: { student: Student | null
         <FormField id="student-school_name" label="Asal sekolah" required error={errors.school_name?.message}>
           <Input {...field('school_name')} {...form.register('school_name')} />
         </FormField>
+        <FormField id="student-registration_source" label="Sumber pendaftaran" required={!isEdit} hint="Kanal tempat orang tua mengetahui Mumtaz." error={errors.registration_source?.message}>
+          <Select {...field('registration_source')} aria-describedby={describedBy('student-registration_source', errors.registration_source?.message, 'Kanal tempat orang tua mengetahui Mumtaz.')} {...form.register('registration_source')}>
+            <option value="" disabled={!isEdit || Boolean(student?.registration_source)}>{isEdit ? 'Belum diisi' : 'Pilih sumber'}</option>
+            {REGISTRATION_SOURCE_OPTIONS.map((source) => (
+              <option key={source} value={source}>{REGISTRATION_SOURCE_LABELS[source]}</option>
+            ))}
+          </Select>
+        </FormField>
         {isEdit && (
           <CheckboxField
             id="student-is_active"
@@ -116,6 +132,14 @@ export function StudentsPage() {
     { accessorKey: 'full_name', header: 'Nama' },
     { accessorKey: 'grade', header: 'Kelas', cell:({row})=><div><span className="whitespace-nowrap">{row.original.grade}</span>{row.original.scheduled_grade && <p className="text-meta text-muted">{row.original.scheduled_grade.grade} · mulai {formatLessonDate(row.original.scheduled_grade.effective_from)}</p>}</div> },
     { accessorKey: 'school_name', header: 'Asal sekolah' },
+    {
+      id: 'registration_source',
+      header: 'Sumber',
+      cell: ({ row }) => {
+        const source = row.original.registration_source;
+        return source ? REGISTRATION_SOURCE_LABELS[source] : <span className="text-muted">Belum diisi</span>;
+      },
+    },
     { id: 'is_active', header: 'Status', cell: ({ row }) => <ActiveBadge active={row.original.is_active} /> },
     {
       id: 'actions',

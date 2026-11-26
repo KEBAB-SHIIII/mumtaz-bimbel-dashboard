@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { moneyStringSchema, uuidSchema } from './common.js';
+import { registrationSourceSchema } from './master-data.js';
 import { periodSchema } from './period.js';
 
 export const sessionStatusCountsSchema = z.object({
@@ -51,6 +52,15 @@ export const adminRevenueSchema = z.object({
   ).length(12),
 });
 export type AdminRevenue = z.infer<typeof adminRevenueSchema>;
+
+/**
+ * `GET /admin/dashboard/registration-sources` — jumlah murid aktif per sumber pendaftaran,
+ * urut sesuai `REGISTRATION_SOURCE_OPTIONS`; `source: null` = belum diisi (hanya bila > 0).
+ */
+export const adminRegistrationSourcesSchema = z.object({
+  sources: z.array(z.object({ source: registrationSourceSchema.nullable(), students: z.number().int().min(0) })),
+});
+export type AdminRegistrationSources = z.infer<typeof adminRegistrationSourcesSchema>;
 
 /** `GET /tutor/dashboard/summary` — hanya tutor dari session. */
 export const tutorDashboardSummarySchema = z.object({

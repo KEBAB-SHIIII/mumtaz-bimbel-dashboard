@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  adminRegistrationSourcesSchema,
   adminDashboardSummarySchema,
   adminRevenueSchema,
   parentDashboardSummarySchema,
@@ -229,6 +230,21 @@ describe('Ringkasan dashboard', () => {
     await admin.get('/admin/dashboard/revenue?year=abc').expect(422);
     const tutorA = await as.tutorA(t.app);
     await tutorA.get('/admin/dashboard/revenue').expect(403);
+  });
+
+  it('Admin: sumber pendaftaran = murid aktif per kanal; murid tanpa sumber dikelompokkan terpisah', async () => {
+    const body = adminRegistrationSourcesSchema.parse((await admin.get('/admin/dashboard/registration-sources').expect(200)).body);
+    // Fixture: 12 murid aktif — 7 WhatsApp (bawaan), 1 per kanal lain, Lutfi belum diisi.
+    expect(body.sources).toEqual([
+      { source: 'whatsapp', students: 7 },
+      { source: 'instagram', students: 1 },
+      { source: 'tiktok', students: 1 },
+      { source: 'referral', students: 1 },
+      { source: 'other', students: 1 },
+      { source: null, students: 1 },
+    ]);
+    const tutorA = await as.tutorA(t.app);
+    await tutorA.get('/admin/dashboard/registration-sources').expect(403);
   });
 
   it('Tutor: hanya data miliknya', async () => {

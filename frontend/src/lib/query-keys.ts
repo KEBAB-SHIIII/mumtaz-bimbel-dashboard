@@ -9,6 +9,7 @@ export const queryKeys = {
   admin: {
     dashboard: (period: string) => ['admin', 'dashboard', period] as const,
     revenue: (year: number | 'latest') => ['admin', 'dashboard', 'revenue', year] as const,
+    registrationSources: ['admin', 'dashboard', 'registration-sources'] as const,
     attendance: (filters: object) => ['admin', 'attendance', 'list', filters] as const,
     attendanceDetail: (id: string) => ['admin', 'attendance', 'detail', id] as const,
     attendanceOptions: ['admin', 'attendance', 'options'] as const,

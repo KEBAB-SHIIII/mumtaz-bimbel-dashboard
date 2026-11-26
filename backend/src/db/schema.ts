@@ -18,7 +18,7 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
-import type { LearningSummarySubjectHighlight } from '@mumtaz/contracts';
+import type { LearningSummarySubjectHighlight, RegistrationSource } from '@mumtaz/contracts';
 
 /**
  * Skema Neon PostgreSQL — docs/14 (ERD & data dictionary).
@@ -90,10 +90,18 @@ export const students = pgTable(
     full_name: varchar('full_name', { length: 120 }).notNull(),
     grade: varchar('grade', { length: 30 }).notNull(),
     school_name: varchar('school_name', { length: 120 }).notNull(),
+    /** Kanal pendaftaran (`REGISTRATION_SOURCE_OPTIONS`); `null` = murid lama belum dilengkapi. */
+    registration_source: varchar('registration_source', { length: 16 }).$type<RegistrationSource>(),
     is_active: boolean('is_active').notNull().default(true),
     ...timestamps,
   },
-  (t) => [index('students_full_name_idx').on(t.full_name)],
+  (t) => [
+    index('students_full_name_idx').on(t.full_name),
+    check(
+      'students_registration_source_check',
+      sql`${t.registration_source} IS NULL OR ${t.registration_source} IN ('whatsapp', 'instagram', 'tiktok', 'referral', 'other')`,
+    ),
+  ],
 );
 
 /** One baseline plus dated class changes; latest effective row wins. */

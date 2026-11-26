@@ -16,9 +16,16 @@ describe('dashboard mengarahkan ke data di balik angka', () => {
     if (!omzet) throw new Error('kartu omzet tidak ada');
     await waitFor(() => expect(omzet).toHaveTextContent(/Rp\s?340\.000/));
     expect(screen.queryByText('Menunggu verifikasi')).not.toBeInTheDocument();
-    // Grafik dimuat lazy (chunk terpisah) setelah kartu metrik. Grafik pendapatan memakai data asli
-    // (tanpa label), empat grafik lain masih data contoh.
-    expect(await screen.findAllByText('Data contoh')).toHaveLength(4);
+    // Grafik dimuat lazy (chunk terpisah) setelah kartu metrik. Grafik pendapatan dan sumber pendaftaran
+    // memakai data asli (tanpa label), tiga grafik lain masih data contoh.
+    expect(await screen.findAllByText('Data contoh')).toHaveLength(3);
+    const sources = screen.getByRole('heading', { name: 'Sumber pendaftaran murid' }).closest('section');
+    if (!sources) throw new Error('kartu sumber pendaftaran tidak ada');
+    expect(sources).not.toHaveTextContent('Data contoh');
+    // Ringkasan aksesibel memuat angka dari API: fixture 7 WhatsApp, 1 per kanal lain, 1 belum diisi.
+    await waitFor(() => expect(within(sources as HTMLElement).getByRole('figure')).toHaveAccessibleName(
+      'Sumber pendaftaran murid: WhatsApp 7, Instagram 1, TikTok 1, Teman/Keluarga 1, Lainnya 1, Belum diisi 1',
+    ));
     const revenue = screen.getByRole('heading', { name: 'Pendapatan per bulan' }).closest('section');
     expect(revenue).not.toHaveTextContent('Data contoh');
     // Grafik pendapatan satu tahun penuh dengan filter tahun (default: tahun terbaru yang punya data).

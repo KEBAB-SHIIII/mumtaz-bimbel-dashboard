@@ -5,6 +5,7 @@ import {
   adminAttendanceListItemSchema,
   adminAttendanceOptionsSchema,
   adminDashboardSummarySchema,
+  adminRegistrationSourcesSchema,
   adminRevenueSchema,
   paginatedSchema,
   parentAccessCodeIssuedSchema,
@@ -46,6 +47,10 @@ export const fetchAdminDashboard = (period: string) =>
 /** Grafik pendapatan Jan–Des; tanpa `year` backend memilih tahun terbaru yang punya data. */
 export const fetchAdminRevenue = (year?: number) =>
   get(adminRevenueSchema, '/admin/dashboard/revenue', { year });
+
+/** Jumlah murid aktif per sumber pendaftaran (grafik dashboard). */
+export const fetchAdminRegistrationSources = () =>
+  get(adminRegistrationSourcesSchema, '/admin/dashboard/registration-sources');
 
 export const fetchBilling = (period: string, studentId?: string) =>
   get(billingResponseSchema, '/admin/billing', { period, student_id: studentId });

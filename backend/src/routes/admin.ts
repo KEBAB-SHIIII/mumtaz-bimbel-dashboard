@@ -38,7 +38,7 @@ import {
 } from '../services/attendance/attendance-service.js';
 import type { AnomalyQueue } from '../services/anomaly/anomaly-worker.js';
 import type { ServiceContext } from '../services/context.js';
-import { getAdminDashboardSummary, getAdminRevenue } from '../services/dashboard-service.js';
+import { getAdminDashboardSummary, getAdminRegistrationSources, getAdminRevenue } from '../services/dashboard-service.js';
 import * as parents from '../services/master-data/parents.js';
 import * as students from '../services/master-data/students.js';
 import * as subjects from '../services/master-data/subjects.js';
@@ -69,6 +69,11 @@ export function adminRouter(ctx: ServiceContext, exportDeps: ExportDeps, anomaly
   router.get('/admin/dashboard/revenue', async (req, res) => {
     const { year } = parseInput(adminRevenueQuerySchema, req.query);
     res.json(await getAdminRevenue(ctx, year));
+  });
+
+  /** Grafik sumber pendaftaran: jumlah murid aktif per kanal. */
+  router.get('/admin/dashboard/registration-sources', async (_req, res) => {
+    res.json(await getAdminRegistrationSources(ctx));
   });
 
   /** Penagihan Orang Tua: sesi yang dihitung per murid + total tagihan (menggantikan Rekap). */

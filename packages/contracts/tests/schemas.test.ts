@@ -8,6 +8,8 @@ import {
   timeToMinutes,
   GRADE_OPTIONS,
   createStudentRequestSchema,
+  REGISTRATION_SOURCE_LABELS,
+  REGISTRATION_SOURCE_OPTIONS,
   updateStudentRequestSchema,
   SHEET_EXPORT_HEADERS,
   adminCreateAttendanceRequestSchema,
@@ -245,11 +247,26 @@ describe('ekspor Google Sheets', () => {
 
 describe('kelas siswa PAUD sampai SMA', () => {
   it.each(GRADE_OPTIONS)('menerima %s untuk create dan update', (grade) => {
-    expect(createStudentRequestSchema.safeParse({ full_name: 'Siswa uji', grade, school_name: 'Sekolah uji' }).success).toBe(true);
+    expect(createStudentRequestSchema.safeParse({ full_name: 'Siswa uji', grade, school_name: 'Sekolah uji', registration_source: 'whatsapp' }).success).toBe(true);
     expect(updateStudentRequestSchema.safeParse({ grade }).success).toBe(true);
   });
   it.each(['7 SD', '4 SMP', '4 SMA', 'SMP', 'SMA', ''])('menolak kelas di luar pilihan: %s', (grade) => {
     expect(updateStudentRequestSchema.safeParse({ grade }).success).toBe(false);
+  });
+});
+
+describe('sumber pendaftaran murid', () => {
+  const base = { full_name: 'Siswa uji', grade: '3 SD', school_name: 'Sekolah uji' };
+  it.each(REGISTRATION_SOURCE_OPTIONS)('menerima %s', (registration_source) => {
+    expect(createStudentRequestSchema.safeParse({ ...base, registration_source }).success).toBe(true);
+    expect(updateStudentRequestSchema.safeParse({ registration_source }).success).toBe(true);
+  });
+  it('wajib saat tambah, menolak nilai di luar daftar, opsional saat ubah', () => {
+    expect(createStudentRequestSchema.safeParse(base).success).toBe(false);
+    expect(createStudentRequestSchema.safeParse({ ...base, registration_source: 'facebook' }).success).toBe(false);
+    expect(updateStudentRequestSchema.safeParse({ is_active: true }).success).toBe(true);
+    expect(REGISTRATION_SOURCE_OPTIONS.map((source) => REGISTRATION_SOURCE_LABELS[source]))
+      .toEqual(['WhatsApp', 'Instagram', 'TikTok', 'Teman/Keluarga', 'Lainnya']);
   });
 });
 

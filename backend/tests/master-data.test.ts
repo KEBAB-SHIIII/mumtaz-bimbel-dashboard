@@ -115,10 +115,27 @@ describe('Master Data → Tutor', () => {
 describe('Master Data → Siswa & Mapel', () => {
   it('create/update siswa; soft deactivation', async () => {
     const created = studentSchema.parse(
-      (await admin.post('/admin/students', { full_name: 'Putri', grade: '6 SD', school_name: 'SD Harapan Bangsa' }).expect(201)).body,
+      (await admin.post('/admin/students', { full_name: 'Putri', grade: '6 SD', school_name: 'SD Harapan Bangsa', registration_source: 'instagram' }).expect(201)).body,
     );
+    expect(created.registration_source).toBe('instagram');
     const updated = await admin.patch(`/admin/students/${created.id}`, { is_active: false }).expect(200);
     expect(studentSchema.parse(updated.body).is_active).toBe(false);
+  });
+
+  it('sumber pendaftaran wajib saat tambah, valid dari daftar, dan bisa diubah', async () => {
+    const base = { full_name: 'Raka', grade: '2 SD', school_name: 'SD Pelita Ilmu' };
+    const missing = await admin.post('/admin/students', base);
+    expect(missing.status).toBe(422);
+    expect(missing.body.error.details).toEqual(expect.arrayContaining([expect.objectContaining({ field: 'registration_source' })]));
+    expect((await admin.post('/admin/students', { ...base, registration_source: 'facebook' })).status).toBe(422);
+
+    // Murid lama (fixture Lutfi) belum punya sumber; Admin melengkapinya lewat Ubah.
+    const legacy = studentSchema.parse((await admin.get(`/admin/students/${STUDENT_IDS.lutfi}`).expect(200)).body);
+    expect(legacy.registration_source).toBeNull();
+    const filled = await admin.patch(`/admin/students/${STUDENT_IDS.lutfi}`, { registration_source: 'referral' }).expect(200);
+    expect(studentSchema.parse(filled.body).registration_source).toBe('referral');
+    const list = await admin.get('/admin/students?search=Lutfi').expect(200);
+    expect(list.body.items[0].registration_source).toBe('referral');
   });
 
   it('search siswa memperlakukan wildcard secara literal', async () => {

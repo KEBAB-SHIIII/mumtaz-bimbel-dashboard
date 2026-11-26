@@ -12,6 +12,7 @@ import {
   sessionStatusFor,
   sheetTitleForPeriod,
   trailingPeriods,
+  REGISTRATION_SOURCE_OPTIONS,
   spreadsheetUrl,
   type AdminAttendanceDetail,
   type AdminAttendanceListItem,
@@ -524,6 +525,21 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
     ],
     [
       'get',
+      /^\/admin\/dashboard\/registration-sources$/,
+      () => {
+        requireRole('admin');
+        const active = students.filter((st) => st.is_active);
+        const unknown = active.filter((st) => st.registration_source === null).length;
+        return ok({
+          sources: [
+            ...REGISTRATION_SOURCE_OPTIONS.map((source) => ({ source, students: active.filter((st) => st.registration_source === source).length })),
+            ...(unknown > 0 ? [{ source: null, students: unknown }] : []),
+          ],
+        });
+      },
+    ],
+    [
+      'get',
       /^\/admin\/attendance$/,
       (req) => {
         requireRole('admin');
@@ -742,7 +758,7 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
       /^\/admin\/students$/,
       (req) => {
         requireRole('admin');
-        const student: Student = { id: nextId('8003'), full_name: String(req.body.full_name), grade: String(req.body.grade), school_name: String(req.body.school_name), is_active: true, created_at: now().toISOString(), updated_at: now().toISOString() };
+        const student: Student = { id: nextId('8003'), full_name: String(req.body.full_name), grade: String(req.body.grade), school_name: String(req.body.school_name), registration_source: req.body.registration_source as Student['registration_source'], is_active: true, created_at: now().toISOString(), updated_at: now().toISOString() };
         students.push(student);
         return ok(student, 201);
       },

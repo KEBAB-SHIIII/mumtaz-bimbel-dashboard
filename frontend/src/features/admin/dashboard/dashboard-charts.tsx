@@ -16,17 +16,16 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { AdminRevenue } from '@mumtaz/contracts';
+import { REGISTRATION_SOURCE_LABELS, type AdminRegistrationSources, type AdminRevenue } from '@mumtaz/contracts';
 import { Chip } from '../../../components/ui/data-display/chip';
 import { Card } from '../../../components/ui/surfaces/layout-primitives';
 import { FilterSelect } from '../../../components/ui/forms/filter-select';
 import { formatPeriod, formatRupiah } from '../../../lib/format';
 import { queryKeys } from '../../../lib/query-keys';
-import { fetchAdminRevenue } from '../api';
+import { fetchAdminRegistrationSources, fetchAdminRevenue } from '../api';
 import { useThemeColors, type ThemeColors } from '../../../hooks/use-theme-colors';
 import {
   SAMPLE_GRADE_COMPOSITION,
-  SAMPLE_REGISTRATION_SOURCES,
   SAMPLE_STUDENT_GROWTH,
   SAMPLE_TUTOR_RANKING,
 } from './sample-chart-data';
@@ -164,6 +163,10 @@ function toRevenueChart(months: AdminRevenue['months']) {
   }));
 }
 
+/** Sumber pendaftaran dari API; `null` = murid lama yang belum dilengkapi. */
+const toSourceChart = (sources: AdminRegistrationSources['sources']) =>
+  sources.map((item) => ({ source: item.source ? REGISTRATION_SOURCE_LABELS[item.source] : 'Belum diisi', students: item.students }));
+
 type RevenuePoint = ReturnType<typeof toRevenueChart>[number];
 
 /** Tooltip pendapatan dengan penanda warna yang sama seperti seri grafik. */
@@ -204,6 +207,12 @@ export function DashboardCharts() {
   const shownYear = revenue.data?.year ?? year;
   const yearOptions = (revenue.data?.years.length ? revenue.data.years : shownYear ? [shownYear] : []).map((y) => ({ value: String(y), label: String(y) }));
   const revenueData = revenue.data ? toRevenueChart(revenue.data.months) : [];
+  const sources = useQuery({
+    queryKey: queryKeys.admin.registrationSources,
+    queryFn: fetchAdminRegistrationSources,
+    refetchInterval: 60_000,
+  });
+  const sourceData = sources.data ? toSourceChart(sources.data.sources) : [];
 
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
@@ -310,21 +319,31 @@ export function DashboardCharts() {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Sumber pendaftaran murid" subtitle="Murid baru per kanal" summary="jumlah murid baru per kanal pendaftaran">
-          <ResponsiveContainer width="100%" height="100%">
-            {/* Batang horizontal: nama kanal panjang tetap terbaca di kartu sempit. */}
-            <BarChart data={SAMPLE_REGISTRATION_SOURCES} layout="vertical" margin={{ top: 0, right: 16, bottom: 0, left: 8 }}>
-              <CartesianGrid stroke={colors.border} horizontal={false} />
-              <XAxis type="number" allowDecimals={false} {...style.axis} />
-              <YAxis type="category" dataKey="source" width={76} {...style.axis} />
-              <Tooltip {...style.tooltip} cursor={style.barCursor} />
-              <Bar dataKey="students" name="Murid" fill={CHART_PALETTE.students} radius={[0, 6, 6, 0]} barSize={16} isAnimationActive={animate}>
-                {SAMPLE_REGISTRATION_SOURCES.map((entry) => (
-                  <Cell key={entry.source} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <ChartCard
+          title="Sumber pendaftaran murid"
+          subtitle="Murid aktif per kanal"
+          summary={sourceData.length ? sourceData.map((item) => `${item.source} ${item.students}`).join(', ') : 'jumlah murid aktif per kanal pendaftaran'}
+          sample={false}
+        >
+          <div className="relative h-full">
+            {sources.isError && !sources.data && (
+              <p role="alert" className="absolute inset-0 grid place-items-center text-sm text-muted">Gagal memuat grafik sumber pendaftaran.</p>
+            )}
+            <ResponsiveContainer width="100%" height="100%">
+              {/* Batang horizontal: nama kanal panjang tetap terbaca di kartu sempit. */}
+              <BarChart data={sourceData} layout="vertical" margin={{ top: 0, right: 16, bottom: 0, left: 8 }}>
+                <CartesianGrid stroke={colors.border} horizontal={false} />
+                <XAxis type="number" allowDecimals={false} {...style.axis} />
+                <YAxis type="category" dataKey="source" width={104} {...style.axis} />
+                <Tooltip {...style.tooltip} cursor={style.barCursor} />
+                <Bar dataKey="students" name="Murid" fill={CHART_PALETTE.students} radius={[0, 6, 6, 0]} barSize={16} isAnimationActive={animate}>
+                  {sourceData.map((entry) => (
+                    <Cell key={entry.source} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </ChartCard>
       </div>
     </div>
