@@ -1,7 +1,7 @@
 import { useNotification } from '../../../components/ui/feedback/notification-provider';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Check, Copy, KeyRound, Pencil } from 'lucide-react';
+import { Check, Copy, KeyRound, Pencil, X } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { createParentRequestSchema, updateParentRequestSchema, type Parent, type ParentAccessCodeIssued } from '@mumtaz/contracts';
@@ -9,14 +9,14 @@ import { Button } from '../../../components/ui/actions/button';
 import { DataTable } from '../../../components/ui/data-display/data-table';
 import { ConfirmDialog, Modal } from '../../../components/ui/overlay/dialog';
 import { EmptyState, ErrorState, InlineAlert, LoadingState, NoResultsState } from '../../../components/ui/feedback/states';
-import { FormField, Input, describedBy } from '../../../components/ui/forms/field';
+import { FormField, Input, SearchSelect, describedBy } from '../../../components/ui/forms/field';
 import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/feedback/skeleton';
 import { Card } from '../../../components/ui/surfaces/layout-primitives';
 import { toApiError } from '../../../lib/api-error';
 import { queryKeys } from '../../../lib/query-keys';
-import { createParent, rotateParentAccessCode, updateMasterData } from '../api';
+import { createParent, fetchMasterData, rotateParentAccessCode, updateMasterData } from '../api';
 import { applyServerErrors, hasFieldErrors, stripEmpty, validateWith } from '../../../lib/form';
-import { ActiveBadge, CheckboxField, MASTER_PAGE_SIZE, MasterToolbar, useMasterList, useMasterOptions } from './master-data-shared';
+import { ActiveBadge, CheckboxField, MASTER_PAGE_SIZE, MasterToolbar, useMasterList } from './master-data-shared';
 
 const SERVER_FIELDS = ['full_name', 'email', 'student_links'] as const;
 const EMAIL_HINT = 'Kontak saja, bukan metode login.';
@@ -75,7 +75,19 @@ function ParentFormDialog({
 }) {
   const queryClient = useQueryClient();
   const notify = useNotification();
-  const students = useMasterOptions('students');
+  const students = useQuery({
+    queryKey: [...queryKeys.admin.masterDataAll('students'), 'parent-link-options'],
+    enabled: open,
+    queryFn: async () => {
+      const first = await fetchMasterData('students', { page: 1, page_size: 100 });
+      const items = [...first.items];
+      for (let page = 2; page <= Math.ceil(first.total / first.page_size); page++) {
+        const next = await fetchMasterData('students', { page, page_size: first.page_size });
+        items.push(...next.items);
+      }
+      return items;
+    },
+  });
   const isEdit = parent !== null;
   const [pendingPayload, setPendingPayload] = useState<object | null>(null);
   const form = useForm<ParentFormValues>({
@@ -87,6 +99,17 @@ function ParentFormDialog({
     },
   });
   const { errors } = form.formState;
+
+  const selectedIds = form.watch('student_ids');
+  const options = (students.data ?? []).map((student) => ({
+    value: student.id,
+    label: student.full_name,
+    hint: `${student.grade} · ${student.school_name}${student.is_active ? '' : ' · nonaktif'}`,
+  }));
+  const updateChildren = (ids: string[]) => {
+    form.setValue('student_ids', ids, { shouldDirty: true });
+    if (ids.length) form.clearErrors('student_ids');
+  };
 
   const relationshipOf = (studentId: string) => parent?.students.find((s) => s.student_id === studentId)?.relationship ?? null;
 
@@ -161,34 +184,44 @@ function ParentFormDialog({
           <FormField id="parent-email" label="Email" hint={EMAIL_HINT} error={errors.email?.message}>
             <Input id="parent-email" type="email" aria-invalid={Boolean(errors.email)} aria-describedby={describedBy('parent-email', errors.email?.message, EMAIL_HINT)} {...form.register('email')} />
           </FormField>
-          <fieldset aria-describedby={errors.student_ids ? 'parent-links-error' : undefined}>
-            <legend className="text-sm font-medium text-text">
-              Anak yang terhubung <span className="font-normal text-muted">(wajib, minimal satu)</span>
-            </legend>
+          <FormField id="parent-links" label="Anak yang terhubung" required error={errors.student_ids?.message}>
             {students.isPending ? (
               <LoadingState label="Memuat siswa…" className="py-4" />
             ) : students.isError ? (
               <ErrorState error={students.error} onRetry={() => void students.refetch()} />
             ) : (
-              <div className="mt-2 grid max-h-56 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
-                {students.data.items.map((student) => (
-                  <CheckboxField
-                    key={student.id}
-                    id={`parent-student-${student.id}`}
-                    label={student.full_name}
-                    description={`${student.grade} · ${student.school_name}${student.is_active ? '' : ' · nonaktif'}`}
-                    value={student.id}
-                    {...form.register('student_ids')}
-                  />
-                ))}
-              </div>
+              <SearchSelect
+                id="parent-links"
+                items={options.filter((option) => !selectedIds.includes(option.value))}
+                value=""
+                placeholder={selectedIds.length ? 'Cari anak lain' : 'Cari nama anak'}
+                onChange={(id) => {
+                  if (id && !selectedIds.includes(id)) updateChildren([...selectedIds, id]);
+                }}
+                invalid={Boolean(errors.student_ids)}
+                describedBy={describedBy('parent-links', errors.student_ids?.message)}
+              />
             )}
-            {errors.student_ids && (
-              <p id="parent-links-error" role="alert" className="mt-1 text-meta text-danger">
-                {errors.student_ids.message ?? 'Pilih minimal satu siswa'}
-              </p>
+            {selectedIds.length > 0 && (
+              <ul className="flex flex-col gap-1">
+                {selectedIds.map((id) => {
+                  const option = options.find((item) => item.value === id);
+                  const name = option?.label ?? parent?.students.find((student) => student.student_id === id)?.full_name;
+                  return (
+                    <li key={id} className="flex items-center justify-between gap-2 rounded-md bg-surface-muted px-3 py-1">
+                      <span className="min-w-0 break-words text-sm">
+                        {name}
+                        {option && <span className="block text-meta text-muted">{option.hint}</span>}
+                      </span>
+                      <button type="button" aria-label={`Lepas ${name}`} className="grid size-8 shrink-0 place-items-center rounded-md text-muted hover:text-text pointer-coarse:size-11" onClick={() => updateChildren(selectedIds.filter((selected) => selected !== id))}>
+                        <X aria-hidden className="size-4" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
-          </fieldset>
+          </FormField>
           {isEdit && (
             <CheckboxField id="parent-is_active" label="Akses login aktif" description="Jika nonaktif, wali langsung keluar dan tidak bisa masuk." {...form.register('is_active')} />
           )}

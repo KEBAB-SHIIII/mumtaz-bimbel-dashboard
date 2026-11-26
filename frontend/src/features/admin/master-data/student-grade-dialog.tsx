@@ -5,7 +5,7 @@ import { CompactDisclosure } from '../../../components/ui/surfaces/compact-discl
 import { GRADE_OPTIONS, gradeChangeRequestSchema, todayInBusinessTimeZone, type GradeChangeRequest, type GradeChangePreview, type Student } from '@mumtaz/contracts';
 import { Button } from '../../../components/ui/actions/button';
 import { Modal } from '../../../components/ui/overlay/dialog';
-import { FormField, Input, SearchSelect } from '../../../components/ui/forms/field';
+import { FormField, Input, Dropdown } from '../../../components/ui/forms/field';
 import { InlineAlert } from '../../../components/ui/feedback/states';
 import { useNotification } from '../../../components/ui/feedback/notification-provider';
 import { formatLessonDate, formatRupiah, formatTimestamp } from '../../../lib/format';
@@ -50,7 +50,7 @@ export function StudentGradeDialog({student, onClose}: {student:Student; onClose
     </div> : <div className="space-y-5">
       <form id="grade-change" className="space-y-4" onSubmit={event=>{event.preventDefault();const result=gradeChangeRequestSchema.safeParse(input);if(!result.success){setError(result.error.issues[0]?.message??'Periksa form');return;}setError(null);review.mutate();}}>
         <div className="grid gap-3 sm:grid-cols-2">
-          <FormField id="grade-new" label="Kelas baru" required><SearchSelect id="grade-new" items={GRADE_OPTIONS.map(grade=>({value:grade,label:grade}))} value={input.grade} onChange={grade=>patch({grade:grade as GradeChangeRequest['grade']})} placeholder="Pilih kelas" /></FormField>
+          <FormField id="grade-new" label="Kelas baru" required><Dropdown id="grade-new" items={GRADE_OPTIONS.map(grade=>({value:grade,label:grade}))} value={input.grade} onChange={grade=>patch({grade:grade as GradeChangeRequest['grade']})} placeholder="Pilih kelas" /></FormField>
           <FormField id="grade-from" label="Berlaku mulai" required><Input id="grade-from" type="date" value={input.effective_from} onChange={e=>patch({effective_from:e.target.value})} required /></FormField>
         </div>
         <FormField id="grade-reason" label="Catatan" required><Input id="grade-reason" value={input.reason} maxLength={500} onChange={e=>patch({reason:e.target.value})} required /></FormField>

@@ -19,9 +19,7 @@ it('class changes require preview before saving and keep history collapsed',asyn
   await user.click(await screen.findByRole('button',{name:'Ubah kelas Aisyah'}));
   const dialog=within(await screen.findByRole('dialog'));
   expect(dialog.queryByRole('button',{name:'Simpan perubahan'})).not.toBeInTheDocument();
-  const gradeInput=dialog.getByRole('combobox',{name:/Kelas baru/});
-  await user.clear(gradeInput);
-  await user.type(gradeInput,'4 SD');
+  await user.click(dialog.getByRole('button', { name: /Kelas baru/ }));
   await user.click(await screen.findByRole('option',{name:'4 SD'}));
   await user.click(dialog.getByRole('button',{name:'Tinjau perubahan'}));
   await dialog.findByText('3 SD → 4 SD');

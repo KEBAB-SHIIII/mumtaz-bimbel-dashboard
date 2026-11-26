@@ -1,4 +1,4 @@
-import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOptions } from '@headlessui/react';
+import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOptions, Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react';
 import { Check, ChevronDown } from 'lucide-react';
 import { useState, type ComponentPropsWithRef, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { cn } from '../../../lib/cn';
@@ -36,7 +36,7 @@ export interface SearchSelectItem {
   hint?: string;
 }
 
-interface SearchSelectProps {
+interface SelectFieldProps {
   id: string;
   items: SearchSelectItem[];
   /** Nilai terpilih (`''` = belum memilih). */
@@ -47,11 +47,40 @@ interface SearchSelectProps {
   describedBy?: string | undefined;
 }
 
+export function Dropdown({ id, items, value, onChange, placeholder, invalid, describedBy }: SelectFieldProps) {
+  const selected = items.find((item) => item.value === value);
+  return (
+    <Listbox value={value} onChange={onChange}>
+      <ListboxButton
+        id={id}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
+        className={cn(CONTROL, CONTROL_HEIGHT, 'group flex items-center justify-between gap-2 text-start', !selected && 'text-muted')}
+      >
+        {selected?.label ?? placeholder}
+        <ChevronDown aria-hidden className="size-4 shrink-0 text-muted transition-transform group-data-open:rotate-180 motion-reduce:transition-none" />
+      </ListboxButton>
+      <ListboxOptions
+        anchor="bottom start"
+        transition
+        className="z-50 max-h-60 w-(--button-width) origin-top overflow-y-auto overscroll-contain rounded-lg border border-border bg-surface p-1 text-sm shadow-md transition duration-150 ease-out [--anchor-gap:0.25rem] data-closed:scale-95 data-closed:opacity-0 motion-reduce:transition-none"
+      >
+        {items.map((item) => (
+          <ListboxOption key={item.value} value={item.value} className="flex cursor-pointer items-center justify-between gap-2 rounded-md px-2.5 py-2 font-medium text-text select-none data-focus:bg-surface-muted pointer-coarse:min-h-11">
+            {item.label}
+            {item.value === value && <Check aria-hidden className="size-4 shrink-0 text-primary" />}
+          </ListboxOption>
+        ))}
+      </ListboxOptions>
+    </Listbox>
+  );
+}
+
 /**
  * Pilihan dengan pencarian (Headless UI Combobox): ketik untuk menyaring daftar panjang
  * (mis. ratusan murid), panah/Enter untuk memilih. Hanya nilai dari daftar yang dapat dipilih.
  */
-export function SearchSelect({ id, items, value, onChange, placeholder, invalid, describedBy }: SearchSelectProps) {
+export function SearchSelect({ id, items, value, onChange, placeholder, invalid, describedBy }: SelectFieldProps) {
   const [query, setQuery] = useState('');
   const needle = query.trim().toLowerCase();
   const filtered = needle ? items.filter((item) => `${item.label} ${item.hint ?? ''}`.toLowerCase().includes(needle)) : items;

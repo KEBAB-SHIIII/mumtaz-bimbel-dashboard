@@ -11,7 +11,7 @@ import { Button } from '../../../components/ui/actions/button';
 import { DataTable } from '../../../components/ui/data-display/data-table';
 import { Modal } from '../../../components/ui/overlay/dialog';
 import { EmptyState, ErrorState, NoResultsState, InlineAlert } from '../../../components/ui/feedback/states';
-import { FormField, Input, SearchSelect, Select, describedBy } from '../../../components/ui/forms/field';
+import { FormField, Input, Dropdown, describedBy } from '../../../components/ui/forms/field';
 import { LoadingSwitch, SkeletonDataTable } from '../../../components/ui/feedback/skeleton';
 import { Card } from '../../../components/ui/surfaces/layout-primitives';
 import { toApiError } from '../../../lib/api-error';
@@ -21,6 +21,8 @@ import { applyServerErrors, hasFieldErrors, validateWith } from '../../../lib/fo
 import { ActiveBadge, CheckboxField, MASTER_PAGE_SIZE, MasterToolbar, useMasterList } from './master-data-shared';
 
 const SERVER_FIELDS = ['full_name', 'grade', 'school_name', 'registration_source'] as const;
+
+const sourceItems = REGISTRATION_SOURCE_OPTIONS.map((value) => ({ value, label: REGISTRATION_SOURCE_LABELS[value] }));
 
 interface StudentFormValues {
   full_name: string;
@@ -93,7 +95,7 @@ function StudentFormDialog({ student, open, onClose }: { student: Student | null
         </FormField>
         {!isEdit && <FormField id="student-grade" label="Kelas" required hint="Tarif les mengikuti jenjang PAUD–TK, SD 1–3, SD 4–6, SMP, atau SMA." error={errors.grade?.message}>
           <Controller control={form.control} name="grade" render={({field:gradeField})=>(
-            <SearchSelect id="student-grade" items={GRADE_OPTIONS.map(grade=>({value:grade,label:grade}))}
+            <Dropdown id="student-grade" items={GRADE_OPTIONS.map(grade=>({value:grade,label:grade}))}
               value={gradeField.value} onChange={gradeField.onChange} placeholder="Pilih kelas"
               invalid={Boolean(errors.grade)} describedBy={describedBy('student-grade',errors.grade?.message,'Tarif les mengikuti jenjang PAUD–TK, SD 1–3, SD 4–6, SMP, atau SMA.')} />
           )} />
@@ -101,13 +103,18 @@ function StudentFormDialog({ student, open, onClose }: { student: Student | null
         <FormField id="student-school_name" label="Asal sekolah" required error={errors.school_name?.message}>
           <Input {...field('school_name')} {...form.register('school_name')} />
         </FormField>
-        <FormField id="student-registration_source" label="Sumber pendaftaran" required={!isEdit} hint="Kanal tempat orang tua mengetahui Mumtaz." error={errors.registration_source?.message}>
-          <Select {...field('registration_source')} aria-describedby={describedBy('student-registration_source', errors.registration_source?.message, 'Kanal tempat orang tua mengetahui Mumtaz.')} {...form.register('registration_source')}>
-            <option value="" disabled={!isEdit || Boolean(student?.registration_source)}>{isEdit ? 'Belum diisi' : 'Pilih sumber'}</option>
-            {REGISTRATION_SOURCE_OPTIONS.map((source) => (
-              <option key={source} value={source}>{REGISTRATION_SOURCE_LABELS[source]}</option>
-            ))}
-          </Select>
+        <FormField id="student-registration_source" label="Sumber pendaftaran" required={!isEdit} error={errors.registration_source?.message}>
+          <Controller control={form.control} name="registration_source" render={({ field: sourceField }) => (
+            <Dropdown
+              id="student-registration_source"
+              items={isEdit && !student.registration_source ? [{ value: '', label: 'Belum diisi' }, ...sourceItems] : sourceItems}
+              value={sourceField.value}
+              onChange={sourceField.onChange}
+              placeholder={isEdit ? 'Belum diisi' : 'Pilih sumber'}
+              invalid={Boolean(errors.registration_source)}
+              describedBy={describedBy('student-registration_source', errors.registration_source?.message)}
+            />
+          )} />
         </FormField>
         {isEdit && (
           <CheckboxField
