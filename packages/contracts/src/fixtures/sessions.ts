@@ -43,7 +43,7 @@ const A2 = { tutor_id: TUTOR_IDS.tutorA, student_id: STUDENT_IDS.murid2, subject
 const B3 = { tutor_id: TUTOR_IDS.tutorB, student_id: STUDENT_IDS.murid3, subject_ids: [SUBJECT_IDS.ipa] };
 
 /** Snapshot data contoh mengikuti tarif owner D-26 sesuai kelas dan durasi sesi. */
-const sdLower90 = { rate_amount_snapshot: '90000', admin_fee_snapshot: '20000' } as const;
+const sdLower90 = { rate_amount_snapshot: '90000', admin_fee_snapshot: '15000' } as const;
 const sdUpper60 = { rate_amount_snapshot: '80000', admin_fee_snapshot: '10000' } as const;
 
 const noSnapshot = { rate_amount_snapshot: null, admin_fee_snapshot: null } as const;

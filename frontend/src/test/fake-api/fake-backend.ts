@@ -426,8 +426,12 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
     if (!hourly || !Number.isFinite(s.duration_minutes) || s.duration_minutes <= 0) {
       return { rate_amount_snapshot: null, admin_fee_snapshot: null };
     }
-    const gross = hourly + Math.max(0, Math.floor((s.duration_minutes - 60) / 30)) * hourly * 0.5;
-    const fee = 10_000 * Math.max(1, Math.floor((s.duration_minutes + 30) / 60));
+    // Jam tertagih: sisa < 20 mnt dibulatkan ke bawah, 20–49 → +0,5 jam, ≥ 50 → +1 jam (min. 1 jam).
+    const full = Math.floor(s.duration_minutes / 60);
+    const rest = s.duration_minutes - full * 60;
+    const hours = Math.max(1, full + (rest >= 50 ? 1 : rest >= 20 ? 0.5 : 0));
+    const gross = hourly * hours;
+    const fee = 10_000 * hours;
     return { rate_amount_snapshot: String(gross), admin_fee_snapshot: String(fee) };
   };
 

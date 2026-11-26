@@ -25,10 +25,10 @@ describe('fake API adapter mengikuti kontrak (data sintetis)', () => {
     if (!first) throw new Error('list kosong');
     await admin.fetchAdminAttendanceDetail(first.id);
     const payroll = await admin.fetchPayrollPreview('2026-10');
-    expect(payroll.totals).toEqual({ gross_amount: '340000', admin_fee_amount: '60000', net_amount: '280000' });
+    expect(payroll.totals).toEqual({ gross_amount: '340000', admin_fee_amount: '50000', net_amount: '290000' });
     // Total dapat ditelusuri ke rincian sesi.
     const counted = payroll.tutors.flatMap((t) => t.sessions).filter((line) => line.counted);
-    expect(counted.reduce((sum, line) => sum + Number(line.net_amount), 0)).toBe(280000);
+    expect(counted.reduce((sum, line) => sum + Number(line.net_amount), 0)).toBe(290000);
     const billing = await admin.fetchBilling('2026-10');
     expect(billing).toMatchObject({ total_sessions: 4, total_amount: '340000' });
     for (const entity of ['tutors', 'students', 'parents', 'subjects'] as const) {

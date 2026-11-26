@@ -43,7 +43,7 @@ describe('Payroll preview (estimasi honor)', () => {
       expect(counted.map((line) => line.session_id).sort()).toEqual([...expected.approved_session_ids].sort());
       expect(counted.map((line) => [line.gross_amount, line.admin_fee, line.net_amount])).toEqual(
         expected.tutor_id === TUTOR_IDS.tutorA
-          ? [['90000', '20000', '70000'], ['80000', '10000', '70000'], ['90000', '20000', '70000']]
+          ? [['90000', '15000', '75000'], ['80000', '10000', '70000'], ['90000', '15000', '75000']]
           : [['80000', '10000', '70000']],
       );
     }
@@ -219,7 +219,7 @@ describe('Ringkasan dashboard', () => {
     expect(body.year).toBe(2026);
     expect(body.years).toEqual([2026]);
     expect(body.months.map((month) => month.period)).toEqual(Array.from({ length: 12 }, (_, i) => `2026-${String(i + 1).padStart(2, '0')}`));
-    expect(body.months[9]).toEqual({ period: '2026-10', gross_revenue: '340000', tutor_salary: '280000', net_revenue: '60000' });
+    expect(body.months[9]).toEqual({ period: '2026-10', gross_revenue: '340000', tutor_salary: '290000', net_revenue: '50000' });
     expect(body.months[0]).toEqual({ period: '2026-01', gross_revenue: '0', tutor_salary: '0', net_revenue: '0' });
 
     const other = adminRevenueSchema.parse((await admin.get('/admin/dashboard/revenue?year=2025').expect(200)).body);
@@ -235,8 +235,8 @@ describe('Ringkasan dashboard', () => {
     const tutorA = await as.tutorA(t.app);
     const body = tutorDashboardSummarySchema.parse((await tutorA.get('/tutor/dashboard/summary?period=2026-10').expect(200)).body);
     expect(body.status_counts).toEqual({ pending: 2, approved: 3, revision_requested: 0, rejected: 0 });
-    // Bersih Farhan: 2 × (Rp90.000 − Rp20.000) + (Rp80.000 − Rp10.000).
-    expect(body.honor.estimated_amount).toBe('210000');
+    // Bersih Farhan: 2 × (Rp90.000 − Rp15.000) + (Rp80.000 − Rp10.000).
+    expect(body.honor.estimated_amount).toBe('220000');
   });
 
   it('Orang Tua: hanya approved anak terhubung, tanpa honor', async () => {

@@ -18,19 +18,19 @@ describe('Honor Tutor (Admin)', () => {
     useFakeBackend();
     const user = await openAs('admin.demo', TEST_ONLY_CREDENTIALS.adminPassword, 'Honor Tutor', '2026-10');
 
-    // Fixture Okt: kotor Rp340.000, potongan Rp60.000 (2 × Rp20.000 + 2 × Rp10.000), gaji Rp280.000.
+    // Fixture Okt: kotor Rp340.000, potongan Rp50.000 (2 × Rp15.000 + 2 × Rp10.000), gaji Rp290.000.
     const metric = async (label: string) => (await screen.findByText(label)).closest('div');
     expect(await metric('Total pendapatan kotor')).toHaveTextContent(/Rp\s?340\.000/);
-    expect(await metric('Total pendapatan bersih')).toHaveTextContent(/Rp\s?60\.000/);
-    expect(await metric('Total gaji yang harus dibayarkan')).toHaveTextContent(/Rp\s?280\.000/);
+    expect(await metric('Total pendapatan bersih')).toHaveTextContent(/Rp\s?50\.000/);
+    expect(await metric('Total gaji yang harus dibayarkan')).toHaveTextContent(/Rp\s?290\.000/);
 
     const farhan = (await screen.findByRole('heading', { name: 'Farhan' })).closest('section');
     if (!farhan) throw new Error('kartu Farhan tidak ada');
-    // Farhan: 2 × Rp90.000 + Rp80.000 = Rp260.000; potongan Rp50.000; bersih Rp210.000.
-    expect(within(farhan).getByText('Total pendapatan bersih tutor').parentElement).toHaveTextContent(/Rp\s?210\.000/);
+    // Farhan: 2 × Rp90.000 + Rp80.000 = Rp260.000; potongan Rp40.000; bersih Rp220.000.
+    expect(within(farhan).getByText('Total pendapatan bersih tutor').parentElement).toHaveTextContent(/Rp\s?220\.000/);
     expect(within(farhan).getByText('Jumlah sesi valid').parentElement).toHaveTextContent('3 sesi');
     expect(within(farhan).getByText('Subtotal (kotor)').parentElement).toHaveTextContent(/Rp\s?260\.000/);
-    expect(within(farhan).getByText('Potongan admin').parentElement).toHaveTextContent(/Rp\s?50\.000/);
+    expect(within(farhan).getByText('Potongan admin').parentElement).toHaveTextContent(/Rp\s?40\.000/);
 
     await user.click(within(farhan).getByRole('button', { name: /Rincian sesi \(5\)/ }));
     const table = within(farhan).getByRole('table', { name: 'Rincian sesi Farhan' });

@@ -41,7 +41,7 @@ describe('dated class history',()=>{
   const recent=await getAdminAttendanceDetail(ctx,SESSION_IDS.s06);
   expect(recent.grade).toBe('4 SD');
   expect(Number(recent.gross_amount)).toBe(120000);
-  expect(Number(recent.admin_fee)).toBe(20000);
+  expect(Number(recent.admin_fee)).toBe(15000);
   await expect(changeGrade(ctx,studentId,input,{token:preview.preview_token,userId:USER_IDS.admin})).rejects.toThrow();
   expect(await handle.db.select().from(studentGradeAudit)).toHaveLength(1);
  });

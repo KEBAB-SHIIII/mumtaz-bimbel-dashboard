@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GRADE_OPTIONS } from '@mumtaz/contracts';
 import { fixtureSessions, resolveFixtureSession } from '@mumtaz/contracts/fixtures';
-import { ADMIN_FEE_PER_HOUR, countedSnapshot, grossAmount, gradeTier, sessionFee } from '../src/services/billing/tariff.js';
+import { ADMIN_FEE_PER_HOUR, billedHours, countedSnapshot, grossAmount, gradeTier, sessionFee } from '../src/services/billing/tariff.js';
 
 describe('tarif owner PAUD sampai SMA', () => {
   it.each([
@@ -18,14 +18,22 @@ describe('tarif owner PAUD sampai SMA', () => {
 
   it.each([
     [30, 60_000, 10_000], [60, 60_000, 10_000], [61, 60_000, 10_000],
-    [75, 60_000, 10_000], [89, 60_000, 10_000], [90, 90_000, 20_000],
-    [91, 90_000, 20_000], [120, 120_000, 20_000], [149, 120_000, 20_000],
-    [150, 150_000, 30_000], [151, 150_000, 30_000], [180, 180_000, 30_000],
-    [181, 180_000, 30_000], [210, 210_000, 40_000], [211, 210_000, 40_000],
+    [79, 60_000, 10_000], [80, 90_000, 15_000], [90, 90_000, 15_000],
+    [109, 90_000, 15_000], [110, 120_000, 20_000], [120, 120_000, 20_000],
+    [139, 120_000, 20_000], [140, 150_000, 25_000], [169, 150_000, 25_000],
+    [170, 180_000, 30_000], [180, 180_000, 30_000], [199, 180_000, 30_000],
+    [200, 210_000, 35_000],
   ])('%i menit: tagihan Rp%i, potongan Rp%i', (minutes, gross, adminFee) => {
     expect(ADMIN_FEE_PER_HOUR).toBe(10_000);
     expect(sessionFee('3 SD', minutes)).toEqual({ gross, adminFee, tutorNet: gross - adminFee });
     expect(countedSnapshot('3 SD', minutes)).toEqual({ rate_amount_snapshot: String(gross), admin_fee_snapshot: String(adminFee) });
+  });
+
+  it.each([
+    [1, 1], [59, 1], [60, 1], [79, 1], [80, 1.5], [109, 1.5], [110, 2], [139, 2],
+    [140, 2.5], [169, 2.5], [170, 3], [199, 3],
+  ])('%i menit dibulatkan menjadi %s jam', (minutes, hours) => {
+    expect(billedHours(minutes)).toBe(hours);
   });
 
   it.each([0, -1, NaN, Infinity, -Infinity])('durasi tidak valid %s tidak menghasilkan nominal', (minutes) => {

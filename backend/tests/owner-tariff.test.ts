@@ -20,7 +20,7 @@ describe('tarif owner melalui API dan snapshot', () => {
   it.each([
     ['PAUD', 60_000], ['TK', 60_000], ['3 SD', 90_000],
     ['6 SD', 120_000], ['3 SMP', 150_000], ['3 SMA', 180_000],
-  ])('%s: create siswa, approval, billing dan honor memakai potongan 91 menit', async (grade, gross) => {
+  ])('%s: create siswa, approval, billing dan honor memakai pembulatan 91 menit (1,5 jam)', async (grade, gross) => {
     const student = studentSchema.parse((await admin.post('/admin/students', {
       full_name: `Siswa ${grade}`, grade, school_name: 'Sekolah uji',
     }).expect(201)).body);
@@ -36,20 +36,20 @@ describe('tarif owner melalui API dan snapshot', () => {
     expect(billing.students[0]?.total_amount).toBe(String(gross));
     const payroll = payrollPreviewResponseSchema.parse((await admin.get('/admin/payroll/preview?period=2026-11').expect(200)).body);
     expect(payroll.tutors.flatMap((tutor) => tutor.sessions).find((line) => line.session_id === id)).toMatchObject({
-      gross_amount: String(gross), admin_fee: '20000', net_amount: String(gross - 20_000),
+      gross_amount: String(gross), admin_fee: '15000', net_amount: String(gross - 15_000),
     });
 
-    // Koreksi melewati batas berikutnya harus memperbarui kedua snapshot.
+    // Koreksi ke 151 menit (2,5 jam) harus memperbarui kedua snapshot.
     await admin.put(`/admin/attendance/${id}`, { ...input, end_time: '18:31' }).expect(200);
     const [corrected] = await t.database.db.select().from(lessonSessions).where(eq(lessonSessions.id, id));
     expect(Number(corrected?.rate_amount_snapshot)).toBe(gross / 1.5 * 2.5);
-    expect(Number(corrected?.admin_fee_snapshot)).toBe(30_000);
+    expect(Number(corrected?.admin_fee_snapshot)).toBe(25_000);
     await admin.patch(`/admin/attendance/${id}/validity`, { validity: 'rejected' }).expect(200);
     const [rejected] = await t.database.db.select().from(lessonSessions).where(eq(lessonSessions.id, id));
     expect(rejected).toMatchObject({ rate_amount_snapshot: null, admin_fee_snapshot: null });
     await admin.patch(`/admin/attendance/${id}/validity`, { validity: 'valid' }).expect(200);
     const [approvedAgain] = await t.database.db.select().from(lessonSessions).where(eq(lessonSessions.id, id));
-    expect(Number(approvedAgain?.admin_fee_snapshot)).toBe(30_000);
+    expect(Number(approvedAgain?.admin_fee_snapshot)).toBe(25_000);
   });
 
   it('validasi otomatis SMA mengunci tarif baru; snapshot histori tetap', async () => {
@@ -74,7 +74,7 @@ describe('tarif owner melalui API dan snapshot', () => {
     }, id);
     const [row] = await t.database.db.select().from(lessonSessions).where(eq(lessonSessions.id, id));
     expect(row?.status).toBe('approved');
-    expect([Number(row?.rate_amount_snapshot), Number(row?.admin_fee_snapshot)]).toEqual([180_000, 20_000]);
+    expect([Number(row?.rate_amount_snapshot), Number(row?.admin_fee_snapshot)]).toEqual([180_000, 15_000]);
     const [historical] = await t.database.db.select().from(lessonSessions).where(eq(lessonSessions.id, SESSION_IDS.s01));
     expect([Number(historical?.rate_amount_snapshot), Number(historical?.admin_fee_snapshot)]).toEqual([50_000, 10_000]);
   });
