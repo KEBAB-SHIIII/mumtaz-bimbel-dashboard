@@ -122,11 +122,6 @@ function useParentSummaries(studentId: string, period: string) {
   };
 }
 
-const noteColors = [
-  'bg-accent-green-subtle before:bg-accent-green/25',
-  'bg-accent-blue-subtle before:bg-accent-blue/25',
-  'bg-accent-violet-subtle before:bg-accent-violet/25',
-];
 const NOTES_PER_PAGE = 6;
 
 function SessionNoteBoard({
@@ -152,7 +147,7 @@ function SessionNoteBoard({
         <m.li
           key={session.id}
           {...itemEnter(index)}
-          className={`relative min-w-0 rounded-md border border-black/5 p-4 shadow-sm before:pointer-events-none before:absolute before:top-0 before:left-1/2 before:h-3 before:w-12 before:-translate-x-1/2 before:-translate-y-1/2 before:-rotate-3 sm:p-5 ${noteColors[index % noteColors.length]}`}
+          className={`relative min-w-0 rounded-md border border-black/5 p-4 shadow-sm before:pointer-events-none before:absolute before:top-0 before:left-1/2 before:h-3 before:w-12 before:-translate-x-1/2 before:-translate-y-1/2 before:-rotate-3 sm:p-5 ${subjectStyle(session.subject_name).noteClass}`}
         >
           <article className="flex min-w-0 flex-col gap-1.5 [overflow-wrap:anywhere]">
             <p className="text-meta text-muted tabular-nums">

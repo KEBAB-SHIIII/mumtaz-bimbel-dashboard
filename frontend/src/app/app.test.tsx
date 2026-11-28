@@ -60,7 +60,7 @@ describe('autentikasi & navigasi per role', () => {
     expect(screen.queryByLabelText(/^Password/)).not.toBeInTheDocument();
     await user.type(await screen.findByLabelText(/ID Akses Orang Tua/), 'MUMTAZ-DEMO-PARENT-ACCESS-ONLY');
     await user.click(screen.getByRole('button', { name: 'Masuk' }));
-    expect(await screen.findByRole('heading', { name: 'Progress Anak' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Aisyah', level: 1 })).toBeInTheDocument();
     expect(await navLinks()).toEqual(['Beranda', 'Catatan Belajar']);
   });
 
@@ -248,7 +248,7 @@ describe('Orang Tua: Progress Anak', () => {
     await user.type(await screen.findByLabelText(/ID Akses Orang Tua/), 'MUMTAZ-DEMO-PARENT-ACCESS-ONLY');
     await user.click(screen.getByRole('button', { name: 'Masuk' }));
     await user.click(within(await screen.findByRole('navigation', { name: 'Navigasi utama' })).getByRole('link', { name: 'Catatan Belajar' }));
-    await screen.findByRole('heading', { name: 'Riwayat Pembelajaran', level: 1 });
+    await screen.findByRole('heading', { name: 'Catatan Belajar', level: 1 });
     await choosePeriod('2026-10');
 
     expect(await screen.findByText(/Penjumlahan dan pengurangan/)).toBeInTheDocument();
