@@ -1077,6 +1077,12 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
     failNextLearningSummary() {
       summaryStore.failNext();
     },
+    /** Hook test: tambahkan mata pelajaran aktif; mengembalikan ID-nya. */
+    addSubject(name: string) {
+      const subject: Subject = { id: nextId('8004'), name, is_active: true, created_at: FIXED_TIMESTAMP, updated_at: FIXED_TIMESTAMP };
+      subjects.push(subject);
+      return subject.id;
+    },
     /** Hook test: hubungkan anak tambahan ke akun orang tua (skenario orang tua dengan beberapa anak). */
     linkStudent(parentUserId: string, studentId: string) {
       links = [...links, { parent_user_id: parentUserId, student_id: studentId, relationship: 'ibu' }];

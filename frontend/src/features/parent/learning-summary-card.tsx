@@ -183,18 +183,25 @@ export function MonthlyLearningSummaryCard({
   ) : null;
 
   return (
-    <section aria-labelledby="monthly-summary-title" className="relative isolate overflow-hidden rounded-2xl bg-pastel-sun p-4 sm:p-5">
-      <OwlMascot className="pointer-events-none absolute end-3 bottom-2 -z-10 size-16 sm:size-20" />
-      <div className="flex flex-col gap-2 pe-16 sm:pe-24">
-        <h2 id="monthly-summary-title" className="text-card-title text-balance text-text">Ringkasan belajar {month}</h2>
+    <section aria-labelledby="monthly-summary-title" className="rounded-2xl bg-pastel-sun p-4 sm:p-5">
+      <div className="flex flex-col gap-3">
+        {/* Maskot di header (bukan menumpang di atas teks) agar paragraf memakai lebar penuh. */}
+        <div className="flex items-center gap-3">
+          <OwlMascot className="size-11 shrink-0" />
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 id="monthly-summary-title" className="text-card-title text-balance text-text">Ringkasan belajar {month}</h2>
+            {summary && approvedSessionCount > 0 && (
+              <p className="rounded-md bg-pastel-teal px-2 py-0.5 text-meta font-semibold text-ink-teal">{STATUS_META[summary.overall_status].label}</p>
+            )}
+          </div>
+        </div>
         {approvedSessionCount === 0 ? (
           <p className="text-sm text-pretty text-muted">Belum ada sesi terverifikasi untuk diringkas pada {formatPeriod(period)}.</p>
         ) : summary ? (
           <>
-            <p className="w-fit rounded-md bg-pastel-teal px-2 py-0.5 text-meta font-semibold text-ink-teal">{STATUS_META[summary.overall_status].label}</p>
             <p className="line-clamp-4 text-sm leading-relaxed text-pretty text-text">{summary.summary}</p>
             {retry}
-            <div className="flex flex-wrap items-center gap-2 pt-1">
+            <div className="flex flex-wrap items-center gap-2">
               <Button variant="secondary" size="sm" aria-haspopup="dialog" onClick={() => setOpen(true)}>Baca selengkapnya</Button>
               {summary.is_stale && (
                 <Button variant="ghost" size="sm" loading={isGenerating} icon={<RefreshCw aria-hidden className="size-3.5" />} onClick={onGenerate}>
@@ -209,7 +216,7 @@ export function MonthlyLearningSummaryCard({
         ) : (
           <>
             <p className="text-sm text-pretty text-muted">Dapatkan rangkuman perkembangan anak dari {approvedSessionCount} sesi terverifikasi bulan ini.</p>
-            <div className="pt-1">
+            <div>
               <Button variant="primary" size="md" loading={isGenerating} icon={<Sparkles aria-hidden className="size-4" />} onClick={onGenerate}>
                 Buat ringkasan bulanan
               </Button>

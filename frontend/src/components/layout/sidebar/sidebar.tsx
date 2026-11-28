@@ -6,7 +6,7 @@ import { formatPeriod } from '../../../lib/format';
 import { LockKeyhole, ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { AnimatePresence, m } from 'motion/react';
 import { useId, useState, type ButtonHTMLAttributes } from 'react';
-import { NavLink, useMatch } from 'react-router';
+import { NavLink, useLocation, useMatch } from 'react-router';
 import type { Role } from '@mumtaz/contracts';
 import { cn } from '../../../lib/cn';
 import { Chip } from '../../ui/data-display/chip';
@@ -72,9 +72,13 @@ function AttendanceAnomalyBadge({ collapsed }: { collapsed: boolean }) {
 
 function LeafItem({ item, collapsed, onNavigate }: ItemProps) {
   const [period] = usePeriodParam();
+  const { search } = useLocation();
+  // Portal Orang Tua: anak & bulan terpilih (student_id, period) ikut saat berpindah halaman.
+  const to = item.to.startsWith('/orang-tua-murid') ? { pathname: item.to, search }
+    : item.to === '/admin/absensi' ? `${item.to}?period=${period}` : item.to;
   return (
     <NavLink
-      to={item.to === '/admin/absensi' ? `${item.to}?period=${period}` : item.to}
+      to={to}
       aria-label={item.label}
       end={item.end ?? false}
       onClick={onNavigate}

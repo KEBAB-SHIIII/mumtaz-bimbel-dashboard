@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, CalendarCheck, Clock, GraduationCap, type LucideIcon } from 'lucide-react';
-import { Link } from 'react-router';
+import { BookOpen, CalendarCheck, ChevronDown, ChevronUp, Clock, type LucideIcon } from 'lucide-react';
+import { Link, Navigate, useLocation } from 'react-router';
 import { m } from 'motion/react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type {
   LearningSummaryView,
   ParentLearningSummariesResponse,
@@ -10,6 +10,7 @@ import type {
   ParentStudent,
 } from '@mumtaz/contracts';
 import { itemEnter } from '../../components/ui/motion/animated-list';
+import { Avatar } from '../../components/ui/data-display/avatar';
 import { Pagination } from '../../components/ui/data-display/data-table';
 import { EmptyState, ErrorState } from '../../components/ui/feedback/states';
 import { FilterSelect } from '../../components/ui/forms/filter-select';
@@ -235,27 +236,35 @@ function ParentPageFrame({ title, children }: { title: string; children: (ctx: P
   return <>{children({ student: selected, period, controls })}</>;
 }
 
+/** Identitas anak (avatar DiceBear dari ID murid internal, bukan ID Akses Orang Tua). */
+function ChildCard({ student, children }: { student: ParentStudent; children?: ReactNode }) {
+  return (
+    <section aria-label="Data anak" className="relative isolate flex flex-col gap-4 rounded-2xl border border-brand-border/60 bg-linear-to-br from-primary-subtle to-brand-gradient-to p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
+      <svg aria-hidden="true" focusable="false" viewBox="0 0 150 62" className="pointer-events-none absolute end-2 top-1 -z-10 w-24 text-primary/25 sm:end-1/3 sm:w-36">
+        <path d="M3 53c24 4 49-6 48-20-1-11-22-8-17 3 6 14 37 13 57-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="3 5" />
+        <path d="m91 23 43-17-15 33-11-10-7 5 2-10Z" fill="var(--color-surface)" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        <path d="m103 24 31-18-26 23" fill="none" stroke="currentColor" strokeLinejoin="round" />
+      </svg>
+      <div className="flex min-w-0 items-center gap-3">
+        <Avatar seed={student.id} name={student.full_name} size={40} decorative />
+        <div className="min-w-0">
+          <p className="text-card-title break-words text-text">{student.full_name}</p>
+          <p className="text-meta text-pretty text-muted">{student.grade} · {student.school_name}</p>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 /** Beranda: ringkas dulu (angka, ringkasan AI), detail kemudian (sesi terakhir, pelajaran). */
 export function ParentDashboardPage() {
-  useEffect(() => {
-    document.title = 'Beranda · Mumtaz Bimbel';
-  }, []);
   return (
     <ParentPageFrame title="Beranda">
       {({ student, period, controls }) => (
         <>
-          <section aria-label="Data anak" className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:p-5">
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-pastel-blue text-ink-blue">
-                <GraduationCap aria-hidden className="size-5" />
-              </span>
-              <div className="min-w-0">
-                <h1 className="text-card-title break-words text-text sm:text-xl">{student.full_name}</h1>
-                <p className="text-meta text-pretty text-muted">{student.grade} · {student.school_name}</p>
-              </div>
-            </div>
-            {controls}
-          </section>
+          <PageHeader title="Beranda" />
+          <ChildCard student={student}>{controls}</ChildCard>
           <HomeContent key={`${student.id}:${period}`} studentId={student.id} period={period} />
         </>
       )}
@@ -286,8 +295,9 @@ function StatTile({ icon: Icon, label, value, unit, tone }: { icon: LucideIcon; 
 
 function SectionCard({ id, title, actions, children }: { id: string; title: string; actions?: ReactNode; children: ReactNode }) {
   return (
-    <section aria-labelledby={id} className="rounded-2xl border border-border bg-surface p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-3">
+    <section aria-labelledby={id} className="rounded-2xl border border-border bg-surface px-4 pt-4 pb-2 sm:px-5 sm:pt-5">
+      {/* Tinggi header tetap (h-7) di semua kartu; aksi memakai margin negatif agar area sentuh 44px tidak menambah tinggi. */}
+      <div className="flex h-7 items-center justify-between gap-3">
         <h2 id={id} className="text-card-title text-text">{title}</h2>
         {actions}
       </div>
@@ -313,7 +323,6 @@ function HomeContent({ studentId, period }: { studentId: string; period: string 
   return (
     <QueryView query={combined} skeleton={<><SkeletonStatCards count={3} /><Card><SkeletonCardList count={2} /></Card></>}>
       {({ summary: data, progress: detail }) => {
-        const maxSessions = Math.max(1, ...data.subject_sessions.map((item) => item.sessions));
         return (
           <>
             <ul aria-label="Ringkasan bulan ini" className="grid grid-cols-3 gap-2 sm:gap-4">
@@ -340,9 +349,9 @@ function HomeContent({ studentId, period }: { studentId: string; period: string 
                   <SectionCard
                     id="recent-sessions-title"
                     title="Sesi terakhir"
-                    actions={<Link to={notesLink} className="inline-flex min-h-11 items-center rounded-md px-2 text-sm font-semibold text-primary hover:bg-primary-subtle focus-visible:outline-2 focus-visible:outline-primary">Lihat semua catatan</Link>}
+                    actions={<Link to={notesLink} className="-my-2.5 -me-2 inline-flex min-h-11 items-center rounded-md px-2 text-sm font-semibold text-primary hover:text-ink-blue hover:underline focus-visible:outline-2 focus-visible:outline-primary">Lihat semua catatan</Link>}
                   >
-                    <ol className="mt-1 divide-y divide-border">
+                    <ol className="mt-2 divide-y divide-border">
                       {detail.sessions.slice(0, 5).map((session) => {
                         const style = subjectStyle(session.subject_name);
                         return (
@@ -361,35 +370,60 @@ function HomeContent({ studentId, period }: { studentId: string; period: string 
                     </ol>
                   </SectionCard>
                 </div>
-                <SectionCard id="subjects-title" title="Pelajaran bulan ini">
-                  <ul className="mt-1 divide-y divide-border">
-                    {data.subject_sessions.map((item) => {
-                      const style = subjectStyle(item.name);
-                      return (
-                        <li key={item.name} className="flex items-center gap-3 py-3">
-                          <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${style.tileClass}`}>
-                            <style.icon aria-hidden className={`size-[1.125rem] ${style.iconClass}`} />
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-baseline justify-between gap-3">
-                              <span className="break-words text-sm font-medium text-text">{item.name}</span>
-                              <span className="shrink-0 text-meta text-muted">{item.sessions} sesi</span>
-                            </div>
-                            <div aria-hidden className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-muted">
-                              <div className={`h-full rounded-full ${style.barClass}`} style={{ width: `${(item.sessions / maxSessions) * 100}%` }} />
-                            </div>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </SectionCard>
+                <SubjectsCard items={data.subject_sessions} />
               </div>
             )}
           </>
         );
       }}
     </QueryView>
+  );
+}
+
+const SUBJECTS_COLLAPSED = 5;
+
+/** Pelajaran bulan ini: 5 mapel teratas, sisanya dibuka lewat tombol agar kolom tidak memanjang. */
+function SubjectsCard({ items }: { items: { name: string; sessions: number }[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const maxSessions = Math.max(1, ...items.map((item) => item.sessions));
+  const visible = expanded ? items : items.slice(0, SUBJECTS_COLLAPSED);
+  return (
+    <SectionCard id="subjects-title" title="Pelajaran bulan ini">
+      <ul className="mt-2 divide-y divide-border">
+        {visible.map((item) => {
+          const style = subjectStyle(item.name);
+          return (
+            <li key={item.name} className="flex items-center gap-3 py-3">
+              <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${style.tileClass}`}>
+                <style.icon aria-hidden className={`size-5 ${style.iconClass}`} />
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="min-w-0 break-words text-sm font-semibold text-text">{item.name}</span>
+                  <span className="shrink-0 text-meta text-muted tabular-nums">{item.sessions} sesi</span>
+                </div>
+                <div aria-hidden className="h-1.5 overflow-hidden rounded-full bg-surface-muted">
+                  <div className={`h-full rounded-full ${style.barClass}`} style={{ width: `${(item.sessions / maxSessions) * 100}%` }} />
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {items.length > SUBJECTS_COLLAPSED && (
+        <div className="border-t border-border py-2">
+          <button
+            type="button"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((open) => !open)}
+            className="-ms-2 inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-sm font-semibold text-primary hover:text-ink-blue focus-visible:outline-2 focus-visible:outline-primary"
+          >
+            {expanded ? <ChevronUp aria-hidden className="size-4" /> : <ChevronDown aria-hidden className="size-4" />}
+            {expanded ? 'Tampilkan lebih sedikit' : `Lihat semua (${items.length} mapel)`}
+          </button>
+        </div>
+      )}
+    </SectionCard>
   );
 }
 
@@ -440,4 +474,10 @@ function HistoryList({ studentId, period }: { studentId: string; period: string 
       )}
     </QueryView>
   );
+}
+
+/** Halaman Mata Pelajaran digabung ke Beranda (28-11-2026); tautan lama tetap berfungsi. */
+export function ParentSubjectsRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: '/orang-tua-murid', search }} replace />;
 }

@@ -60,7 +60,7 @@ describe('autentikasi & navigasi per role', () => {
     expect(screen.queryByLabelText(/^Password/)).not.toBeInTheDocument();
     await user.type(await screen.findByLabelText(/ID Akses Orang Tua/), 'MUMTAZ-DEMO-PARENT-ACCESS-ONLY');
     await user.click(screen.getByRole('button', { name: 'Masuk' }));
-    expect(await screen.findByRole('heading', { name: 'Aisyah', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Beranda', level: 1 })).toBeInTheDocument();
     expect(await navLinks()).toEqual(['Beranda', 'Catatan Belajar']);
   });
 

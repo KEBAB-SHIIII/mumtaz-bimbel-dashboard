@@ -16,7 +16,10 @@ describe('Beranda Orang Tua', () => {
   it('menampilkan kartu anak, angka bulan ini, pelajaran per mapel, dan sesi terakhir', async () => {
     useFakeBackend();
     const user = await loginParentA();
-    expect(await screen.findByRole('heading', { name: 'Aisyah', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Beranda', level: 1 })).toBeInTheDocument();
+    const child = await screen.findByRole('region', { name: 'Data anak' });
+    expect(child).toHaveTextContent('Aisyah');
+    expect(child).toHaveTextContent('3 SD · SD Harapan Bangsa');
     await choosePeriod('2026-10');
 
     const stats = await screen.findByRole('list', { name: 'Ringkasan bulan ini' });
@@ -37,7 +40,7 @@ describe('Beranda Orang Tua', () => {
     useFakeBackend();
     // Pemilih bulan hanya berisi bulan bersesi; bulan kosong dibuka lewat tautan.
     await loginParentA('/orang-tua-murid?period=2026-08');
-    await screen.findByRole('heading', { name: 'Aisyah', level: 1 });
+    await screen.findByRole('heading', { name: 'Beranda', level: 1 });
     expect(await screen.findByText('Belum ada sesi terverifikasi')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
@@ -46,10 +49,10 @@ describe('Beranda Orang Tua', () => {
     const backend = useFakeBackend();
     backend.linkStudent(USER_IDS.parentA, STUDENT_IDS.murid2);
     const user = await loginParentA();
-    await screen.findByRole('heading', { name: 'Aisyah', level: 1 });
+    await screen.findByRole('heading', { name: 'Beranda', level: 1 });
     await user.click(await screen.findByRole('button', { name: /^Anak/ }));
     await user.click(await screen.findByRole('option', { name: 'Bima' }));
-    expect(await screen.findByRole('heading', { name: 'Bima', level: 1 })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Data anak' })).toHaveTextContent('Bima'));
   });
 
   it('label kartu angka dibacakan sekali saja (tanpa duplikat untuk pembaca layar)', async () => {
@@ -77,5 +80,25 @@ describe('Beranda Orang Tua', () => {
     await waitFor(() => expect(within(subjects).getAllByRole('listitem')).toHaveLength(2));
     expect(within(subjects).getByText('Matematika').closest('li')).toHaveTextContent('3 sesi');
     expect(within(subjects).getByText('Bahasa Inggris').closest('li')).toHaveTextContent('1 sesi');
+  });
+
+  it('pelajaran bulan ini menampilkan 5 mapel teratas lalu bisa diperluas', async () => {
+    const backend = useFakeBackend();
+    const extra = ['Fiqih', 'PKN', 'Mewarnai'].map((name) => backend.addSubject(name));
+    backend.seedApprovedSession({
+      student_id: STUDENT_IDS.murid1,
+      subject_ids: [SUBJECT_IDS.bahasaInggris, SUBJECT_IDS.ipa, SUBJECT_IDS.bahasaIndonesia, ...extra],
+      lesson_date: '2026-10-21',
+      learning_material: 'Latihan gabungan',
+      learning_notes: 'Siswa mengikuti latihan gabungan beberapa mata pelajaran dengan baik dan fokus sepanjang sesi berlangsung.',
+    });
+    const user = await loginParentA();
+    await choosePeriod('2026-10');
+    const subjects = await screen.findByRole('region', { name: 'Pelajaran bulan ini' });
+    await waitFor(() => expect(within(subjects).getAllByRole('listitem')).toHaveLength(5));
+    await user.click(within(subjects).getByRole('button', { name: 'Lihat semua (7 mapel)' }));
+    expect(within(subjects).getAllByRole('listitem')).toHaveLength(7);
+    await user.click(within(subjects).getByRole('button', { name: 'Tampilkan lebih sedikit' }));
+    expect(within(subjects).getAllByRole('listitem')).toHaveLength(5);
   });
 });

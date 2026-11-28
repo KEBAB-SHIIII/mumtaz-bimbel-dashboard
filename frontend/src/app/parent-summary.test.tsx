@@ -9,7 +9,7 @@ async function loginParentA(route = '/login/orang-tua') {
   const user = userEvent.setup();
   await user.type(await screen.findByLabelText(/ID Akses Orang Tua/), 'MUMTAZ-DEMO-PARENT-ACCESS-ONLY');
   await user.click(screen.getByRole('button', { name: 'Masuk' }));
-  await screen.findByRole('heading', { name: 'Aisyah', level: 1 });
+  await screen.findByRole('heading', { name: 'Beranda', level: 1 });
   return user;
 }
 
@@ -51,7 +51,7 @@ describe('Ringkasan belajar AI Orang Tua', () => {
     if (!first) throw new Error('tombol ringkas sesi tidak ada');
     await user.click(first);
     expect(await screen.findByText('Ringkasan AI sesi ini')).toBeInTheDocument();
-    expect(screen.getByText(/Pada sesi ini siswa mengikuti materi Perkalian dasar 1–5/)).toBeInTheDocument();
+    expect(await screen.findByText(/Pada sesi ini siswa mengikuti materi Perkalian dasar 1–5/)).toBeInTheDocument();
     expect(screen.getByText('Perkalian dasar 1–5')).toBeInTheDocument();
   });
 
