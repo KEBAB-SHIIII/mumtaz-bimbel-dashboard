@@ -101,4 +101,19 @@ describe('Beranda Orang Tua', () => {
     await user.click(within(subjects).getByRole('button', { name: 'Tampilkan lebih sedikit' }));
     expect(within(subjects).getAllByRole('listitem')).toHaveLength(5);
   });
+
+  it('isi Beranda tanpa ikon/ilustrasi (maskot & ikon lucide dihapus)', async () => {
+    useFakeBackend();
+    const user = await loginParentA();
+    await choosePeriod('2026-10');
+    await user.click(await screen.findByRole('button', { name: 'Buat ringkasan bulanan' }));
+    await screen.findByText('Berkembang baik');
+    const regions = [
+      screen.getByRole('list', { name: 'Ringkasan bulan ini' }),
+      screen.getByRole('region', { name: 'Ringkasan belajar Oktober' }),
+      screen.getByRole('region', { name: 'Sesi terakhir' }),
+      screen.getByRole('region', { name: 'Pelajaran bulan ini' }),
+    ];
+    for (const region of regions) expect(region.querySelector('svg')).toBeNull();
+  });
 });

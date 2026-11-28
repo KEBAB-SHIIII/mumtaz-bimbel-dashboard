@@ -1,4 +1,3 @@
-import { ChevronDown, ChevronUp, RefreshCw, RotateCcw, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import type { LearningSummaryStatus, LearningSummaryView } from '@mumtaz/contracts';
 import { Button } from '../../components/ui/actions/button';
@@ -7,7 +6,6 @@ import { Chip, type ChipColor } from '../../components/ui/data-display/chip';
 import { InlineAlert } from '../../components/ui/feedback/states';
 import { toApiError } from '../../lib/api-error';
 import { formatPeriod, formatTimestamp } from '../../lib/format';
-import { OwlMascot } from './owl-mascot';
 
 const MAX_COLLAPSED_SUBJECTS = 3;
 
@@ -56,7 +54,6 @@ function SummaryBody({
             variant="secondary"
             size="sm"
             loading={isLoading}
-            icon={<RefreshCw aria-hidden className="size-3.5" />}
             onClick={onGenerate}
           >
             Perbarui ringkasan
@@ -72,7 +69,6 @@ function SummaryBody({
               variant="secondary"
               size="sm"
               loading={isLoading}
-              icon={<RotateCcw aria-hidden className="size-3.5" />}
               onClick={onGenerate}
             >
               Coba lagi
@@ -127,13 +123,6 @@ function SummaryBody({
               <Button
                 variant="ghost"
                 size="sm"
-                icon={
-                  expanded ? (
-                    <ChevronUp aria-hidden className="size-4" />
-                  ) : (
-                    <ChevronDown aria-hidden className="size-4" />
-                  )
-                }
                 onClick={() => setExpanded((prev) => !prev)}
               >
                 {expanded
@@ -175,7 +164,7 @@ export function MonthlyLearningSummaryCard({
     <InlineAlert tone="danger" title={summary ? 'Gagal memperbarui ringkasan' : 'Ringkasan belum dapat dibuat'}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span>{toApiError(error).message}</span>
-        <Button variant="secondary" size="sm" loading={isGenerating} icon={<RotateCcw aria-hidden className="size-3.5" />} onClick={onGenerate}>
+        <Button variant="secondary" size="sm" loading={isGenerating} onClick={onGenerate}>
           Coba lagi
         </Button>
       </div>
@@ -185,15 +174,11 @@ export function MonthlyLearningSummaryCard({
   return (
     <section aria-labelledby="monthly-summary-title" className="rounded-2xl bg-pastel-sun p-4 sm:p-5">
       <div className="flex flex-col gap-3">
-        {/* Maskot di header (bukan menumpang di atas teks) agar paragraf memakai lebar penuh. */}
-        <div className="flex items-center gap-3">
-          <OwlMascot className="size-11 shrink-0" />
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
-            <h2 id="monthly-summary-title" className="text-card-title text-balance text-text">Ringkasan belajar {month}</h2>
-            {summary && approvedSessionCount > 0 && (
-              <p className="rounded-md bg-pastel-teal px-2 py-0.5 text-meta font-semibold text-ink-teal">{STATUS_META[summary.overall_status].label}</p>
-            )}
-          </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h2 id="monthly-summary-title" className="text-card-title text-balance text-text">Ringkasan belajar {month}</h2>
+          {summary && approvedSessionCount > 0 && (
+            <p className="rounded-md bg-pastel-teal px-2 py-0.5 text-meta font-semibold text-ink-teal">{STATUS_META[summary.overall_status].label}</p>
+          )}
         </div>
         {approvedSessionCount === 0 ? (
           <p className="text-sm text-pretty text-muted">Belum ada sesi terverifikasi untuk diringkas pada {formatPeriod(period)}.</p>
@@ -204,7 +189,7 @@ export function MonthlyLearningSummaryCard({
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="secondary" size="sm" aria-haspopup="dialog" onClick={() => setOpen(true)}>Baca selengkapnya</Button>
               {summary.is_stale && (
-                <Button variant="ghost" size="sm" loading={isGenerating} icon={<RefreshCw aria-hidden className="size-3.5" />} onClick={onGenerate}>
+                <Button variant="ghost" size="sm" loading={isGenerating} onClick={onGenerate}>
                   Perbarui ringkasan
                 </Button>
               )}
@@ -217,7 +202,7 @@ export function MonthlyLearningSummaryCard({
           <>
             <p className="text-sm text-pretty text-muted">Dapatkan rangkuman perkembangan anak dari {approvedSessionCount} sesi terverifikasi bulan ini.</p>
             <div>
-              <Button variant="primary" size="md" loading={isGenerating} icon={<Sparkles aria-hidden className="size-4" />} onClick={onGenerate}>
+              <Button variant="primary" size="md" loading={isGenerating} onClick={onGenerate}>
                 Buat ringkasan bulanan
               </Button>
             </div>
@@ -252,7 +237,6 @@ export function SessionLearningSummaryBlock({
           size="md"
           aria-haspopup="dialog"
           aria-expanded={open}
-          icon={<Sparkles aria-hidden className="size-3.5" />}
           onClick={() => {
             setOpen(true);
             if (!summary && !isGenerating && !error) onGenerate();
@@ -271,7 +255,6 @@ export function SessionLearningSummaryBlock({
               variant="secondary"
               size="sm"
               loading={isGenerating}
-              icon={<RotateCcw aria-hidden className="size-3.5" />}
               onClick={onGenerate}
             >
               Coba lagi

@@ -1,32 +1,24 @@
 // @vitest-environment node
 /// <reference types="node" />
-import { BookHeart, BookOpen, Calculator, FlaskConical, Languages } from 'lucide-react';
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { subjectStyle } from './subject-style';
 
-describe('subjectStyle: identitas warna & ikon mapel', () => {
-  it('memetakan mapel umum ke ikonnya', () => {
-    expect(subjectStyle('Matematika').icon).toBe(Calculator);
-    expect(subjectStyle('Mengaji, Tajwid, dan Hafalan').icon).toBe(BookHeart);
-    expect(subjectStyle('IPAS').icon).toBe(FlaskConical);
-  });
-
-  it('mapel tak dikenal memakai ikon cadangan tanpa error', () => {
-    expect(subjectStyle('Seni Rupa').icon).toBe(BookOpen);
-    expect(subjectStyle('').icon).toBe(BookOpen);
+describe('subjectStyle: identitas warna mapel', () => {
+  it('mapel tak dikenal tetap mendapat nada warna tanpa error', () => {
+    expect(subjectStyle('Seni Rupa').barClass).toMatch(/^bg-bar-(blue|teal|amber|sky)$/);
+    expect(subjectStyle('').barClass).toMatch(/^bg-bar-(blue|teal|amber|sky)$/);
   });
 
   it('warna deterministik: nama sama (beda huruf besar) → kelas sama', () => {
     expect(subjectStyle('Bahasa Inggris')).toEqual(subjectStyle('bahasa inggris'));
-    expect(subjectStyle('Matematika').tileClass).toMatch(/^bg-pastel-(blue|teal|amber|sky)$/);
+    expect(subjectStyle('Matematika').barClass).toMatch(/^bg-bar-(blue|teal|amber|sky)$/);
   });
 
   it('sesi multi-mapel memakai gaya mapel pertama (termasuk mapel bernama koma)', () => {
     expect(subjectStyle('Matematika, Bahasa Inggris')).toEqual(subjectStyle('Matematika'));
     expect(subjectStyle('Bahasa Inggris, Matematika')).toEqual(subjectStyle('Bahasa Inggris'));
-    expect(subjectStyle('Bahasa Inggris, Matematika').icon).toBe(Languages);
     expect(subjectStyle('Mengaji, Tajwid, dan Hafalan, Matematika')).toEqual(subjectStyle('Mengaji, Tajwid, dan Hafalan'));
     expect(subjectStyle('Seni Rupa, Matematika')).toEqual(subjectStyle('Seni Rupa'));
   });

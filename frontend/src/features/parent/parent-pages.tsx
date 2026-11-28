@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, CalendarCheck, ChevronDown, ChevronUp, Clock, type LucideIcon } from 'lucide-react';
 import { Link, Navigate, useLocation } from 'react-router';
 import { m } from 'motion/react';
 import { useState, type ReactNode } from 'react';
@@ -278,13 +277,10 @@ const STAT_TONES = {
   amber: 'bg-pastel-amber',
 } as const;
 
-function StatTile({ icon: Icon, label, value, unit, tone }: { icon: LucideIcon; label: string; value: string; unit: string; tone: keyof typeof STAT_TONES }) {
+function StatTile({ label, value, unit, tone }: { label: string; value: string; unit: string; tone: keyof typeof STAT_TONES }) {
   return (
-    <li className={`flex flex-col gap-3 rounded-2xl p-3 sm:p-4 ${STAT_TONES[tone]}`}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-meta font-semibold text-text max-sm:sr-only">{label}</span>
-        <Icon aria-hidden className="size-5 shrink-0 text-text" />
-      </div>
+    <li className={`flex flex-col gap-2 rounded-2xl p-3 sm:gap-3 sm:p-4 ${STAT_TONES[tone]}`}>
+      <span className="text-meta font-semibold text-text">{label}</span>
       <p className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
         <span className="text-2xl font-bold text-text tabular-nums sm:text-3xl">{value}</span>
         <span className="text-meta text-muted">{unit}</span>
@@ -326,9 +322,9 @@ function HomeContent({ studentId, period }: { studentId: string; period: string 
         return (
           <>
             <ul aria-label="Ringkasan bulan ini" className="grid grid-cols-3 gap-2 sm:gap-4">
-              <StatTile icon={CalendarCheck} tone="blue" label="Sesi belajar" value={String(data.approved_sessions)} unit="sesi" />
-              <StatTile icon={Clock} tone="teal" label="Waktu belajar" value={formatHours(data.approved_duration_minutes)} unit="jam" />
-              <StatTile icon={BookOpen} tone="amber" label="Mata pelajaran" value={String(data.subject_sessions.length)} unit="mapel" />
+              <StatTile tone="blue" label="Sesi belajar" value={String(data.approved_sessions)} unit="sesi" />
+              <StatTile tone="teal" label="Waktu belajar" value={formatHours(data.approved_duration_minutes)} unit="jam" />
+              <StatTile tone="amber" label="Mata pelajaran" value={String(data.subject_sessions.length)} unit="mapel" />
             </ul>
 
             {data.approved_sessions === 0 ? (
@@ -356,9 +352,8 @@ function HomeContent({ studentId, period }: { studentId: string; period: string 
                         const style = subjectStyle(session.subject_name);
                         return (
                           <li key={session.id} className="flex items-center gap-3 py-3">
-                            <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${style.tileClass}`}>
-                              <style.icon aria-hidden className={`size-5 ${style.iconClass}`} />
-                            </span>
+                            {/* Penanda warna mapel (tanpa ikon): garis tegak tipis di kiri. */}
+                            <span aria-hidden className={`h-9 w-1 shrink-0 rounded-full ${style.barClass}`} />
                             <div className="min-w-0 flex-1">
                               <p className="font-semibold break-words text-text">{session.subject_name}</p>
                               <p className="text-meta text-muted">{session.tutor_name} · {formatDuration(session.duration_minutes)}</p>
@@ -393,11 +388,8 @@ function SubjectsCard({ items }: { items: { name: string; sessions: number }[] }
         {visible.map((item) => {
           const style = subjectStyle(item.name);
           return (
-            <li key={item.name} className="flex items-center gap-3 py-3">
-              <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${style.tileClass}`}>
-                <style.icon aria-hidden className={`size-5 ${style.iconClass}`} />
-              </span>
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <li key={item.name} className="py-3">
+              <div className="flex min-w-0 flex-col gap-1.5">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="min-w-0 break-words text-sm font-semibold text-text">{item.name}</span>
                   <span className="shrink-0 text-meta text-muted tabular-nums">{item.sessions} sesi</span>
@@ -416,9 +408,8 @@ function SubjectsCard({ items }: { items: { name: string; sessions: number }[] }
             type="button"
             aria-expanded={expanded}
             onClick={() => setExpanded((open) => !open)}
-            className="-ms-2 inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-sm font-semibold text-primary hover:text-ink-blue focus-visible:outline-2 focus-visible:outline-primary"
+            className="-ms-2 inline-flex min-h-11 items-center rounded-md px-2 text-sm font-semibold text-primary hover:text-ink-blue focus-visible:outline-2 focus-visible:outline-primary"
           >
-            {expanded ? <ChevronUp aria-hidden className="size-4" /> : <ChevronDown aria-hidden className="size-4" />}
             {expanded ? 'Tampilkan lebih sedikit' : `Lihat semua (${items.length} mapel)`}
           </button>
         </div>
