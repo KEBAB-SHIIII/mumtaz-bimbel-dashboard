@@ -18,7 +18,8 @@ const DESKTOP_QUERY = '(min-width: 64rem)';
 
 /**
  * Shell aplikasi per role (docs/design/03-layout.md): sidebar berkelompok yang bisa diciutkan (≥ 1024px)
- * atau drawer (< 1024px), header dengan judul halaman + pencarian menu + avatar, dan frame konten.
+ * atau drawer (< 1024px), header penuh di atas, frame konten utama, serta slot sidebar kanan
+ * yang sejajar dengan frame utama di bawah header untuk panel detail non-modal di desktop.
  */
 export function AppShell() {
   const user = useSession().data;
@@ -36,7 +37,11 @@ export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
   const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
-  const slots = useMemo(() => ({ title: titleSlot, actions: actionsSlot }), [titleSlot, actionsSlot]);
+  const [rightPanelSlot, setRightPanelSlot] = useState<HTMLElement | null>(null);
+  const slots = useMemo(
+    () => ({ title: titleSlot, actions: actionsSlot, rightPanel: rightPanelSlot }),
+    [titleSlot, actionsSlot, rightPanelSlot],
+  );
 
   // Drawer modal yang tertinggal terbuka saat jendela dilebarkan akan mengunci halaman: tutup otomatis.
   useEffect(() => {
@@ -127,23 +132,41 @@ export function AppShell() {
             <AccountMenu userId={user.id} fullName={user.full_name} role={user.role} roleLabel={ROLE_LABEL[user.role]} onLogout={handleLogout} />
           </header>
 
-          <main id="main" tabIndex={-1} className={cn('flex flex-1 flex-col px-4 focus:outline-none sm:px-6 lg:ps-2 lg:pe-4 lg:pb-8', isParent ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]' : 'pb-8')}>
-            <div className="mx-auto lg:ms-0 flex w-full max-w-[90rem] flex-1 flex-col gap-4 lg:rounded-xl lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-sm">
-              {/* Pindah halaman: isi frame memudar + naik 6px (keyframe), sidebar & header diam. */}
-              <div key={location.pathname} className="flex flex-1 flex-col gap-4">
-                <Suspense
-                  fallback={
-                    <PageSkeleton>
-                      <RouteSkeletonContent pathname={location.pathname} />
-                    </PageSkeleton>
-                  }
-                >
-                  <Outlet />
-                </Suspense>
+          {/* Area kerja di bawah header: frame konten utama (`<main>`) dan slot sidebar kanan sejajar dari tepi atas yang sama. */}
+          <div className="flex min-w-0 flex-1 items-stretch lg:gap-4 lg:pe-4">
+            <main
+              id="main"
+              tabIndex={-1}
+              className={cn(
+                'flex min-w-0 flex-1 flex-col px-4 focus:outline-none sm:px-6 lg:ps-2 lg:pe-0 lg:pb-8',
+                isParent ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]' : 'pb-8',
+              )}
+            >
+              <div className="mx-auto lg:ms-0 flex w-full max-w-[90rem] flex-1 flex-col gap-4 lg:rounded-xl lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-sm">
+                {/* Pindah halaman: isi frame memudar + naik 6px (keyframe), sidebar & header diam. */}
+                <div key={location.pathname} className="flex flex-1 flex-col gap-4">
+                  <Suspense
+                    fallback={
+                      <PageSkeleton>
+                        <RouteSkeletonContent pathname={location.pathname} />
+                      </PageSkeleton>
+                    }
+                  >
+                    <Outlet />
+                  </Suspense>
+                </div>
               </div>
-            </div>
-          </main>
+            </main>
+
+            {/* Slot sidebar kanan (desktop ≥ 1024px): mulai tepat di bawah header (`top-16`),
+                sejajar dengan tepi atas & bawah frame utama, dan otomatis hilang saat kosong (`empty:hidden`). */}
+            <div
+              ref={setRightPanelSlot}
+              className="sticky top-16 z-30 hidden h-[calc(100dvh-4rem)] shrink-0 lg:block lg:pb-8 empty:hidden"
+            />
+          </div>
         </div>
+
         {isParent && <ParentBottomNav />}
       </div>
     </HeaderSlotContext.Provider>

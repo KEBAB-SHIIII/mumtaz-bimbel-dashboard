@@ -209,15 +209,18 @@
   --color-pastel-teal: #dcefed;
   --color-pastel-amber: #fdebd3;
   --color-pastel-sky: #e0f2fe;
+  --color-pastel-paper: #f7f4ec;
   --color-pastel-sun: #fef3c7;
   --color-ink-blue: #1d4ed8;
   --color-ink-teal: #1f6468;
   --color-ink-amber: #92400e;
   --color-ink-sky: #0369a1;
+  --color-ink-paper: #475569;
   --color-bar-blue: #93c5fd;
   --color-bar-teal: #8ccac6;
   --color-bar-amber: #f4c27f;
   --color-bar-sky: #7dd3fc;
+  --color-bar-paper: #d6cfc0;
 
   /* Spacing base (Tailwind menurunkan skala dari nilai ini) */
   --spacing: 0.25rem;

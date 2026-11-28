@@ -24,7 +24,7 @@ import type { ServiceContext } from '../context.js';
 import { assertParentLinked } from '../parent-service.js';
 
 const UNAVAILABLE_MESSAGE =
-  'Layanan ringkasan AI sedang tidak tersedia. Silakan coba lagi nanti.';
+  'Ringkasan tutor sedang tidak tersedia saat ini. Silakan coba lagi nanti.';
 
 export interface FingerprintSession {
   id: string;

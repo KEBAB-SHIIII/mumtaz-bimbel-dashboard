@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { subjectStyle } from './subject-style';
+import { sessionCardStyle, subjectStyle } from './subject-style';
 
 describe('subjectStyle: identitas warna mapel', () => {
   it('mapel tak dikenal tetap mendapat nada warna tanpa error', () => {
@@ -21,6 +21,22 @@ describe('subjectStyle: identitas warna mapel', () => {
     expect(subjectStyle('Bahasa Inggris, Matematika')).toEqual(subjectStyle('Bahasa Inggris'));
     expect(subjectStyle('Mengaji, Tajwid, dan Hafalan, Matematika')).toEqual(subjectStyle('Mengaji, Tajwid, dan Hafalan'));
     expect(subjectStyle('Seni Rupa, Matematika')).toEqual(subjectStyle('Seni Rupa'));
+  });
+});
+
+describe('sessionCardStyle: 4 warna kontekstual kartu Catatan Belajar', () => {
+  it('memetakan 3 status perkembangan + kondisi belum dibuka ke 4 tema pastel berbeda', () => {
+    expect(sessionCardStyle('very_good').cardClass).toContain('bg-pastel-teal');
+    expect(sessionCardStyle('very_good').statusLabel).toBe('Sangat baik');
+
+    expect(sessionCardStyle('good').cardClass).toContain('bg-pastel-blue');
+    expect(sessionCardStyle('good').statusLabel).toBe('Berkembang baik');
+
+    expect(sessionCardStyle('needs_attention').cardClass).toContain('bg-pastel-amber');
+    expect(sessionCardStyle('needs_attention').statusLabel).toBe('Perlu pendampingan');
+
+    expect(sessionCardStyle(undefined).cardClass).toContain('bg-pastel-paper');
+    expect(sessionCardStyle(undefined).statusLabel).toBeNull();
   });
 });
 
@@ -43,7 +59,7 @@ describe('token warna portal Orang Tua', () => {
   const token = (name: string) => new RegExp(`--color-${name}: (#[0-9a-f]{6});`, 'i').exec(tokens)?.[1] ?? '';
 
   it('teks ink di atas latar pastel yang sama memenuhi kontras AA (≥ 4,5:1) untuk teks kecil', () => {
-    for (const tone of ['blue', 'teal', 'amber', 'sky']) {
+    for (const tone of ['blue', 'teal', 'amber', 'sky', 'paper']) {
       expect(contrast(token(`ink-${tone}`), token(`pastel-${tone}`)), tone).toBeGreaterThanOrEqual(4.5);
     }
   });

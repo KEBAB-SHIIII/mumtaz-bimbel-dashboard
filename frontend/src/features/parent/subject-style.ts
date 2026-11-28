@@ -1,8 +1,21 @@
+import type { LearningSummaryStatus } from '@mumtaz/contracts';
+
 export interface SubjectStyle {
   /** Kertas catatan tempel (latar + warna selotip `before:`). */
   noteClass: string;
   /** Garis proporsi jumlah sesi. */
   barClass: string;
+}
+
+export interface SessionCardStyle {
+  /** Latar kertas pastel + garis tepi tipis + warna selotip di atas (`before:`). */
+  cardClass: string;
+  /** Warna teks aksen (waktu relatif, label Materi, teks badge status). */
+  accentTextClass: string;
+  /** Warna titik 6px di dalam badge status (`● Berkembang baik`). */
+  dotClass: string;
+  /** Label status perkembangan dalam Bahasa Indonesia, atau `null` bila belum dibuka. */
+  statusLabel: string | null;
 }
 
 /** Empat nada palet landing page. Kelas ditulis utuh agar terdeteksi Tailwind. */
@@ -31,11 +44,49 @@ function hash(text: string): number {
 }
 
 /**
- * Identitas warna mapel untuk portal Orang Tua: nada yang sama di Beranda dan Catatan Belajar.
+ * Identitas warna mapel untuk portal Orang Tua (garis warna di Beranda & bar pelajaran).
  * Nama tak dikenal → nada dari hash nama (tetap konsisten antar-render).
  */
 export function subjectStyle(name: string): SubjectStyle {
   const key = leadingSubject(name.trim().toLowerCase());
   const tone = TONES[FIXED_TONE[key] ?? hash(key) % TONES.length] ?? TONES[0];
   return { ...tone };
+}
+
+/**
+ * Empat warna lembut kartu Catatan Belajar sesuai konteks status perkembangan:
+ * - `very_good`       → Teal lembut ("Sangat baik")
+ * - `good`            → Biru lembut ("Berkembang baik")
+ * - `needs_attention` → Amber lembut ("Perlu pendampingan")
+ * - belum dibuka      → Kertas krem hangat (netral sebelum ringkasan dibuka)
+ */
+const SESSION_CARD_THEMES: Record<LearningSummaryStatus | 'pending', SessionCardStyle> = {
+  very_good: {
+    cardClass: 'bg-pastel-teal border-bar-teal/60 before:bg-bar-teal/85',
+    accentTextClass: 'text-ink-teal',
+    dotClass: 'bg-ink-teal',
+    statusLabel: 'Sangat baik',
+  },
+  good: {
+    cardClass: 'bg-pastel-blue border-bar-blue/60 before:bg-bar-blue/85',
+    accentTextClass: 'text-ink-blue',
+    dotClass: 'bg-ink-blue',
+    statusLabel: 'Berkembang baik',
+  },
+  needs_attention: {
+    cardClass: 'bg-pastel-amber border-bar-amber/70 before:bg-bar-amber/85',
+    accentTextClass: 'text-ink-amber',
+    dotClass: 'bg-ink-amber',
+    statusLabel: 'Perlu pendampingan',
+  },
+  pending: {
+    cardClass: 'bg-pastel-paper border-bar-paper/75 before:bg-bar-paper/90',
+    accentTextClass: 'text-ink-paper',
+    dotClass: 'bg-ink-paper',
+    statusLabel: null,
+  },
+};
+
+export function sessionCardStyle(status?: LearningSummaryStatus): SessionCardStyle {
+  return SESSION_CARD_THEMES[status ?? 'pending'];
 }

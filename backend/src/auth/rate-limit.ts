@@ -84,7 +84,7 @@ export function createLearningSummaryRateLimiter(
         new HttpError(
           429,
           'RATE_LIMITED',
-          'Terlalu banyak permintaan ringkasan AI. Coba lagi beberapa saat lagi.',
+          'Terlalu banyak permintaan ringkasan. Coba lagi beberapa saat lagi.',
         ),
       );
     },

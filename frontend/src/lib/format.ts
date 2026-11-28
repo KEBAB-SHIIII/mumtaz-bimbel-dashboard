@@ -1,6 +1,19 @@
 import { BUSINESS_TIME_ZONE, formatCalendarDate, formatPeriodLabel, formatTimeRange } from '@mumtaz/contracts';
 
 const LOCALE = 'id-ID';
+const MS_PER_DAY = 86_400_000;
+
+const jakartaIsoDate = new Intl.DateTimeFormat('en-CA', {
+  timeZone: BUSINESS_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function toUtcDayMs(isoDate: string): number {
+  const [y = 0, m = 1, d = 1] = isoDate.split('-').map(Number);
+  return Date.UTC(y, m - 1, d);
+}
 
 /** `YYYY-MM-DD` → "31 Oktober 2026" (bulan ditulis lengkap agar mudah dibaca). */
 export function formatLessonDate(isoDate: string): string {
@@ -10,6 +23,24 @@ export function formatLessonDate(isoDate: string): string {
 /** `YYYY-MM-DD` → "31 Okt 2026" — versi ringkas untuk kolom tabel yang sempit. */
 export function formatShortDate(isoDate: string): string {
   return formatCalendarDate(isoDate, 'short');
+}
+
+/**
+ * Selisih hari kalender WIB antara `isoDate` (`YYYY-MM-DD`) dan waktu sekarang (`now`):
+ * "Hari ini", "Kemarin", "2 hari lalu", "1 minggu lalu", "2 bulan lalu", dst.
+ */
+export function formatRelativeLessonDate(isoDate: string, now: Date = new Date()): string {
+  const todayIso = jakartaIsoDate.format(now);
+  const diffDays = Math.round((toUtcDayMs(todayIso) - toUtcDayMs(isoDate)) / MS_PER_DAY);
+
+  if (diffDays === 0) return 'Hari ini';
+  if (diffDays === 1) return 'Kemarin';
+  if (diffDays > 1 && diffDays < 7) return `${diffDays} hari lalu`;
+  if (diffDays >= 7 && diffDays < 30) return `${Math.floor(diffDays / 7)} minggu lalu`;
+  if (diffDays >= 30 && diffDays < 365) return `${Math.floor(diffDays / 30)} bulan lalu`;
+  if (diffDays >= 365) return `${Math.floor(diffDays / 365)} tahun lalu`;
+  if (diffDays === -1) return 'Besok';
+  return `${Math.abs(diffDays)} hari lagi`;
 }
 
 /**

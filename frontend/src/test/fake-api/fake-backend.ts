@@ -1030,7 +1030,7 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
           throw new FakeError(
             503,
             'INTEGRATION_UNAVAILABLE',
-            'Layanan ringkasan AI sedang tidak tersedia. Silakan coba lagi nanti.',
+            'Ringkasan tutor sedang tidak tersedia saat ini. Silakan coba lagi nanti.',
           );
         }
         return ok(summaryStore.generateMonthly(studentId, period, rows, subjectNamesOf, now));
@@ -1052,7 +1052,7 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
           throw new FakeError(
             503,
             'INTEGRATION_UNAVAILABLE',
-            'Layanan ringkasan AI sedang tidak tersedia. Silakan coba lagi nanti.',
+            'Ringkasan tutor sedang tidak tersedia saat ini. Silakan coba lagi nanti.',
           );
         }
         return ok(summaryStore.generateSession(session, subjectNamesOf(session), now));

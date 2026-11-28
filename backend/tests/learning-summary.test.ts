@@ -381,7 +381,7 @@ describe('Parent learning summaries API (integration)', () => {
         .post(`/parent/students/${STUDENT_IDS.murid1}/sessions/${SESSION_IDS.s01}/summary`, {})
         .expect(503);
       expect(resFail.body.error.code).toBe('INTEGRATION_UNAVAILABLE');
-      expect(resFail.body.error.message).toContain('Layanan ringkasan AI sedang tidak tersedia');
+      expect(resFail.body.error.message).toContain('Ringkasan tutor sedang tidak tersedia');
     } finally {
       await tFail.close();
     }
