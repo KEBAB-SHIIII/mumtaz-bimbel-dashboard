@@ -291,7 +291,7 @@ function StatTile({ label, value, unit, tone }: { label: string; value: string; 
 
 function SectionCard({ id, title, actions, children }: { id: string; title: string; actions?: ReactNode; children: ReactNode }) {
   return (
-    <section aria-labelledby={id} className="rounded-2xl border border-border bg-surface px-4 pt-4 pb-2 sm:px-5 sm:pt-5">
+    <section aria-labelledby={id} className="h-full rounded-2xl border border-border bg-surface px-4 pt-4 pb-2 sm:px-5 sm:pt-5">
       {/* Tinggi header tetap (h-7) di semua kartu; aksi memakai margin negatif agar area sentuh 44px tidak menambah tinggi. */}
       <div className="flex h-7 items-center justify-between gap-3">
         <h2 id={id} className="text-card-title text-text">{title}</h2>
@@ -332,16 +332,17 @@ function HomeContent({ studentId, period }: { studentId: string; period: string 
                 <EmptyState title="Belum ada sesi terverifikasi" description={`Belum ada sesi yang diverifikasi pada ${formatPeriod(period)}. Pilih bulan lain untuk melihat perkembangan anak.`} />
               </Card>
             ) : (
-              <div className="grid items-start gap-4 lg:grid-cols-[1.35fr_1fr]">
-                <div className="flex min-w-0 flex-col gap-4">
-                  <MonthlyLearningSummaryCard
-                    period={period}
-                    approvedSessionCount={ai.approvedSessionCount ?? data.approved_sessions}
-                    summary={ai.monthly}
-                    isGenerating={ai.monthlyGenerating}
-                    error={ai.monthlyError}
-                    onGenerate={ai.generateMonthly}
-                  />
+              <>
+                <MonthlyLearningSummaryCard
+                  period={period}
+                  approvedSessionCount={ai.approvedSessionCount ?? data.approved_sessions}
+                  summary={ai.monthly}
+                  isGenerating={ai.monthlyGenerating}
+                  error={ai.monthlyError}
+                  onGenerate={ai.generateMonthly}
+                />
+                {/* Ringkasan AI lebar penuh; dua daftar di bawahnya bersanding dengan tinggi sama. */}
+                <div className="grid items-stretch gap-4 lg:grid-cols-[1.35fr_1fr]">
                   <SectionCard
                     id="recent-sessions-title"
                     title="Sesi terakhir"
@@ -364,9 +365,9 @@ function HomeContent({ studentId, period }: { studentId: string; period: string 
                       })}
                     </ol>
                   </SectionCard>
+                  <SubjectsCard items={data.subject_sessions} />
                 </div>
-                <SubjectsCard items={data.subject_sessions} />
-              </div>
+              </>
             )}
           </>
         );
