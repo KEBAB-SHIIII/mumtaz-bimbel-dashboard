@@ -1,5 +1,4 @@
 import { screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { TEST_ONLY_CREDENTIALS } from '@mumtaz/contracts/fixtures';
 import { loginStaff, renderApp, useFakeBackend } from '../../test/render';
@@ -143,14 +142,5 @@ describe('AppShell: header', () => {
     expect(within(menu).getByRole('menuitem', { name: 'Profil' })).toBeInTheDocument();
     await user.click(within(menu).getByRole('menuitem', { name: 'Keluar' }));
     expect(await screen.findByRole('heading', { name: 'Masuk Admin / Tutor' })).toBeInTheDocument();
-  });
-
-  it('Orang Tua: satu grup menu tanpa label grup', async () => {
-    renderApp('/login/orang-tua');
-    const user = userEvent.setup();
-    await user.type(await screen.findByLabelText(/ID Akses Orang Tua/), 'MUMTAZ-DEMO-PARENT-ACCESS-ONLY');
-    await user.click(screen.getByRole('button', { name: 'Masuk' }));
-    await screen.findByRole('heading', { name: 'Progress Anak' });
-    expect(within(mainNav()).queryByText('Anak')).not.toBeInTheDocument();
   });
 });

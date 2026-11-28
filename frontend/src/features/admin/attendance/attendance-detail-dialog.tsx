@@ -37,7 +37,6 @@ function SessionDetails({ detail }: { detail: AdminAttendanceDetail }) {
       <DescriptionList items={[
         { label: 'Materi pembelajaran', value: detail.learning_material },
         { label: 'Catatan pembelajaran', value: detail.learning_notes ?? '—' },
-        { label: 'Fokus berikutnya', value: detail.next_focus ?? '—' },
       ]} />
     </section>
     <section aria-label="Waktu pencatatan" className="border-t border-border pt-4">

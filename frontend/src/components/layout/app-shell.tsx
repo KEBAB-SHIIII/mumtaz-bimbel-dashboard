@@ -7,6 +7,7 @@ import { cn } from '../../lib/cn';
 import { PageSkeleton } from '../ui/feedback/skeleton';
 import { RouteSkeletonContent } from './route-skeleton';
 import { AccountMenu } from './header/account-menu';
+import { ParentBottomNav } from './parent-bottom-nav';
 import { HeaderSlotContext } from './header/header-slot';
 import { NavSearch } from './header/nav-search';
 import { Sidebar } from './sidebar/sidebar';
@@ -55,6 +56,7 @@ export function AppShell() {
 
   // Sesi baru saja berakhir (logout/401): route guard sedang mengarahkan ke login, jangan render shell.
   if (!user) return null;
+  const isParent = user.role === 'parent';
 
   const sidebarProps = {
     passwordRequired: user.role === 'tutor' && Boolean(user.must_change_password),
@@ -101,14 +103,17 @@ export function AppShell() {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="z-30 flex h-16 shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-6 lg:sticky lg:top-0 lg:bg-background/85 lg:ps-2 lg:pe-4 lg:backdrop-blur-md">
-            <button
-              type="button"
-              aria-label="Buka menu"
-              onClick={() => setDrawerOpen(true)}
-              className="grid size-10 shrink-0 place-items-center rounded-md text-text transition-colors duration-150 hover:bg-surface pointer-coarse:size-11 motion-reduce:transition-none lg:hidden"
-            >
-              <Menu aria-hidden className="size-5" />
-            </button>
+            {/* Orang Tua memakai tab bawah di HP, bukan drawer. */}
+            {!isParent && (
+              <button
+                type="button"
+                aria-label="Buka menu"
+                onClick={() => setDrawerOpen(true)}
+                className="grid size-10 shrink-0 place-items-center rounded-md text-text transition-colors duration-150 hover:bg-surface pointer-coarse:size-11 motion-reduce:transition-none lg:hidden"
+              >
+                <Menu aria-hidden className="size-5" />
+              </button>
+            )}
             {/* Judul halaman (h1) dirender di sini oleh PageHeader lewat portal. */}
             {/* Kosong selama halaman dimuat: tampilkan bar skeleton judul agar header tidak terlihat bolong. */}
             <div
@@ -122,7 +127,7 @@ export function AppShell() {
             <AccountMenu userId={user.id} fullName={user.full_name} role={user.role} roleLabel={ROLE_LABEL[user.role]} onLogout={handleLogout} />
           </header>
 
-          <main id="main" tabIndex={-1} className="flex flex-1 flex-col px-4 pb-8 focus:outline-none sm:px-6 lg:ps-2 lg:pe-4">
+          <main id="main" tabIndex={-1} className={cn('flex flex-1 flex-col px-4 focus:outline-none sm:px-6 lg:ps-2 lg:pe-4 lg:pb-8', isParent ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]' : 'pb-8')}>
             <div className="mx-auto lg:ms-0 flex w-full max-w-[90rem] flex-1 flex-col gap-4 lg:rounded-xl lg:border lg:border-border lg:bg-surface lg:p-6 lg:shadow-sm">
               {/* Pindah halaman: isi frame memudar + naik 6px (keyframe), sidebar & header diam. */}
               <div key={location.pathname} className="flex flex-1 flex-col gap-4">
@@ -139,6 +144,7 @@ export function AppShell() {
             </div>
           </main>
         </div>
+        {isParent && <ParentBottomNav />}
       </div>
     </HeaderSlotContext.Provider>
   );

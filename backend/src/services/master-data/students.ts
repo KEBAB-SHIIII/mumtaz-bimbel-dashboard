@@ -18,7 +18,7 @@ type StudentRow = typeof students.$inferSelect;
 function studentColumns(ctx: ServiceContext) {
   const today = todayInBusinessTimeZone(ctx.now());
   return { id:students.id, full_name:students.full_name, grade:currentGrade(ctx.now()), school_name:students.school_name,
-    is_active:students.is_active, created_at:students.created_at, updated_at:students.updated_at,
+    registration_source:students.registration_source, is_active:students.is_active, created_at:students.created_at, updated_at:students.updated_at,
     scheduled_grade:sql<Student['scheduled_grade']>`(select json_build_object('grade', gh.grade, 'effective_from', gh.effective_from) from student_grade_history gh where gh.student_id = ${sql.raw('"students"."id"')} and gh.effective_from > ${today}::date order by gh.effective_from limit 1)` };
 }
 

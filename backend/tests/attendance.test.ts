@@ -174,6 +174,16 @@ describe('POST /tutor/attendance', () => {
     expect(res.body.error.code).toBe('VALIDATION_FAILED');
   });
 
+  it('catatan pembelajaran kurang dari 100 karakter ditolak → 422', async () => {
+    const res = await tutorA.post('/tutor/attendance', {
+      ...validSubmitRequest,
+      client_submission_id: uuid(199),
+      learning_notes: 'Catatan terlalu singkat',
+    });
+    expect(res.status).toBe(422);
+    expect(res.body.error.details).toContainEqual({ field: 'learning_notes', message: 'Minimal 100 karakter' });
+  });
+
   it('tanggal masa depan menurut Asia/Jakarta → 422 (O-14 working default)', async () => {
     // FIXED_NOW = 2026-11-15T03:00Z = 15 Nov 10:00 WIB
     const res = await tutorA.post('/tutor/attendance', {
@@ -307,6 +317,8 @@ describe('Admin: Data Absensi, validitas & CRUD', () => {
       start_time: '15:00',
       end_time: '16:00',
       learning_material: 'Siklus air',
+      learning_notes:
+        'Siswa memahami tahapan evaporasi, kondensasi, dan presipitasi dengan baik serta mampu menjelaskan contohnya dalam kehidupan sehari-hari.',
     });
     expect(created.status).toBe(201);
     const detail = adminAttendanceDetailSchema.parse(created.body);
@@ -320,6 +332,8 @@ describe('Admin: Data Absensi, validitas & CRUD', () => {
       start_time: '15:00',
       end_time: '16:30',
       learning_material: 'Siklus air & pecahan',
+      learning_notes:
+        'Siswa memahami tahapan evaporasi dan operasi pecahan dasar dengan cukup lancar, namun masih perlu latihan soal campuran.',
     });
     expect(updated.status).toBe(200);
     expect(adminAttendanceDetailSchema.parse(updated.body)).toMatchObject({ duration_minutes: 90, subject_name: 'IPA, Matematika' });
@@ -368,8 +382,8 @@ describe('revisi oleh Tutor', () => {
     start_time: '16:00',
     end_time: '17:00',
     learning_material: 'Numbers 1–100 (koreksi tanggal)',
-    learning_notes: null,
-    next_focus: 'Numbers 100–1000',
+    learning_notes:
+      'Siswa lancar menyebutkan angka puluhan dan ratusan dalam bahasa Inggris, serta mampu menyusun kalimat sederhana dengan cukup tepat.',
   };
 
   it('Perlu revisi → Tutor merevisi → menunggu validasi ulang, metadata direset, finding lama superseded', async () => {

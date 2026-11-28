@@ -137,7 +137,7 @@ export async function importRealData(db: Database, records: Record<string, strin
     await tx.update(subjects).set({ is_active: true }).where(inArray(subjects.id, [...subjectIds.values()]));
 
     for (const batch of chunks(plan.students)) {
-      await tx.insert(students).values(batch.map((s) => ({ id: s.id, full_name: s.name, grade: s.grade, school_name: s.school, is_active: true, created_at: now, updated_at: now })));
+      await tx.insert(students).values(batch.map((s) => ({ id: s.id, full_name: s.name, grade: s.grade, school_name: s.school, registration_source: s.registration_source ?? 'other', is_active: true, created_at: now, updated_at: now })));
     }
     const history = plan.students.flatMap((s) => s.history.map((h, i) => ({
       student_id: s.id, grade: h.grade, effective_from: h.effective_from,

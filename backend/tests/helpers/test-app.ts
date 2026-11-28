@@ -5,6 +5,7 @@ import { createSessionStore } from '../../src/config/session.js';
 import type { DatabaseHandle } from '../../src/db/client.js';
 import { seedSyntheticData } from './seed.js';
 import type { GoogleSheetsExporter } from '../../src/integrations/google-sheets/types.js';
+import type { LearningSummaryProvider } from '../../src/integrations/learning-summary/types.js';
 import type { AnomalyQueue } from '../../src/services/anomaly/anomaly-worker.js';
 import { createLogger } from '../../src/lib/logger.js';
 import { makeTestEnv, testEnvSource } from '../test-env.js';
@@ -31,6 +32,8 @@ export async function createTestApp(
     anomalyQueue?: (database: DatabaseHandle) => AnomalyQueue;
     /** Exporter Google Sheets (mis. `FakeGoogleSheetsExporter`); default: belum dikonfigurasi. */
     sheetsExporter?: GoogleSheetsExporter;
+    /** Provider ringkasan belajar AI; default: belum dikonfigurasi (`null`). */
+    learningSummaryProvider?: LearningSummaryProvider | null;
     /** Pakai database yang sudah ada (mis. dua app dengan konfigurasi berbeda); tidak di-seed & tidak ditutup. */
     database?: DatabaseHandle;
   } = {},
@@ -53,6 +56,9 @@ export async function createTestApp(
     now: options.now ?? (() => FIXED_NOW),
     ...(options.anomalyQueue ? { anomalyQueue: options.anomalyQueue(database) } : {}),
     ...(options.sheetsExporter ? { sheetsExporter: options.sheetsExporter } : {}),
+    ...(options.learningSummaryProvider !== undefined
+      ? { learningSummaryProvider: options.learningSummaryProvider }
+      : {}),
   });
   return { app, database, close: () => (options.database ? Promise.resolve() : database.close()) };
 }

@@ -56,6 +56,8 @@ const editable = (lesson_date: string, start_time: string, end_time: string) => 
   start_time,
   end_time,
   learning_material: 'Sesi uji dependen',
+  learning_notes:
+    'Catatan pembelajaran untuk pengujian sesi dependen: siswa mengikuti materi bahasa Inggris dasar dan berlatih menyusun kalimat sederhana.',
 });
 
 async function submit(lessonDate: string, start: string, end: string): Promise<string> {

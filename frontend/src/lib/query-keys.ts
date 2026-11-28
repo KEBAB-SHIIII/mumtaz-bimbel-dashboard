@@ -9,6 +9,9 @@ export const queryKeys = {
   admin: {
     dashboard: (period: string) => ['admin', 'dashboard', period] as const,
     revenue: (year: number | 'latest') => ['admin', 'dashboard', 'revenue', year] as const,
+    registrationSources: ['admin', 'dashboard', 'registration-sources'] as const,
+    dashboardCharts: (period: string) => ['admin', 'dashboard', 'charts', period] as const,
+    studentGrowth: (year: number | 'latest') => ['admin', 'dashboard', 'student-growth', year] as const,
     attendance: (filters: object) => ['admin', 'attendance', 'list', filters] as const,
     attendanceDetail: (id: string) => ['admin', 'attendance', 'detail', id] as const,
     attendanceOptions: ['admin', 'attendance', 'options'] as const,
@@ -30,5 +33,6 @@ export const queryKeys = {
     students: ['parent', 'students'] as const,
     dashboard: (studentId: string, period: string) => ['parent', 'dashboard', studentId, period] as const,
     progress: (studentId: string, period: string) => ['parent', 'progress', studentId, period] as const,
+    summaries: (studentId: string, period: string) => ['parent', 'summaries', studentId, period] as const,
   },
 };

@@ -15,7 +15,7 @@ import { TutorsPage } from '../features/admin/master-data/tutors-page';
 import { AdminPayrollPage } from '../features/admin/payroll/payroll-page';
 import { BillingPage } from '../features/admin/billing/billing-page';
 import { ParentDashboardPage } from '../features/parent/parent-pages';
-import { ParentHistoryPage } from '../features/parent/parent-pages';
+import { ParentHistoryPage, ParentSubjectsRedirect } from '../features/parent/parent-pages';
 import { AttendanceFormPage } from '../features/tutor/attendance-form-page';
 import { TutorDashboardPage } from '../features/tutor/tutor-dashboard-page';
 import { TutorHistoryPage } from '../features/tutor/tutor-history-page';
@@ -60,6 +60,7 @@ export function AppRoutes() {
       <Route path="orang-tua-murid" element={<RequireRole role="parent"><AppShell /></RequireRole>}>
         <Route index element={<ParentDashboardPage />} />
         <Route path="riwayat" element={<ParentHistoryPage />} />
+        <Route path="mata-pelajaran" element={<ParentSubjectsRedirect />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />

@@ -78,12 +78,26 @@ export const GRADE_OPTIONS = [
 ] as const;
 export const gradeSchema = z.enum(GRADE_OPTIONS, { error: 'Pilih jenjang atau kelas PAUD sampai SMA' });
 
+/** Kanal sumber pendaftaran murid (dropdown Master Data + grafik dashboard). */
+export const REGISTRATION_SOURCE_OPTIONS = ['whatsapp', 'instagram', 'tiktok', 'referral', 'other'] as const;
+export const REGISTRATION_SOURCE_LABELS: Record<(typeof REGISTRATION_SOURCE_OPTIONS)[number], string> = {
+  whatsapp: 'WhatsApp',
+  instagram: 'Instagram',
+  tiktok: 'TikTok',
+  referral: 'Teman/Keluarga',
+  other: 'Lainnya',
+};
+export const registrationSourceSchema = z.enum(REGISTRATION_SOURCE_OPTIONS, { error: 'Pilih sumber pendaftaran' });
+export type RegistrationSource = z.infer<typeof registrationSourceSchema>;
+
 export const studentSchema = z.object({
   id: uuidSchema,
   full_name: z.string(),
   grade: z.string(),
   scheduled_grade: z.object({ grade: z.string(), effective_from: isoDateSchema }).nullable().optional(),
   school_name: z.string(),
+  /** `null` untuk murid lama yang belum dilengkapi. */
+  registration_source: registrationSourceSchema.nullable(),
   is_active: z.boolean(),
   ...timestamps,
 });
@@ -93,6 +107,7 @@ export const createStudentRequestSchema = z.strictObject({
   full_name: requiredText(NAME_MAX),
   grade: gradeSchema,
   school_name: requiredText(NAME_MAX),
+  registration_source: registrationSourceSchema,
 });
 export type CreateStudentRequest = z.infer<typeof createStudentRequestSchema>;
 
@@ -100,6 +115,7 @@ export const updateStudentRequestSchema = z.strictObject({
   full_name: requiredText(NAME_MAX).optional(),
   grade: gradeSchema.optional(),
   school_name: requiredText(NAME_MAX).optional(),
+  registration_source: registrationSourceSchema.optional(),
   is_active: z.boolean().optional(),
 });
 export type UpdateStudentRequest = z.infer<typeof updateStudentRequestSchema>;

@@ -151,7 +151,6 @@ export function TutorSessionDialog({ session, onClose }: { session: TutorSession
                 { label: 'Divalidasi', value: session.reviewed_at ? formatTimestamp(session.reviewed_at) : '—' },
                 { label: 'Materi pembelajaran', value: session.learning_material },
                 { label: 'Catatan pembelajaran', value: session.learning_notes ?? '—' },
-                { label: 'Fokus berikutnya', value: session.next_focus ?? '—' },
               ]}
             />
           </>

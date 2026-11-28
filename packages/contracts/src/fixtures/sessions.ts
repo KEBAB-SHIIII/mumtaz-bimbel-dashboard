@@ -43,7 +43,7 @@ const A2 = { tutor_id: TUTOR_IDS.tutorA, student_id: STUDENT_IDS.murid2, subject
 const B3 = { tutor_id: TUTOR_IDS.tutorB, student_id: STUDENT_IDS.murid3, subject_ids: [SUBJECT_IDS.ipa] };
 
 /** Snapshot data contoh mengikuti tarif owner D-26 sesuai kelas dan durasi sesi. */
-const sdLower90 = { rate_amount_snapshot: '90000', admin_fee_snapshot: '20000' } as const;
+const sdLower90 = { rate_amount_snapshot: '90000', admin_fee_snapshot: '15000' } as const;
 const sdUpper60 = { rate_amount_snapshot: '80000', admin_fee_snapshot: '10000' } as const;
 
 const noSnapshot = { rate_amount_snapshot: null, admin_fee_snapshot: null } as const;
@@ -90,7 +90,9 @@ export const fixtureSessions: FixtureLessonSession[] = [
     id: SESSION_IDS.s03, client_submission_id: submission(3), ...B3,
     lesson_date: '2026-10-05', duration_minutes: 90,
     learning_material: 'Sistem pencernaan manusia',
-    learning_notes: 'Siswa aktif bertanya.', next_focus: 'Sistem pernapasan.',
+    learning_notes:
+      'Siswa aktif bertanya selama pembahasan sistem pencernaan manusia dan mampu menjelaskan fungsi organ utama dengan cukup baik.',
+    next_focus: 'Sistem pernapasan.',
     ...legacy('revision_requested'), status: 'revision_requested', anomaly_analysis_status: 'completed', ...noSnapshot,
     reviewed_by_user_id: USER_IDS.admin, reviewed_at: '2026-10-06T03:00:00Z',
     admin_note: 'Durasi tidak sesuai jadwal; mohon periksa kembali.',

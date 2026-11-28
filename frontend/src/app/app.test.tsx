@@ -60,8 +60,8 @@ describe('autentikasi & navigasi per role', () => {
     expect(screen.queryByLabelText(/^Password/)).not.toBeInTheDocument();
     await user.type(await screen.findByLabelText(/ID Akses Orang Tua/), 'MUMTAZ-DEMO-PARENT-ACCESS-ONLY');
     await user.click(screen.getByRole('button', { name: 'Masuk' }));
-    expect(await screen.findByRole('heading', { name: 'Progress Anak' })).toBeInTheDocument();
-    expect(await navLinks()).toEqual(['Progress Anak', 'Riwayat Pembelajaran']);
+    expect(await screen.findByRole('heading', { name: 'Beranda', level: 1 })).toBeInTheDocument();
+    expect(await navLinks()).toEqual(['Beranda', 'Catatan Belajar']);
   });
 
   it('logout membersihkan sesi dan kembali ke login', async () => {
@@ -163,6 +163,10 @@ describe('Admin: validitas data (label AI)', () => {
     await user.type(within(form).getByLabelText(/^Jam mulai/), '16:00');
     await user.type(within(form).getByLabelText(/^Jam selesai/), '17:00');
     await user.type(within(form).getByLabelText(/^Materi pembelajaran/), 'Pecahan');
+    await user.click(within(form).getByLabelText(/^Catatan pembelajaran/));
+    await user.paste(
+      'Siswa memahami konsep pecahan dasar dengan cukup baik dan mampu menyelesaikan sebagian besar latihan mandiri tanpa kesulitan berarti.',
+    );
     await user.click(within(form).getByRole('button', { name: 'Simpan' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Tambah sesi' })).not.toBeInTheDocument());
@@ -183,8 +187,11 @@ describe('Tutor: Form Absensi', () => {
     const user = await loginStaff('farhan', TEST_ONLY_CREDENTIALS.tutorPassword);
     await user.click(await screen.findByRole('link', { name: 'Form Absensi' }));
 
-    // Nama tutor wajib (bukan opsional), terisi dari akun.
+    // Nama tutor wajib (bukan opsional), terisi dari akun. Fokus berikutnya sudah dihapus, materi & catatan wajib dengan placeholder contoh.
     expect(await screen.findByLabelText(/^Nama tutor \(wajib\)/)).toHaveValue('Farhan');
+    expect(screen.queryByLabelText(/Fokus berikutnya/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/^Materi pembelajaran \(wajib\)/)).toHaveAttribute('placeholder', expect.stringMatching(/^Contoh:/));
+    expect(screen.getByLabelText(/^Catatan pembelajaran \(wajib\)/)).toHaveAttribute('placeholder', expect.stringMatching(/^Contoh:/));
     await user.click(screen.getByRole('button', { name: 'Kirim absensi' }));
     expect((await screen.findAllByText('Wajib diisi')).length).toBeGreaterThan(0);
 
@@ -201,10 +208,23 @@ describe('Tutor: Form Absensi', () => {
     await user.type(screen.getByLabelText(/^Jam selesai/), '19:45');
     expect(screen.getByText('60 menit')).toBeInTheDocument();
     await user.type(screen.getByLabelText(/^Materi pembelajaran/), 'Persamaan linear');
+
+    const notesInput = screen.getByLabelText(/^Catatan pembelajaran/);
+    await user.type(notesInput, 'Catatan terlalu pendek');
+    await user.click(screen.getByRole('button', { name: 'Kirim absensi' }));
+    expect(await screen.findByText('Minimal 100 karakter')).toBeInTheDocument();
+    expect(notesInput).toHaveAttribute('aria-invalid', 'true');
+
+    await user.clear(notesInput);
+    await user.click(notesInput);
+    await user.paste(
+      'Siswa lancar menyelesaikan soal latihan persamaan linear satu variabel dan mulai memahami langkah pemodelan soal cerita sederhana.',
+    );
     await user.click(screen.getByRole('button', { name: 'Kirim absensi' }));
 
     expect(await screen.findByText('Absensi tersimpan')).toBeInTheDocument();
     expect(screen.getByLabelText(/^Materi pembelajaran/)).toHaveValue('');
+    expect(screen.getByLabelText(/^Catatan pembelajaran/)).toHaveValue('');
   });
 
   it('jam selesai sebelum jam mulai ditolak sebelum dikirim', async () => {
@@ -227,8 +247,8 @@ describe('Orang Tua: Progress Anak', () => {
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText(/ID Akses Orang Tua/), 'MUMTAZ-DEMO-PARENT-ACCESS-ONLY');
     await user.click(screen.getByRole('button', { name: 'Masuk' }));
-    await user.click(await screen.findByRole('link', { name: 'Riwayat Pembelajaran' }));
-    await screen.findByRole('heading', { name: 'Riwayat Pembelajaran', level: 1 });
+    await user.click(within(await screen.findByRole('navigation', { name: 'Navigasi utama' })).getByRole('link', { name: 'Catatan Belajar' }));
+    await screen.findByRole('heading', { name: 'Catatan Belajar', level: 1 });
     await choosePeriod('2026-10');
 
     expect(await screen.findByText(/Penjumlahan dan pengurangan/)).toBeInTheDocument();

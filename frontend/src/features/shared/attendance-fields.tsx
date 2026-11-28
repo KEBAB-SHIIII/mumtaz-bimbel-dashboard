@@ -5,6 +5,7 @@ import { useSession } from '../auth/session';
 import type { ReactNode } from 'react';
 import { Controller, useWatch, type UseFormReturn } from 'react-hook-form';
 import {
+  LEARNING_NOTES_MIN,
   MAX_SUBJECTS_PER_SESSION,
   durationBetween,
   todayInBusinessTimeZone,
@@ -24,7 +25,6 @@ export interface AttendanceFormValues {
   end_time: string;
   learning_material: string;
   learning_notes: string;
-  next_focus: string;
 }
 
 export const EMPTY_ATTENDANCE_VALUES: AttendanceFormValues = {
@@ -36,7 +36,6 @@ export const EMPTY_ATTENDANCE_VALUES: AttendanceFormValues = {
   end_time: '',
   learning_material: '',
   learning_notes: '',
-  next_focus: '',
 };
 
 /** Field yang error-nya dari server ditampilkan di dekat input. */
@@ -49,7 +48,6 @@ export const ATTENDANCE_SERVER_FIELDS = [
   'end_time',
   'learning_material',
   'learning_notes',
-  'next_focus',
 ] as const;
 
 /** Form → payload field editable (tanpa tutor & `client_submission_id`); validasi tetap oleh schema kontrak. */
@@ -62,7 +60,6 @@ export function toEditablePayload(values: AttendanceFormValues) {
     end_time: values.end_time,
     learning_material: values.learning_material,
     learning_notes: values.learning_notes,
-    next_focus: values.next_focus,
   };
 }
 
@@ -76,7 +73,6 @@ export function attendanceValuesOf(session: {
   end_time: string | null;
   learning_material: string;
   learning_notes: string | null;
-  next_focus: string | null;
 }): AttendanceFormValues {
   return {
     tutor_id: session.tutor_id,
@@ -87,7 +83,6 @@ export function attendanceValuesOf(session: {
     end_time: session.end_time ?? '',
     learning_material: session.learning_material,
     learning_notes: session.learning_notes ?? '',
-    next_focus: session.next_focus ?? '',
   };
 }
 
@@ -113,7 +108,15 @@ interface AttendanceFieldsProps {
  */
 export function AttendanceFields({ form, options, tutorField, idPrefix }: AttendanceFieldsProps) {
   const { errors } = form.formState;
-  const [studentId, startTime, endTime, lessonDate] = useWatch({ control: form.control, name: ['student_id', 'start_time', 'end_time', 'lesson_date'] });
+  const [studentId, startTime, endTime, lessonDate, learningNotes] = useWatch({
+    control: form.control,
+    name: ['student_id', 'start_time', 'end_time', 'lesson_date', 'learning_notes'],
+  });
+  const learningNotesLength = (learningNotes ?? '').trim().length;
+  const learningNotesHint =
+    learningNotesLength >= LEARNING_NOTES_MIN
+      ? `${learningNotesLength} karakter (minimal ${LEARNING_NOTES_MIN} karakter terpenuhi).`
+      : `Minimal ${LEARNING_NOTES_MIN} karakter (${learningNotesLength}/${LEARNING_NOTES_MIN}).`;
   const role = useSession().data?.role;
   const dated = useQuery({queryKey:['attendance-grade',role,lessonDate], enabled:!!studentId && !!role && isoDateSchema.safeParse(lessonDate).success, queryFn:async()=>{
     const {data}=await apiClient.get(`/${role}/attendance-options`,{params:{lesson_date:lessonDate}});
@@ -202,13 +205,26 @@ export function AttendanceFields({ form, options, tutorField, idPrefix }: Attend
       </div>
 
       <FormField id={id('learning_material')} label="Materi pembelajaran" required className="md:col-span-2" error={errors.learning_material?.message}>
-        <Input {...control('learning_material')} {...form.register('learning_material')} />
+        <Input
+          placeholder="Contoh: Persamaan linear satu variabel & latihan soal cerita"
+          {...control('learning_material')}
+          {...form.register('learning_material')}
+        />
       </FormField>
-      <FormField id={id('learning_notes')} label="Catatan pembelajaran" className="md:col-span-2" error={errors.learning_notes?.message}>
-        <Textarea {...control('learning_notes')} {...form.register('learning_notes')} />
-      </FormField>
-      <FormField id={id('next_focus')} label="Fokus berikutnya" className="md:col-span-2" error={errors.next_focus?.message}>
-        <Textarea {...control('next_focus')} {...form.register('next_focus')} />
+      <FormField
+        id={id('learning_notes')}
+        label="Catatan pembelajaran"
+        required
+        hint={learningNotesHint}
+        className="md:col-span-2"
+        error={errors.learning_notes?.message}
+      >
+        <Textarea
+          minLength={LEARNING_NOTES_MIN}
+          placeholder="Contoh: Siswa sudah memahami konsep dasar persamaan linear satu variabel dan mampu menyelesaikan soal pindah ruas dengan baik, namun masih perlu latihan ketelitian saat menghitung operasi bilangan negatif pada soal cerita."
+          {...control('learning_notes', learningNotesHint)}
+          {...form.register('learning_notes')}
+        />
       </FormField>
     </>
   );

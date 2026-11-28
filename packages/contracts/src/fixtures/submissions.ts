@@ -10,7 +10,8 @@ export const validSubmitRequest: SubmitAttendanceRequest = {
   start_time: '16:00',
   end_time: '17:30',
   learning_material: 'Persamaan linear satu variabel',
-  learning_notes: 'Siswa memahami persamaan sederhana, masih perlu latihan soal cerita.',
+  learning_notes:
+    'Siswa memahami konsep persamaan linear satu variabel dengan baik, mampu menyelesaikan latihan dasar, dan masih perlu pendampingan untuk soal cerita.',
   next_focus: 'Latihan soal cerita bertahap.',
 };
 
@@ -23,6 +24,12 @@ export const schemaInvalidSubmitCases: { name: string; field: string; body: unkn
   { name: 'tanggal tidak ada', field: 'lesson_date', body: { ...validSubmitRequest, lesson_date: '2026-02-30' } },
   { name: 'format tanggal DD/MM/YYYY', field: 'lesson_date', body: { ...validSubmitRequest, lesson_date: '20/10/2026' } },
   { name: 'materi kosong (O-09)', field: 'learning_material', body: { ...validSubmitRequest, learning_material: '   ' } },
+  { name: 'catatan pembelajaran kosong', field: 'learning_notes', body: { ...validSubmitRequest, learning_notes: '   ' } },
+  {
+    name: 'catatan pembelajaran kurang dari 100 karakter',
+    field: 'learning_notes',
+    body: { ...validSubmitRequest, learning_notes: 'Catatan terlalu singkat.' },
+  },
   { name: 'murid bukan UUID', field: 'student_id', body: { ...validSubmitRequest, student_id: 'abc' } },
   { name: 'mapel bukan UUID', field: 'subject_ids', body: { ...validSubmitRequest, subject_ids: ['abc'] } },
   { name: 'tanpa mapel', field: 'subject_ids', body: { ...validSubmitRequest, subject_ids: [] } },

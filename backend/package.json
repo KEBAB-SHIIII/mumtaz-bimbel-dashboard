@@ -18,6 +18,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:bootstrap-admin": "tsx --conditions=source src/scripts/bootstrap-admin.ts",
     "db:import-real-data": "tsx --conditions=source src/scripts/import-real-data.ts",
+    "db:refresh-real-data": "tsx --conditions=source src/scripts/refresh-real-data.ts",
     "db:check": "drizzle-kit check"
   },
   "dependencies": {

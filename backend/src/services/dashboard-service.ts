@@ -1,18 +1,23 @@
-import { and, count, desc, eq, gte, lt, sql } from 'drizzle-orm';
+import { and, asc, count, countDistinct, desc, eq, gte, lt, sql } from 'drizzle-orm';
 import { Decimal } from 'decimal.js';
-import { todayInBusinessTimeZone, trailingPeriods } from '@mumtaz/contracts';
+import { GRADE_TIERS, REGISTRATION_SOURCE_OPTIONS, todayInBusinessTimeZone, trailingPeriods } from '@mumtaz/contracts';
 import type {
+  AdminDashboardCharts,
   AdminDashboardSummary,
+  AdminRegistrationSources,
   AdminRevenue,
+  AdminStudentGrowth,
   ParentDashboardSummary,
   Period,
   SessionStatusCounts,
   TutorDashboardSummary,
 } from '@mumtaz/contracts';
-import { lessonSessions, tutors, users } from '../db/schema.js';
+import { lessonSessions, students, tutors, users } from '../db/schema.js';
 import { money } from '../lib/format.js';
+import { gradeTier } from './billing/tariff.js';
+import { gradeAtDate } from './master-data/grade-history.js';
 import type { ServiceContext } from './context.js';
-import { sessionsInPeriod, type SessionView } from './attendance/session-query.js';
+import { lessonDateInPeriod, sessionsInPeriod, type SessionView } from './attendance/session-query.js';
 import { assertParentLinked } from './parent-service.js';
 import { getTutorPayroll } from './payroll-service.js';
 
@@ -26,13 +31,102 @@ function statusCounts(rows: SessionView[]): SessionStatusCounts {
 }
 
 /**
+ * Grafik dashboard dari sesi yang dihitung (`approved`): peringkat tutor & komposisi jenjang untuk
+ * `period`, pertumbuhan murid aktif 12 bulan s.d. `period` (lihat `adminDashboardChartsSchema`).
+ */
+export async function getAdminDashboardCharts(ctx: ServiceContext, period: Period): Promise<AdminDashboardCharts> {
+  const inPeriod = and(eq(lessonSessions.status, 'approved'), lessonDateInPeriod(period));
+  const sessionsCount = count(lessonSessions.id);
+  const ranking = await ctx.db
+    .select({ tutor_id: tutors.id, name: users.full_name, sessions: sessionsCount })
+    .from(lessonSessions)
+    .innerJoin(tutors, eq(tutors.id, lessonSessions.tutor_id))
+    .innerJoin(users, eq(users.id, tutors.user_id))
+    .where(inPeriod)
+    .groupBy(tutors.id, users.full_name)
+    .orderBy(desc(sessionsCount), asc(users.full_name))
+    .limit(6);
+
+  // Kelas saat les (snapshot; sesi lama tanpa snapshot → riwayat kelas pada tanggal les). Murid dengan
+  // beberapa kelas dalam sebulan dihitung pada kelas terakhirnya.
+  const studentGrades = await ctx.db
+    .selectDistinctOn([lessonSessions.student_id], {
+      student_id: lessonSessions.student_id,
+      grade: sql<string>`coalesce(${lessonSessions.grade_snapshot}, ${gradeAtDate(sql`${lessonSessions.lesson_date}`)})`,
+    })
+    .from(lessonSessions)
+    .innerJoin(students, eq(students.id, lessonSessions.student_id))
+    .where(inPeriod)
+    .orderBy(lessonSessions.student_id, desc(lessonSessions.lesson_date));
+  const tiers = new Map<string, number>();
+  for (const row of studentGrades) {
+    const tier = row.grade ? gradeTier(row.grade) : null;
+    if (tier) tiers.set(tier, (tiers.get(tier) ?? 0) + 1);
+  }
+
+  return {
+    period,
+    tutor_ranking: ranking,
+    grade_composition: GRADE_TIERS.map((tier) => ({ tier, students: tiers.get(tier) ?? 0 })),
+  };
+}
+
+/** Tahun yang punya sesi dihitung (baru → lama). */
+async function countedYears(ctx: ServiceContext): Promise<number[]> {
+  const yearOf = sql<number>`extract(year from ${lessonSessions.lesson_date})::int`;
+  return (await ctx.db.selectDistinct({ year: yearOf }).from(lessonSessions)
+    .where(eq(lessonSessions.status, 'approved')).orderBy(desc(yearOf))).map((row) => Number(row.year));
+}
+
+/**
+ * Pertumbuhan murid aktif Januari–Desember satu tahun (lihat `adminStudentGrowthSchema`).
+ * Tanpa `year` dipakai tahun terbaru yang punya sesi dihitung (atau tahun berjalan bila belum ada).
+ */
+export async function getAdminStudentGrowth(ctx: ServiceContext, requestedYear?: number): Promise<AdminStudentGrowth> {
+  const years = await countedYears(ctx);
+  const year = requestedYear ?? years[0] ?? Number(todayInBusinessTimeZone(ctx.now()).slice(0, 4));
+  // Desember tahun lalu ikut dihitung sebagai pembanding Januari.
+  const months = trailingPeriods(`${year}-12`, 13);
+  const month = sql<string>`to_char(${lessonSessions.lesson_date}, 'YYYY-MM')`;
+  const active = await ctx.db
+    .select({ period: month, students: countDistinct(lessonSessions.student_id) })
+    .from(lessonSessions)
+    .where(and(eq(lessonSessions.status, 'approved'), gte(lessonSessions.lesson_date, `${year - 1}-12-01`), lt(lessonSessions.lesson_date, `${year + 1}-01-01`)))
+    .groupBy(month);
+  const activeOf = (p: string) => active.find((row) => row.period === p)?.students ?? 0;
+  return {
+    year,
+    years,
+    months: months.slice(1).map((p, i) => ({ period: p, students: activeOf(p), change: activeOf(p) - activeOf(months[i] as string) })),
+  };
+}
+
+/**
+ * Jumlah murid aktif per sumber pendaftaran. Semua kanal selalu tampil (0 bila kosong) agar urutan
+ * grafik stabil; murid lama tanpa sumber dikelompokkan `null` dan hanya tampil bila ada.
+ */
+export async function getAdminRegistrationSources(ctx: ServiceContext): Promise<AdminRegistrationSources> {
+  const rows = await ctx.db
+    .select({ source: students.registration_source, n: count() })
+    .from(students)
+    .where(eq(students.is_active, true))
+    .groupBy(students.registration_source);
+  const countOf = (source: string | null) => rows.find((row) => row.source === source)?.n ?? 0;
+  const unknown = countOf(null);
+  return {
+    sources: [
+      ...REGISTRATION_SOURCE_OPTIONS.map((source) => ({ source, students: countOf(source) })),
+      ...(unknown > 0 ? [{ source: null, students: unknown }] : []),
+    ],
+  };
+}
+
+/**
  * Pendapatan satu tahun penuh (Januari–Desember) dari snapshot sesi yang dihitung; bulan tanpa sesi = 0.
  * Tanpa `year` dipakai tahun terbaru yang punya sesi dihitung (atau tahun berjalan bila belum ada).
  */
 export async function getAdminRevenue(ctx: ServiceContext, requestedYear?: number): Promise<AdminRevenue> {
-  const yearOf = sql<number>`extract(year from ${lessonSessions.lesson_date})::int`;
-  const years = (await ctx.db.selectDistinct({ year: yearOf }).from(lessonSessions)
-    .where(eq(lessonSessions.status, 'approved')).orderBy(desc(yearOf))).map((row) => Number(row.year));
+  const years = await countedYears(ctx);
   const year = requestedYear ?? years[0] ?? Number(todayInBusinessTimeZone(ctx.now()).slice(0, 4));
   const periods = trailingPeriods(`${year}-12`, 12);
   const month = sql<string>`to_char(${lessonSessions.lesson_date}, 'YYYY-MM')`;
@@ -117,11 +211,15 @@ export async function getParentDashboardSummary(
     period,
     and(eq(lessonSessions.student_id, studentId), eq(lessonSessions.status, 'approved')),
   );
+  const perSubject = new Map<string, number>();
+  for (const row of rows) for (const name of new Set(row.subject_names)) perSubject.set(name, (perSubject.get(name) ?? 0) + 1);
   return {
     period,
     student_id: studentId,
     approved_sessions: rows.length,
     approved_duration_minutes: rows.reduce((sum, row) => sum + row.duration_minutes, 0),
-    subjects: [...new Set(rows.map((row) => row.subject_name))].sort(),
+    subjects: [...perSubject.keys()].sort((a, b) => a.localeCompare(b, 'id')),
+    subject_sessions: [...perSubject].map(([name, sessions]) => ({ name, sessions }))
+      .sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name, 'id')),
   };
 }

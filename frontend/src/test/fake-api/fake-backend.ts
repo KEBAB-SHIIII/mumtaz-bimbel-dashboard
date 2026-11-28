@@ -12,6 +12,8 @@ import {
   sessionStatusFor,
   sheetTitleForPeriod,
   trailingPeriods,
+  REGISTRATION_SOURCE_OPTIONS,
+  GRADE_TIERS,
   spreadsheetUrl,
   type AdminAttendanceDetail,
   type AdminAttendanceListItem,
@@ -41,6 +43,7 @@ import {
   fixtureUsers,
   type FixtureLessonSession,
 } from '@mumtaz/contracts/fixtures';
+import { createFakeLearningSummaryStore } from './learning-summary-fake';
 
 export interface FakeRequest {
   method: string;
@@ -112,6 +115,7 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
   const sheetTabs = new Map<string, number>();
   const exportRuns: SheetExportRun[] = [];
   let failNextExport = false;
+  const summaryStore = createFakeLearningSummaryStore();
 
   let csrfToken = 'demo-csrf-anonymous';
   let currentUserId: string | null = null;
@@ -145,6 +149,12 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
       .sort((a, b) => a.name.localeCompare(b.name));
     return { subject_ids: list.map((su) => su.id), subject_name: list.map((su) => su.name).join(', ') };
   };
+
+  const subjectNamesOf = (s: FixtureLessonSession): string[] =>
+    s.subject_ids
+      .map((id) => subjects.find((su) => su.id === id)?.name)
+      .filter((name): name is string => name !== undefined)
+      .sort((a, b) => a.localeCompare(b));
 
   const validityOf = (s: FixtureLessonSession) => ({
     validity: s.validity,
@@ -418,8 +428,12 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
     if (!hourly || !Number.isFinite(s.duration_minutes) || s.duration_minutes <= 0) {
       return { rate_amount_snapshot: null, admin_fee_snapshot: null };
     }
-    const gross = hourly + Math.max(0, Math.floor((s.duration_minutes - 60) / 30)) * hourly * 0.5;
-    const fee = 10_000 * Math.max(1, Math.floor((s.duration_minutes + 30) / 60));
+    // Jam tertagih: sisa < 20 mnt dibulatkan ke bawah, 20–49 → +0,5 jam, ≥ 50 → +1 jam (min. 1 jam).
+    const full = Math.floor(s.duration_minutes / 60);
+    const rest = s.duration_minutes - full * 60;
+    const hours = Math.max(1, full + (rest >= 50 ? 1 : rest >= 20 ? 0.5 : 0));
+    const gross = hourly * hours;
+    const fee = 10_000 * hours;
     return { rate_amount_snapshot: String(gross), admin_fee_snapshot: String(fee) };
   };
 
@@ -507,6 +521,57 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
             const fee = inMonth.reduce((sum, r) => sum + Number(r.admin_fee_snapshot ?? 0), 0);
             return { period: month, gross_revenue: String(monthGross), tutor_salary: String(monthGross - fee), net_revenue: String(fee) };
           }),
+        });
+      },
+    ],
+    [
+      'get',
+      /^\/admin\/dashboard\/charts$/,
+      (req) => {
+        requireRole('admin');
+        const period = req.params.period ?? '';
+        if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) throw new FakeError(422, 'VALIDATION_FAILED', 'Periode tidak valid');
+        const counted = (p: string) => sessions.filter((r) => r.status === 'approved' && r.lesson_date.startsWith(p));
+        const inPeriod = counted(period);
+        const perTutor = new Map<string, number>();
+        for (const r of inPeriod) perTutor.set(r.tutor_id, (perTutor.get(r.tutor_id) ?? 0) + 1);
+        const tierOf = (grade: string) => /^(PAUD|TK)$/.test(grade) ? 'PAUD-TK' : /^[1-3] SD$/.test(grade) ? 'SD 1-3' : /^[4-6] SD$/.test(grade) ? 'SD 4-6' : / SMP$/.test(grade) ? 'SMP' : / SMA$/.test(grade) ? 'SMA' : null;
+        const studentIds = [...new Set(inPeriod.map((r) => r.student_id))];
+        const tiers = studentIds.map((id) => tierOf(students.find((st) => st.id === id)?.grade ?? ''));
+        return ok({
+          period,
+          tutor_ranking: [...perTutor.entries()]
+            .map(([id, n]) => ({ tutor_id: id, name: tutorName(id), sessions: n }))
+            .sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name)).slice(0, 6),
+          grade_composition: GRADE_TIERS.map((tier) => ({ tier, students: tiers.filter((t) => t === tier).length })),
+        });
+      },
+    ],
+    [
+      'get',
+      /^\/admin\/dashboard\/student-growth$/,
+      (req) => {
+        requireRole('admin');
+        const approved = sessions.filter((r) => r.status === 'approved');
+        const years = [...new Set(approved.map((r) => Number(r.lesson_date.slice(0, 4))))].sort((a, b) => b - a);
+        const year = req.params.year ? Number(req.params.year) : (years[0] ?? 2026);
+        const months = trailingPeriods(`${year}-12`, 13);
+        const activeOf = (p: string) => new Set(approved.filter((r) => r.lesson_date.startsWith(p)).map((r) => r.student_id)).size;
+        return ok({ year, years, months: months.slice(1).map((p, i) => ({ period: p, students: activeOf(p), change: activeOf(p) - activeOf(months[i] ?? '') })) });
+      },
+    ],
+    [
+      'get',
+      /^\/admin\/dashboard\/registration-sources$/,
+      () => {
+        requireRole('admin');
+        const active = students.filter((st) => st.is_active);
+        const unknown = active.filter((st) => st.registration_source === null).length;
+        return ok({
+          sources: [
+            ...REGISTRATION_SOURCE_OPTIONS.map((source) => ({ source, students: active.filter((st) => st.registration_source === source).length })),
+            ...(unknown > 0 ? [{ source: null, students: unknown }] : []),
+          ],
         });
       },
     ],
@@ -730,7 +795,7 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
       /^\/admin\/students$/,
       (req) => {
         requireRole('admin');
-        const student: Student = { id: nextId('8003'), full_name: String(req.body.full_name), grade: String(req.body.grade), school_name: String(req.body.school_name), is_active: true, created_at: now().toISOString(), updated_at: now().toISOString() };
+        const student: Student = { id: nextId('8003'), full_name: String(req.body.full_name), grade: String(req.body.grade), school_name: String(req.body.school_name), registration_source: req.body.registration_source as Student['registration_source'], is_active: true, created_at: now().toISOString(), updated_at: now().toISOString() };
         students.push(student);
         return ok(student, 201);
       },
@@ -910,6 +975,13 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
           approved_sessions: rows.length,
           approved_duration_minutes: rows.reduce((sum, s) => sum + s.duration_minutes, 0),
           subjects: [...new Set(rows.map((s) => core(s).subject_name))].sort(),
+          // Hitung per mapel (sesi multi-mapel masuk ke tiap mapelnya), sama dengan backend.
+          subject_sessions: [...rows.reduce((m, s) => {
+            for (const name of new Set(s.subject_ids.map((id) => subjects.find((su) => su.id === id)?.name ?? ''))) if (name) m.set(name, (m.get(name) ?? 0) + 1);
+            return m;
+          }, new Map<string, number>())]
+            .map(([name, sessions]) => ({ name, sessions }))
+            .sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name, 'id')),
         });
       },
     ],
@@ -930,6 +1002,62 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
         });
       },
     ],
+    [
+      'get',
+      /^\/parent\/students\/([^/]+)\/summaries$/,
+      (req, [studentId = '']) => {
+        const user = requireRole('parent');
+        const period = req.params.period ?? '';
+        const rows = linkedApproved(user.id, studentId, period);
+        return ok(summaryStore.getSummaries(studentId, period, rows, subjectNamesOf));
+      },
+    ],
+    [
+      'post',
+      /^\/parent\/students\/([^/]+)\/summaries\/monthly$/,
+      (req, [studentId = '']) => {
+        const user = requireRole('parent');
+        const period = String(req.body.period ?? '');
+        const rows = linkedApproved(user.id, studentId, period);
+        if (rows.length === 0) {
+          throw new FakeError(
+            422,
+            'VALIDATION_FAILED',
+            'Belum ada sesi yang disetujui pada periode ini untuk diringkas.',
+          );
+        }
+        if (summaryStore.consumeShouldFail()) {
+          throw new FakeError(
+            503,
+            'INTEGRATION_UNAVAILABLE',
+            'Layanan ringkasan AI sedang tidak tersedia. Silakan coba lagi nanti.',
+          );
+        }
+        return ok(summaryStore.generateMonthly(studentId, period, rows, subjectNamesOf, now));
+      },
+    ],
+    [
+      'post',
+      /^\/parent\/students\/([^/]+)\/sessions\/([^/]+)\/summary$/,
+      (_req, [studentId = '', sessionId = '']) => {
+        const user = requireRole('parent');
+        if (!links.some((l) => l.parent_user_id === user.id && l.student_id === studentId)) {
+          throw new FakeError(403, 'FORBIDDEN', 'Anda tidak memiliki akses ke resource ini');
+        }
+        const session = sessions.find(
+          (s) => s.id === sessionId && s.student_id === studentId && s.status === 'approved',
+        );
+        if (!session) throw new FakeError(404, 'NOT_FOUND', 'Sesi belajar tidak ditemukan');
+        if (summaryStore.consumeShouldFail()) {
+          throw new FakeError(
+            503,
+            'INTEGRATION_UNAVAILABLE',
+            'Layanan ringkasan AI sedang tidak tersedia. Silakan coba lagi nanti.',
+          );
+        }
+        return ok(summaryStore.generateSession(session, subjectNamesOf(session), now));
+      },
+    ],
   );
 
   return {
@@ -944,6 +1072,59 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
     /** Hook test: ekspor berikutnya gagal seperti Google menolak akses (503). */
     failNextSheetExport() {
       failNextExport = true;
+    },
+    /** Hook test: generate ringkasan belajar AI berikutnya gagal (503). */
+    failNextLearningSummary() {
+      summaryStore.failNext();
+    },
+    /** Hook test: tambahkan mata pelajaran aktif; mengembalikan ID-nya. */
+    addSubject(name: string) {
+      const subject: Subject = { id: nextId('8004'), name, is_active: true, created_at: FIXED_TIMESTAMP, updated_at: FIXED_TIMESTAMP };
+      subjects.push(subject);
+      return subject.id;
+    },
+    /** Hook test: hubungkan anak tambahan ke akun orang tua (skenario orang tua dengan beberapa anak). */
+    linkStudent(parentUserId: string, studentId: string) {
+      links = [...links, { parent_user_id: parentUserId, student_id: studentId, relationship: 'ibu' }];
+    },
+    /** Hook test: tambahkan sesi approved sintetis (mis. untuk skenario > 3 mapel). */
+    seedApprovedSession(input: {
+      student_id: string;
+      tutor_id?: string;
+      subject_ids: string[];
+      lesson_date: string;
+      learning_material: string;
+      learning_notes?: string | null;
+      duration_minutes?: number;
+    }) {
+      const timestamp = now().toISOString();
+      const s: FixtureLessonSession = {
+        id: nextId('8000'),
+        client_submission_id: nextId('9000'),
+        tutor_id: input.tutor_id ?? tutors[0]?.id ?? '',
+        student_id: input.student_id,
+        subject_ids: input.subject_ids,
+        lesson_date: input.lesson_date,
+        start_time: '16:00',
+        end_time: '17:30',
+        duration_minutes: input.duration_minutes ?? 90,
+        learning_material: input.learning_material,
+        learning_notes: input.learning_notes ?? null,
+        next_focus: null,
+        status: 'approved',
+        validity: 'valid',
+        validity_reason: null,
+        anomaly_analysis_status: 'completed',
+        rate_amount_snapshot: '90000',
+        admin_fee_snapshot: '20000',
+        reviewed_by_user_id: users[0]?.id ?? null,
+        submitted_at: timestamp,
+        reviewed_at: timestamp,
+        updated_at: timestamp,
+        admin_note: null,
+      };
+      sessions.push(s);
+      return s;
     },
     handle(req: FakeRequest): FakeResponse {
       try {

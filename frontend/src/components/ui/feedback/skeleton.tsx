@@ -261,8 +261,9 @@ export function DashboardChartsSkeleton() {
     </SkeletonRegion>
   );
   return <>
-    <div className="grid gap-3 sm:gap-4 lg:grid-cols-3"><div className="lg:col-span-2">{chart(0)}</div>{chart(1)}</div>
-    <div className="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">{[2, 3, 4].map(chart)}</div>
+    {chart(0)}
+    <div className="grid gap-3 sm:gap-4 lg:grid-cols-3"><div className="lg:col-span-2">{chart(1)}</div>{chart(2)}</div>
+    <div className="grid gap-3 sm:gap-4 md:grid-cols-2">{[3, 4].map(chart)}</div>
   </>;
 }
 

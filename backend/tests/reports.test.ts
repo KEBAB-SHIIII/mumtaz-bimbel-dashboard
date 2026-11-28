@@ -1,5 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  adminDashboardChartsSchema,
+  adminStudentGrowthSchema,
+  adminRegistrationSourcesSchema,
   adminDashboardSummarySchema,
   adminRevenueSchema,
   parentDashboardSummarySchema,
@@ -10,6 +13,8 @@ import {
 } from '@mumtaz/contracts';
 import { EXPECTED_PAYROLL_2026_10, STUDENT_IDS, SUBJECT_IDS, TUTOR_IDS, SESSION_IDS } from '@mumtaz/contracts/fixtures';
 import { invoiceFileName, invoiceNumber } from '../src/services/billing/invoice-pdf.js';
+import { eq } from 'drizzle-orm';
+import { lessonSessionSubjects, subjects } from '../src/db/schema.js';
 import { as, createTestApp, type TestApp, type TestClient } from './helpers/test-app.js';
 
 let t: TestApp;
@@ -43,7 +48,7 @@ describe('Payroll preview (estimasi honor)', () => {
       expect(counted.map((line) => line.session_id).sort()).toEqual([...expected.approved_session_ids].sort());
       expect(counted.map((line) => [line.gross_amount, line.admin_fee, line.net_amount])).toEqual(
         expected.tutor_id === TUTOR_IDS.tutorA
-          ? [['90000', '20000', '70000'], ['80000', '10000', '70000'], ['90000', '20000', '70000']]
+          ? [['90000', '15000', '75000'], ['80000', '10000', '70000'], ['90000', '15000', '75000']]
           : [['80000', '10000', '70000']],
       );
     }
@@ -89,6 +94,8 @@ describe('Payroll preview (estimasi honor)', () => {
           start_time: '16:00',
           end_time: '17:00',
           learning_material: 'Sesi tanpa penugasan (tutor memilih sendiri)',
+          learning_notes:
+            'Catatan sesi tanpa penugasan: siswa aktif mengikuti penjelasan materi IPA dan mampu menjawab latihan pemahaman konsep dasar.',
         })
         .expect(201);
       await admin.patch(`/admin/attendance/${res.body.session.id as string}/validity`, { validity: 'valid' }).expect(200);
@@ -217,7 +224,7 @@ describe('Ringkasan dashboard', () => {
     expect(body.year).toBe(2026);
     expect(body.years).toEqual([2026]);
     expect(body.months.map((month) => month.period)).toEqual(Array.from({ length: 12 }, (_, i) => `2026-${String(i + 1).padStart(2, '0')}`));
-    expect(body.months[9]).toEqual({ period: '2026-10', gross_revenue: '340000', tutor_salary: '280000', net_revenue: '60000' });
+    expect(body.months[9]).toEqual({ period: '2026-10', gross_revenue: '340000', tutor_salary: '290000', net_revenue: '50000' });
     expect(body.months[0]).toEqual({ period: '2026-01', gross_revenue: '0', tutor_salary: '0', net_revenue: '0' });
 
     const other = adminRevenueSchema.parse((await admin.get('/admin/dashboard/revenue?year=2025').expect(200)).body);
@@ -229,12 +236,58 @@ describe('Ringkasan dashboard', () => {
     await tutorA.get('/admin/dashboard/revenue').expect(403);
   });
 
+  it('Admin: grafik peringkat tutor dan komposisi jenjang dari sesi yang dihitung', async () => {
+    const body = adminDashboardChartsSchema.parse((await admin.get('/admin/dashboard/charts?period=2026-10').expect(200)).body);
+    // Okt (approved): Farhan s01, s05 (Aisyah 3 SD) + s08 (Bima 5 SD); Noreen s11 (Citra 5 SD).
+    expect(body.tutor_ranking.map((t) => [t.name, t.sessions])).toEqual([['Farhan', 3], ['Noreen', 1]]);
+    expect(body.grade_composition).toEqual([
+      { tier: 'PAUD-TK', students: 0 }, { tier: 'SD 1-3', students: 1 }, { tier: 'SD 4-6', students: 2 },
+      { tier: 'SMP', students: 0 }, { tier: 'SMA', students: 0 },
+    ]);
+    await admin.get('/admin/dashboard/charts').expect(422);
+    const tutorA = await as.tutorA(t.app);
+    await tutorA.get('/admin/dashboard/charts?period=2026-10').expect(403);
+  });
+
+  it('Admin: pertumbuhan murid aktif Januari–Desember dengan filter tahun', async () => {
+    const body = adminStudentGrowthSchema.parse((await admin.get('/admin/dashboard/student-growth').expect(200)).body);
+    expect(body).toMatchObject({ year: 2026, years: [2026] });
+    expect(body.months.map((m) => m.period)).toEqual(Array.from({ length: 12 }, (_, i) => `2026-${String(i + 1).padStart(2, '0')}`));
+    // Sep: s07 (Citra) → 1; Okt: Aisyah, Bima, Citra → 3 (+2); Nov: s06 (Aisyah) → 1 (−2).
+    expect(body.months.slice(8, 11)).toEqual([
+      { period: '2026-09', students: 1, change: 1 },
+      { period: '2026-10', students: 3, change: 2 },
+      { period: '2026-11', students: 1, change: -2 },
+    ]);
+    expect(body.months[0]).toEqual({ period: '2026-01', students: 0, change: 0 });
+    const other = adminStudentGrowthSchema.parse((await admin.get('/admin/dashboard/student-growth?year=2025').expect(200)).body);
+    expect(other.months.every((m) => m.students === 0)).toBe(true);
+    await admin.get('/admin/dashboard/student-growth?year=abc').expect(422);
+    const tutorA = await as.tutorA(t.app);
+    await tutorA.get('/admin/dashboard/student-growth').expect(403);
+  });
+
+  it('Admin: sumber pendaftaran = murid aktif per kanal; murid tanpa sumber dikelompokkan terpisah', async () => {
+    const body = adminRegistrationSourcesSchema.parse((await admin.get('/admin/dashboard/registration-sources').expect(200)).body);
+    // Fixture: 12 murid aktif — 7 WhatsApp (bawaan), 1 per kanal lain, Lutfi belum diisi.
+    expect(body.sources).toEqual([
+      { source: 'whatsapp', students: 7 },
+      { source: 'instagram', students: 1 },
+      { source: 'tiktok', students: 1 },
+      { source: 'referral', students: 1 },
+      { source: 'other', students: 1 },
+      { source: null, students: 1 },
+    ]);
+    const tutorA = await as.tutorA(t.app);
+    await tutorA.get('/admin/dashboard/registration-sources').expect(403);
+  });
+
   it('Tutor: hanya data miliknya', async () => {
     const tutorA = await as.tutorA(t.app);
     const body = tutorDashboardSummarySchema.parse((await tutorA.get('/tutor/dashboard/summary?period=2026-10').expect(200)).body);
     expect(body.status_counts).toEqual({ pending: 2, approved: 3, revision_requested: 0, rejected: 0 });
-    // Bersih Farhan: 2 × (Rp90.000 − Rp20.000) + (Rp80.000 − Rp10.000).
-    expect(body.honor.estimated_amount).toBe('210000');
+    // Bersih Farhan: 2 × (Rp90.000 − Rp15.000) + (Rp80.000 − Rp10.000).
+    expect(body.honor.estimated_amount).toBe('220000');
   });
 
   it('Orang Tua: hanya approved anak terhubung, tanpa honor', async () => {
@@ -246,7 +299,26 @@ describe('Ringkasan dashboard', () => {
       approved_sessions: 2,
       approved_duration_minutes: 180,
       subjects: ['Matematika'],
+      subject_sessions: [{ name: 'Matematika', sessions: 2 }],
     });
     expect(JSON.stringify(res.body)).not.toMatch(/amount|honor|rate/);
+  });
+
+  it('Orang Tua: jumlah sesi per mapel, mapel bernama koma tetap utuh', async () => {
+    // s05 (Aisyah, 31 Okt) jadi dua mapel: Matematika + "Mengaji, Tajwid, dan Hafalan".
+    const [mengaji] = await t.database.db.insert(subjects).values({ name: 'Mengaji, Tajwid, dan Hafalan' }).returning();
+    if (!mengaji) throw new Error('mapel uji gagal dibuat');
+    await t.database.db.insert(lessonSessionSubjects).values({ lesson_session_id: SESSION_IDS.s05, subject_id: mengaji.id });
+    try {
+      const parent = await as.parentA(t.app);
+      const body = parentDashboardSummarySchema.parse((await parent.get(`/parent/dashboard/summary?student_id=${STUDENT_IDS.murid1}&period=2026-10`).expect(200)).body);
+      expect(body.subject_sessions).toEqual([
+        { name: 'Matematika', sessions: 2 },
+        { name: 'Mengaji, Tajwid, dan Hafalan', sessions: 1 },
+      ]);
+    } finally {
+      await t.database.db.delete(lessonSessionSubjects).where(eq(lessonSessionSubjects.subject_id, mengaji.id));
+      await t.database.db.delete(subjects).where(eq(subjects.id, mengaji.id));
+    }
   });
 });

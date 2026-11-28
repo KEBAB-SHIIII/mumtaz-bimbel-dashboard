@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router';
 import type { Role } from '@mumtaz/contracts';
 import { AppShellSkeleton } from '../../components/layout/route-skeleton';
 import { ErrorState } from '../../components/ui/feedback/states';
-import { ROLE_HOME, useSession } from './session';
+import { CurrentUserProvider, ROLE_HOME, useSession } from './session';
 
 /**
  * Guard UI per role. Hanya mengatur navigasi; otorisasi sesungguhnya tetap
@@ -24,7 +24,7 @@ export function RequireRole({ role, children }: { role: Role; children: ReactNod
   }
   if (user.role !== role) return <Navigate to={ROLE_HOME[user.role]} replace />;
   if (user.role === 'tutor' && user.must_change_password && location.pathname !== '/tutor/profil') return <Navigate to="/tutor/profil" replace />;
-  return <>{children}</>;
+  return <CurrentUserProvider user={user}>{children}</CurrentUserProvider>;
 }
 
 /** `/` → dashboard sesuai role, atau halaman login. */

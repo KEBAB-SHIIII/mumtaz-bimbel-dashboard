@@ -70,9 +70,9 @@ describe('perencanaan impor CSV', () => {
       { student: 'Tono', school: 'SDN 5 Baamang Hulu', schoolYear: '2024/2025', chosen: '3 SD', counts: { '4 SD': 1, '3 SD': 2 } },
     ]);
     const olinSessions = plan.sessions.filter((s) => s.student_id === tono?.id);
-    // 3 SD = 60rb/jam, 90 menit = 1,5× → 90rb, potongan 2× (sisa ≥ 30 menit); 4 SD = 80rb/jam.
+    // 3 SD = 60rb/jam, 90 menit = 1,5 jam → 90rb, potongan Rp15.000; 4 SD = 80rb/jam.
     expect(olinSessions.map((s) => [s.lesson_date, s.grade, s.rate_amount_snapshot, s.admin_fee_snapshot])).toEqual([
-      ['2025-05-14', '3 SD', '60000', '10000'], ['2025-05-21', '3 SD', '90000', '20000'],
+      ['2025-05-14', '3 SD', '60000', '10000'], ['2025-05-21', '3 SD', '90000', '15000'],
       ['2025-06-02', '3 SD', '60000', '10000'], ['2025-08-01', '4 SD', '80000', '10000'],
     ]);
     expect(plan.sessions.every((s) => s.learning_material === s.subjects.join('; '))).toBe(true);

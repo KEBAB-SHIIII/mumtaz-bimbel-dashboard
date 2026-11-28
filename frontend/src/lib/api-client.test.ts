@@ -1,6 +1,13 @@
 import { AxiosError, type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios';
 import { describe, expect, it, vi } from 'vitest';
-import { CSRF_HEADER, apiClient, getCsrfToken, onUnauthenticated, setCsrfToken } from './api-client';
+import {
+  CSRF_HEADER,
+  apiClient,
+  getCsrfToken,
+  onForbidden,
+  onUnauthenticated,
+  setCsrfToken,
+} from './api-client';
 
 function reply(config: InternalAxiosRequestConfig, status: number, data: unknown) {
   const response = { data, status, statusText: String(status), headers: {}, config };
@@ -72,6 +79,30 @@ describe('apiClient', () => {
     expect(listener).not.toHaveBeenCalled();
     await apiClient.get('/admin/attendance').catch(() => undefined);
     expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
+  it('403 FORBIDDEN biasa memicu listener onForbidden, tetapi bukan CSRF_INVALID / PASSWORD_CHANGE_REQUIRED', async () => {
+    const forbidden = vi.fn();
+    const unsubscribe = onForbidden(forbidden);
+
+    apiClient.defaults.adapter = (async (config) => {
+      if (config.url === '/auth/csrf') return reply(config, 200, { csrf_token: 'csrf-ok' });
+      if (config.url === '/pw') {
+        return reply(config, 403, { error: { code: 'PASSWORD_CHANGE_REQUIRED', message: 'x' } });
+      }
+      if (config.url === '/csrf') {
+        return reply(config, 403, { error: { code: 'CSRF_INVALID', message: 'x' } });
+      }
+      return reply(config, 403, { error: { code: 'FORBIDDEN', message: 'x' } });
+    }) as AxiosAdapter;
+
+    await apiClient.get('/pw').catch(() => undefined);
+    await apiClient.post('/csrf', {}).catch(() => undefined);
+    expect(forbidden).not.toHaveBeenCalled();
+
+    await apiClient.get('/admin/attendance').catch(() => undefined);
+    expect(forbidden).toHaveBeenCalledTimes(1);
     unsubscribe();
   });
 });

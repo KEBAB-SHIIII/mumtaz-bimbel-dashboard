@@ -6,7 +6,7 @@ import { formatPeriod } from '../../../lib/format';
 import { LockKeyhole, ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { AnimatePresence, m } from 'motion/react';
 import { useId, useState, type ButtonHTMLAttributes } from 'react';
-import { NavLink, useMatch } from 'react-router';
+import { NavLink, useLocation, useMatch } from 'react-router';
 import type { Role } from '@mumtaz/contracts';
 import { cn } from '../../../lib/cn';
 import { Chip } from '../../ui/data-display/chip';
@@ -72,9 +72,13 @@ function AttendanceAnomalyBadge({ collapsed }: { collapsed: boolean }) {
 
 function LeafItem({ item, collapsed, onNavigate }: ItemProps) {
   const [period] = usePeriodParam();
+  const { search } = useLocation();
+  // Portal Orang Tua: anak & bulan terpilih (student_id, period) ikut saat berpindah halaman.
+  const to = item.to.startsWith('/orang-tua-murid') ? { pathname: item.to, search }
+    : item.to === '/admin/absensi' ? `${item.to}?period=${period}` : item.to;
   return (
     <NavLink
-      to={item.to === '/admin/absensi' ? `${item.to}?period=${period}` : item.to}
+      to={to}
       aria-label={item.label}
       end={item.end ?? false}
       onClick={onNavigate}
@@ -250,22 +254,25 @@ interface SidebarProps {
 /** Isi sidebar: brand, navigasi berkelompok, identitas pengguna + Keluar (docs/design/03-layout.md). */
 export function Sidebar({ passwordRequired = false, role, userId, fullName, onLogout, logoutPending, variant, collapsed = false, onToggleCollapse, onClose }: SidebarProps) {
   const isCollapsed = variant === 'desktop' && collapsed;
+  const showBrandIcon = role === 'tutor' || role === 'parent';
   const onNavigate = variant === 'drawer' ? onClose : undefined;
 
   return (
     <div className="flex h-full flex-col">
-      <div className={cn('flex h-16 shrink-0 items-center px-3', role === 'tutor' ? 'gap-2' : 'gap-2.5', isCollapsed && 'justify-center')}>
+      <div className={cn('flex h-16 shrink-0 items-center px-3', showBrandIcon ? 'gap-2' : 'gap-2.5', isCollapsed && 'justify-center')}>
         {!isCollapsed && (
-          <div className={cn('flex min-w-0 flex-1 items-center gap-2.5', role === 'tutor' && 'gap-2')}>
-            {role === 'tutor' && (
+          <div className={cn('flex min-w-0 flex-1 items-center gap-2.5', showBrandIcon && 'gap-2')}>
+            {showBrandIcon && (
               <img
                 src="/favicon.svg"
+                width={32}
+                height={32}
                 alt=""
                 aria-hidden
                 className="size-8 shrink-0 rounded-full bg-white object-cover shadow-sm ring-1 ring-brand-border/55"
               />
             )}
-            {role === 'tutor' ? (
+            {showBrandIcon ? (
               <p className="whitespace-nowrap text-base font-semibold tracking-tight text-text">Mumtaz Bimbel</p>
             ) : (
               <p className="min-w-0 flex-1 truncate text-lg font-semibold text-text">Mumtaz Bimbel</p>
