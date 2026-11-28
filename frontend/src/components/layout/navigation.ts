@@ -1,10 +1,11 @@
 import {
-  BookOpenText,
   ClipboardList,
   Database,
   History,
+  House,
   LayoutDashboard,
   NotebookPen,
+  NotebookText,
   ReceiptText,
   UserRound,
   Wallet,
@@ -87,9 +88,8 @@ export const NAVIGATION: Record<Role, NavGroup[]> = {
     {
       label: 'Anak',
       items: [
-        { to: '/orang-tua-murid', label: 'Progress Anak', icon: LayoutDashboard, end: true },
-        { to: '/orang-tua-murid/riwayat', label: 'Riwayat Pembelajaran', icon: BookOpenText },
-        { to: '/orang-tua-murid/mata-pelajaran', label: 'Mata Pelajaran', icon: BookOpenText },
+        { to: '/orang-tua-murid', label: 'Beranda', icon: House, end: true },
+        { to: '/orang-tua-murid/riwayat', label: 'Catatan Belajar', icon: NotebookText },
       ],
     },
   ],

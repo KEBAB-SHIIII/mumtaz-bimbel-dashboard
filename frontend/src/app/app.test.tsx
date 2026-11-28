@@ -61,7 +61,7 @@ describe('autentikasi & navigasi per role', () => {
     await user.type(await screen.findByLabelText(/ID Akses Orang Tua/), 'MUMTAZ-DEMO-PARENT-ACCESS-ONLY');
     await user.click(screen.getByRole('button', { name: 'Masuk' }));
     expect(await screen.findByRole('heading', { name: 'Progress Anak' })).toBeInTheDocument();
-    expect(await navLinks()).toEqual(['Progress Anak', 'Riwayat Pembelajaran']);
+    expect(await navLinks()).toEqual(['Beranda', 'Catatan Belajar']);
   });
 
   it('logout membersihkan sesi dan kembali ke login', async () => {
@@ -247,7 +247,7 @@ describe('Orang Tua: Progress Anak', () => {
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText(/ID Akses Orang Tua/), 'MUMTAZ-DEMO-PARENT-ACCESS-ONLY');
     await user.click(screen.getByRole('button', { name: 'Masuk' }));
-    await user.click(await screen.findByRole('link', { name: 'Riwayat Pembelajaran' }));
+    await user.click(within(await screen.findByRole('navigation', { name: 'Navigasi utama' })).getByRole('link', { name: 'Catatan Belajar' }));
     await screen.findByRole('heading', { name: 'Riwayat Pembelajaran', level: 1 });
     await choosePeriod('2026-10');
 

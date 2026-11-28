@@ -204,13 +204,27 @@
     }
   }
 
+  /* Pastel portal Orang Tua (palet landing page Mumtaz): latar kartu, ikon, dan garis proporsi per nada. */
+  --color-pastel-blue: #dbeafe;
+  --color-pastel-teal: #dcefed;
+  --color-pastel-amber: #fdebd3;
+  --color-pastel-sky: #e0f2fe;
+  --color-pastel-sun: #fef3c7;
+  --color-ink-blue: #1d4ed8;
+  --color-ink-teal: #287c80;
+  --color-ink-amber: #b45309;
+  --color-ink-sky: #0369a1;
+  --color-bar-blue: #93c5fd;
+  --color-bar-teal: #8ccac6;
+  --color-bar-amber: #f4c27f;
+  --color-bar-sky: #7dd3fc;
+
   /* Spacing base (Tailwind menurunkan skala dari nilai ini) */
   --spacing: 0.25rem;
 }
 
 /* Applied to the document so drawers, dialogs, and other portals inherit the role theme. */
-:root[data-app-role='tutor'],
-:root[data-app-role='parent'] {
+:root[data-app-role='tutor'] {
   --color-primary: oklch(0.49 0.12 250);
   --color-primary-subtle: oklch(0.955 0.025 250);
   --color-focus-ring: oklch(0.48 0.12 250);
@@ -222,4 +236,30 @@
   --color-brand-gradient-to: oklch(0.93 0.035 250);
   --color-brand-ink: oklch(0.30 0.055 250);
   --color-brand-border: oklch(0.75 0.08 250);
+}
+
+/*
+ * Portal Orang Tua: palet & font landing page Mumtaz (navy #0B1F3B, biru #2563EB, biru es #F0F7FF,
+ * Plus Jakarta Sans). Hanya role parent; Admin/Tutor tidak berubah.
+ */
+:root[data-app-role='parent'] {
+  --font-sans: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --color-background: #f0f7ff;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f1f5f9;
+  --color-text: #0b1f3b;
+  --color-muted: #475569;
+  --color-border: #e2e8f0;
+  --color-border-strong: #94a3b8;
+  --color-primary: #2563eb;
+  --color-primary-subtle: #dbeafe;
+  --color-focus-ring: #2563eb;
+  --color-notification-surface: #dbeafe;
+  --color-nav-active-from: #bfdbfe;
+  --color-nav-active-to: #dbeafe;
+  --color-brand-gradient-from: #bfdbfe;
+  --color-brand-gradient-via: #dbeafe;
+  --color-brand-gradient-to: #f0f7ff;
+  --color-brand-ink: #0b1f3b;
+  --color-brand-border: #93c5fd;
 }
