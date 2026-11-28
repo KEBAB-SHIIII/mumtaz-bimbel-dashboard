@@ -19,6 +19,7 @@ import { QueryView } from '../../components/ui/feedback/query-view';
 import { LoadingSwitch, SkeletonCardList, SkeletonProfile, SkeletonStatCards } from '../../components/ui/feedback/skeleton';
 import { formatDuration, formatLessonDate, formatPeriod } from '../../lib/format';
 import { usePeriodParam } from '../../hooks/use-period-param';
+import { cn } from '../../lib/cn';
 import { queryKeys } from '../../lib/query-keys';
 import { useSearchState } from '../../hooks/use-search-state';
 import {
@@ -236,10 +237,17 @@ function ParentPageFrame({ title, children }: { title: string; children: (ctx: P
 }
 
 /** Identitas anak (avatar DiceBear dari ID murid internal, bukan ID Akses Orang Tua). */
-function ChildCard({ student, children }: { student: ParentStudent; children?: ReactNode }) {
+function ChildCard({ student, stacked = false, children }: { student: ParentStudent; stacked?: boolean; children?: ReactNode }) {
   return (
-    <section aria-label="Data anak" className="relative isolate flex flex-col gap-4 rounded-2xl border border-brand-border/60 bg-linear-to-br from-primary-subtle to-brand-gradient-to p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
-      <svg aria-hidden="true" focusable="false" viewBox="0 0 150 62" className="pointer-events-none absolute end-2 top-1 -z-10 w-24 text-primary/25 sm:end-1/3 sm:w-36">
+    <section
+      aria-label="Data anak"
+      className={cn(
+        'relative isolate flex h-full flex-col gap-4 rounded-2xl border border-brand-border/60 bg-linear-to-br from-primary-subtle to-brand-gradient-to p-4 shadow-sm sm:p-5',
+        // Di samping ringkasan (desktop): identitas di atas, pemilih bulan di bawah.
+        stacked ? 'sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-start lg:justify-between' : 'sm:flex-row sm:items-center sm:justify-between',
+      )}
+    >
+      <svg aria-hidden="true" focusable="false" viewBox="0 0 150 62" className={cn('pointer-events-none absolute end-2 top-1 -z-10 w-24 text-primary/25 sm:w-36', stacked ? 'sm:end-1/3 lg:end-3 lg:top-3 lg:w-28' : 'sm:end-1/3')}>
         <path d="M3 53c24 4 49-6 48-20-1-11-22-8-17 3 6 14 37 13 57-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="3 5" />
         <path d="m91 23 43-17-15 33-11-10-7 5 2-10Z" fill="var(--color-surface)" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
         <path d="m103 24 31-18-26 23" fill="none" stroke="currentColor" strokeLinejoin="round" />
@@ -263,8 +271,12 @@ export function ParentDashboardPage() {
       {({ student, period, controls }) => (
         <>
           <PageHeader title="Beranda" />
-          <ChildCard student={student}>{controls}</ChildCard>
-          <HomeContent key={`${student.id}:${period}`} studentId={student.id} period={period} />
+          <HomeContent
+            key={`${student.id}:${period}`}
+            studentId={student.id}
+            period={period}
+            profile={(stacked) => <ChildCard student={student} stacked={stacked}>{controls}</ChildCard>}
+          />
         </>
       )}
     </ParentPageFrame>
@@ -302,7 +314,7 @@ function SectionCard({ id, title, actions, children }: { id: string; title: stri
   );
 }
 
-function HomeContent({ studentId, period }: { studentId: string; period: string }) {
+function HomeContent({ studentId, period, profile }: { studentId: string; period: string; profile: (stacked: boolean) => ReactNode }) {
   const summary = useQuery({ queryKey: queryKeys.parent.dashboard(studentId, period), queryFn: () => fetchParentDashboard(studentId, period) });
   const progress = useQuery({ queryKey: queryKeys.parent.progress(studentId, period), queryFn: () => fetchParentProgress(studentId, period) });
   const ai = useParentSummaries(studentId, period);
@@ -316,7 +328,24 @@ function HomeContent({ studentId, period }: { studentId: string; period: string 
   };
   const notesLink = `/orang-tua-murid/riwayat?${new URLSearchParams({ student_id: studentId, period })}`;
 
+  // Bulan tanpa sesi: tanpa ringkasan, kartu profil kembali lebar penuh.
+  const hasSessions = summary.data ? summary.data.approved_sessions > 0 : true;
+
   return (
+    <>
+      <div className={cn('grid items-stretch gap-4', hasSessions && 'lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]')}>
+        {profile(hasSessions)}
+        {hasSessions && (summary.data ? (
+          <MonthlyLearningSummaryCard
+            period={period}
+            approvedSessionCount={ai.approvedSessionCount ?? summary.data.approved_sessions}
+            summary={ai.monthly}
+            isGenerating={ai.monthlyGenerating}
+            error={ai.monthlyError}
+            onGenerate={ai.generateMonthly}
+          />
+        ) : summary.isError ? null : <div aria-hidden className="min-h-44 animate-pulse-soft rounded-2xl bg-pastel-sun motion-reduce:animate-none" />)}
+      </div>
     <QueryView query={combined} skeleton={<><SkeletonStatCards count={3} /><Card><SkeletonCardList count={2} /></Card></>}>
       {({ summary: data, progress: detail }) => {
         return (
@@ -333,15 +362,7 @@ function HomeContent({ studentId, period }: { studentId: string; period: string 
               </Card>
             ) : (
               <>
-                <MonthlyLearningSummaryCard
-                  period={period}
-                  approvedSessionCount={ai.approvedSessionCount ?? data.approved_sessions}
-                  summary={ai.monthly}
-                  isGenerating={ai.monthlyGenerating}
-                  error={ai.monthlyError}
-                  onGenerate={ai.generateMonthly}
-                />
-                {/* Ringkasan AI lebar penuh; dua daftar di bawahnya bersanding dengan tinggi sama. */}
+                {/* Dua daftar bersanding dengan tinggi kartu yang sama. */}
                 <div className="grid items-stretch gap-4 lg:grid-cols-[1.35fr_1fr]">
                   <SectionCard
                     id="recent-sessions-title"
@@ -373,6 +394,7 @@ function HomeContent({ studentId, period }: { studentId: string; period: string 
         );
       }}
     </QueryView>
+    </>
   );
 }
 

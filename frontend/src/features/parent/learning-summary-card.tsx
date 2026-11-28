@@ -172,8 +172,8 @@ export function MonthlyLearningSummaryCard({
   ) : null;
 
   return (
-    <section aria-labelledby="monthly-summary-title" className="rounded-2xl bg-pastel-sun p-4 sm:p-5">
-      <div className="flex flex-col gap-3">
+    <section aria-labelledby="monthly-summary-title" className="h-full rounded-2xl bg-pastel-sun p-4 sm:p-5">
+      <div className="flex h-full flex-col gap-3">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <h2 id="monthly-summary-title" className="text-card-title text-balance text-text">Ringkasan belajar {month}</h2>
           {summary && approvedSessionCount > 0 && (
@@ -186,7 +186,7 @@ export function MonthlyLearningSummaryCard({
           <>
             <p className="line-clamp-4 text-sm leading-relaxed text-pretty text-text">{summary.summary}</p>
             {retry}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
               <Button variant="secondary" size="sm" aria-haspopup="dialog" onClick={() => setOpen(true)}>Baca selengkapnya</Button>
               {summary.is_stale && (
                 <Button variant="ghost" size="sm" loading={isGenerating} onClick={onGenerate}>
@@ -201,7 +201,7 @@ export function MonthlyLearningSummaryCard({
         ) : (
           <>
             <p className="text-sm text-pretty text-muted">Dapatkan rangkuman perkembangan anak dari {approvedSessionCount} sesi terverifikasi bulan ini.</p>
-            <div>
+            <div className="mt-auto pt-1">
               <Button variant="primary" size="md" loading={isGenerating} onClick={onGenerate}>
                 Buat ringkasan bulanan
               </Button>
