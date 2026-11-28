@@ -243,8 +243,8 @@ function ChildCard({ student, stacked = false, children }: { student: ParentStud
       aria-label="Data anak"
       className={cn(
         'relative isolate flex h-full flex-col gap-4 rounded-2xl border border-brand-border/60 bg-linear-to-br from-primary-subtle to-brand-gradient-to p-4 shadow-sm sm:p-5',
-        // Di samping ringkasan (desktop): identitas di atas, pemilih bulan di bawah.
-        stacked ? 'sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-start lg:justify-between' : 'sm:flex-row sm:items-center sm:justify-between',
+        // Di samping ringkasan (desktop): kartu tegak, avatar besar, pemilih bulan di bawah.
+        stacked ? 'sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-start lg:justify-between lg:p-6' : 'sm:flex-row sm:items-center sm:justify-between',
       )}
     >
       <svg aria-hidden="true" focusable="false" viewBox="0 0 150 62" className={cn('pointer-events-none absolute end-2 top-1 -z-10 w-24 text-primary/25 sm:w-36', stacked ? 'sm:end-1/3 lg:end-3 lg:top-3 lg:w-28' : 'sm:end-1/3')}>
@@ -252,10 +252,11 @@ function ChildCard({ student, stacked = false, children }: { student: ParentStud
         <path d="m91 23 43-17-15 33-11-10-7 5 2-10Z" fill="var(--color-surface)" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
         <path d="m103 24 31-18-26 23" fill="none" stroke="currentColor" strokeLinejoin="round" />
       </svg>
-      <div className="flex min-w-0 items-center gap-3">
-        <Avatar seed={student.id} name={student.full_name} size={40} decorative />
+      <div className={cn('flex min-w-0 items-center gap-3', stacked && 'lg:flex-col lg:items-start lg:gap-4')}>
+        <span className={cn(stacked && 'lg:hidden')}><Avatar seed={student.id} name={student.full_name} size={40} decorative /></span>
+        {stacked && <span className="hidden lg:block"><Avatar seed={student.id} name={student.full_name} size={72} decorative /></span>}
         <div className="min-w-0">
-          <p className="text-card-title break-words text-text">{student.full_name}</p>
+          <p className={cn('text-card-title break-words text-text', stacked && 'lg:text-xl')}>{student.full_name}</p>
           <p className="text-meta text-pretty text-muted">{student.grade} · {student.school_name}</p>
         </div>
       </div>
