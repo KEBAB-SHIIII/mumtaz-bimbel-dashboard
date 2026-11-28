@@ -4,9 +4,11 @@ import {
   adminAttendanceDetailSchema,
   adminAttendanceListItemSchema,
   adminAttendanceOptionsSchema,
+  adminDashboardChartsSchema,
   adminDashboardSummarySchema,
   adminRegistrationSourcesSchema,
   adminRevenueSchema,
+  adminStudentGrowthSchema,
   paginatedSchema,
   parentAccessCodeIssuedSchema,
   parentSchema,
@@ -47,6 +49,14 @@ export const fetchAdminDashboard = (period: string) =>
 /** Grafik pendapatan Jan–Des; tanpa `year` backend memilih tahun terbaru yang punya data. */
 export const fetchAdminRevenue = (year?: number) =>
   get(adminRevenueSchema, '/admin/dashboard/revenue', { year });
+
+/** Grafik peringkat tutor, komposisi jenjang, dan pertumbuhan murid untuk periode terpilih. */
+export const fetchAdminDashboardCharts = (period: string) =>
+  get(adminDashboardChartsSchema, '/admin/dashboard/charts', { period });
+
+/** Pertumbuhan murid aktif Jan–Des; tanpa `year` backend memilih tahun terbaru yang punya data. */
+export const fetchAdminStudentGrowth = (year?: number) =>
+  get(adminStudentGrowthSchema, '/admin/dashboard/student-growth', { year });
 
 /** Jumlah murid aktif per sumber pendaftaran (grafik dashboard). */
 export const fetchAdminRegistrationSources = () =>

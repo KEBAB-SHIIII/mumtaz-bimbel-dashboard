@@ -65,7 +65,7 @@ export function AdminDashboardPage() {
                 to={`/admin/penagihan?period=${period}`}
               />
             </dl>
-            <DashboardCharts />
+            <DashboardCharts period={period} />
           </>
         )}
       </QueryView>

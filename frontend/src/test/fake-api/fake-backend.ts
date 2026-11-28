@@ -13,6 +13,7 @@ import {
   sheetTitleForPeriod,
   trailingPeriods,
   REGISTRATION_SOURCE_OPTIONS,
+  GRADE_TIERS,
   spreadsheetUrl,
   type AdminAttendanceDetail,
   type AdminAttendanceListItem,
@@ -521,6 +522,42 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
             return { period: month, gross_revenue: String(monthGross), tutor_salary: String(monthGross - fee), net_revenue: String(fee) };
           }),
         });
+      },
+    ],
+    [
+      'get',
+      /^\/admin\/dashboard\/charts$/,
+      (req) => {
+        requireRole('admin');
+        const period = req.params.period ?? '';
+        if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) throw new FakeError(422, 'VALIDATION_FAILED', 'Periode tidak valid');
+        const counted = (p: string) => sessions.filter((r) => r.status === 'approved' && r.lesson_date.startsWith(p));
+        const inPeriod = counted(period);
+        const perTutor = new Map<string, number>();
+        for (const r of inPeriod) perTutor.set(r.tutor_id, (perTutor.get(r.tutor_id) ?? 0) + 1);
+        const tierOf = (grade: string) => /^(PAUD|TK)$/.test(grade) ? 'PAUD-TK' : /^[1-3] SD$/.test(grade) ? 'SD 1-3' : /^[4-6] SD$/.test(grade) ? 'SD 4-6' : / SMP$/.test(grade) ? 'SMP' : / SMA$/.test(grade) ? 'SMA' : null;
+        const studentIds = [...new Set(inPeriod.map((r) => r.student_id))];
+        const tiers = studentIds.map((id) => tierOf(students.find((st) => st.id === id)?.grade ?? ''));
+        return ok({
+          period,
+          tutor_ranking: [...perTutor.entries()]
+            .map(([id, n]) => ({ tutor_id: id, name: tutorName(id), sessions: n }))
+            .sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name)).slice(0, 6),
+          grade_composition: GRADE_TIERS.map((tier) => ({ tier, students: tiers.filter((t) => t === tier).length })),
+        });
+      },
+    ],
+    [
+      'get',
+      /^\/admin\/dashboard\/student-growth$/,
+      (req) => {
+        requireRole('admin');
+        const approved = sessions.filter((r) => r.status === 'approved');
+        const years = [...new Set(approved.map((r) => Number(r.lesson_date.slice(0, 4))))].sort((a, b) => b - a);
+        const year = req.params.year ? Number(req.params.year) : (years[0] ?? 2026);
+        const months = trailingPeriods(`${year}-12`, 13);
+        const activeOf = (p: string) => new Set(approved.filter((r) => r.lesson_date.startsWith(p)).map((r) => r.student_id)).size;
+        return ok({ year, years, months: months.slice(1).map((p, i) => ({ period: p, students: activeOf(p), change: activeOf(p) - activeOf(months[i] ?? '') })) });
       },
     ],
     [

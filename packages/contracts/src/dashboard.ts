@@ -62,6 +62,35 @@ export const adminRegistrationSourcesSchema = z.object({
 });
 export type AdminRegistrationSources = z.infer<typeof adminRegistrationSourcesSchema>;
 
+/** Jenjang tarif (sama dengan `gradeTier` backend), urutan PAUD → SMA. */
+export const GRADE_TIERS = ['PAUD-TK', 'SD 1-3', 'SD 4-6', 'SMP', 'SMA'] as const;
+export const gradeTierSchema = z.enum(GRADE_TIERS);
+
+/**
+ * `GET /admin/dashboard/charts?period=YYYY-MM` — grafik dashboard dari sesi yang dihitung (`approved`):
+ * - `tutor_ranking`: maks. 6 tutor dengan sesi terbanyak pada `period` (seri → nama).
+ * - `grade_composition`: murid bersesi pada `period` per jenjang (kelas saat les); semua jenjang tampil.
+ */
+export const adminDashboardChartsSchema = z.object({
+  period: periodSchema,
+  tutor_ranking: z.array(z.object({ tutor_id: uuidSchema, name: z.string(), sessions: z.number().int().min(0) })).max(6),
+  grade_composition: z.array(z.object({ tier: gradeTierSchema, students: z.number().int().min(0) })).length(GRADE_TIERS.length),
+});
+export type AdminDashboardCharts = z.infer<typeof adminDashboardChartsSchema>;
+
+/**
+ * `GET /admin/dashboard/student-growth?year=2026` — murid aktif Januari–Desember (bulan tanpa sesi = 0):
+ * `students` = murid berbeda dengan sesi dihitung di bulan itu, `change` = selisih dari bulan sebelumnya
+ * (Januari dibandingkan Desember tahun lalu) — definisi sama dengan dataset DS. `years` = tahun yang punya
+ * sesi dihitung (baru → lama); tanpa `year` dipakai tahun terbaru.
+ */
+export const adminStudentGrowthSchema = z.object({
+  year: yearSchema,
+  years: z.array(yearSchema),
+  months: z.array(z.object({ period: periodSchema, students: z.number().int().min(0), change: z.number().int() })).length(12),
+});
+export type AdminStudentGrowth = z.infer<typeof adminStudentGrowthSchema>;
+
 /** `GET /tutor/dashboard/summary` — hanya tutor dari session. */
 export const tutorDashboardSummarySchema = z.object({
   period: periodSchema,

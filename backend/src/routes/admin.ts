@@ -38,7 +38,7 @@ import {
 } from '../services/attendance/attendance-service.js';
 import type { AnomalyQueue } from '../services/anomaly/anomaly-worker.js';
 import type { ServiceContext } from '../services/context.js';
-import { getAdminDashboardSummary, getAdminRegistrationSources, getAdminRevenue } from '../services/dashboard-service.js';
+import { getAdminDashboardCharts, getAdminDashboardSummary, getAdminRegistrationSources, getAdminRevenue, getAdminStudentGrowth } from '../services/dashboard-service.js';
 import * as parents from '../services/master-data/parents.js';
 import * as students from '../services/master-data/students.js';
 import * as subjects from '../services/master-data/subjects.js';
@@ -69,6 +69,18 @@ export function adminRouter(ctx: ServiceContext, exportDeps: ExportDeps, anomaly
   router.get('/admin/dashboard/revenue', async (req, res) => {
     const { year } = parseInput(adminRevenueQuerySchema, req.query);
     res.json(await getAdminRevenue(ctx, year));
+  });
+
+  /** Grafik peringkat tutor, komposisi jenjang, dan pertumbuhan murid untuk periode terpilih. */
+  router.get('/admin/dashboard/charts', async (req, res) => {
+    const { period } = parseInput(periodQuerySchema, req.query);
+    res.json(await getAdminDashboardCharts(ctx, period));
+  });
+
+  /** Grafik pertumbuhan murid aktif Januari–Desember (filter tahun, sama dengan grafik pendapatan). */
+  router.get('/admin/dashboard/student-growth', async (req, res) => {
+    const { year } = parseInput(adminRevenueQuerySchema, req.query);
+    res.json(await getAdminStudentGrowth(ctx, year));
   });
 
   /** Grafik sumber pendaftaran: jumlah murid aktif per kanal. */

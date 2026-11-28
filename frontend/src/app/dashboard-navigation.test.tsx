@@ -16,10 +16,19 @@ describe('dashboard mengarahkan ke data di balik angka', () => {
     if (!omzet) throw new Error('kartu omzet tidak ada');
     await waitFor(() => expect(omzet).toHaveTextContent(/Rp\s?340\.000/));
     expect(screen.queryByText('Menunggu verifikasi')).not.toBeInTheDocument();
-    // Grafik dimuat lazy (chunk terpisah) setelah kartu metrik. Grafik pendapatan dan sumber pendaftaran
-    // memakai data asli (tanpa label), tiga grafik lain masih data contoh.
-    expect(await screen.findAllByText('Data contoh')).toHaveLength(3);
-    const sources = screen.getByRole('heading', { name: 'Sumber pendaftaran murid' }).closest('section');
+    // Grafik dimuat lazy (chunk terpisah) setelah kartu metrik; semua grafik memakai data asli dari API.
+    const sources = (await screen.findByRole('heading', { name: 'Sumber pendaftaran murid' })).closest('section');
+    expect(screen.queryByText('Data contoh')).not.toBeInTheDocument();
+    // Ringkasan aksesibel tiap grafik memuat angka periode terpilih (Oktober 2026).
+    const figureOf = (title: string) => within(screen.getByRole('heading', { name: title }).closest('section') as HTMLElement).getByRole('figure');
+    await waitFor(() => expect(figureOf('Tutor dengan sesi terbanyak')).toHaveAccessibleName('Tutor dengan sesi terbanyak: Farhan 3, Noreen 1'));
+    expect(figureOf('Komposisi murid per jenjang')).toHaveAccessibleName('Komposisi murid per jenjang: PAUD–TK 0, SD 1–3 1, SD 4–6 2, SMP 0, SMA 0');
+    // Pertumbuhan: Januari–Desember dengan filter tahun (default tahun terbaru yang punya data).
+    const growth = screen.getByRole('heading', { name: 'Pertumbuhan jumlah siswa' }).closest('section') as HTMLElement;
+    await waitFor(() => expect(figureOf('Pertumbuhan jumlah siswa')).toHaveAccessibleName(/^Pertumbuhan jumlah siswa: Januari 2026 0, .*September 2026 1, Oktober 2026 3, November 2026 1, Desember 2026 0$/));
+    expect(within(growth).getByRole('button', { name: /Tahun/ })).toHaveTextContent('2026');
+    expect(growth).not.toHaveTextContent('12 bulan');
+    expect(screen.getByRole('heading', { name: 'Komposisi murid per jenjang' }).closest('section')).toHaveTextContent('Murid bersesi · Oktober 2026');
     if (!sources) throw new Error('kartu sumber pendaftaran tidak ada');
     expect(sources).not.toHaveTextContent('Data contoh');
     // Ringkasan aksesibel memuat angka dari API: fixture 7 WhatsApp, 1 per kanal lain, 1 belum diisi.

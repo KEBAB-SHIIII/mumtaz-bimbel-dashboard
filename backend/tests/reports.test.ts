@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  adminDashboardChartsSchema,
+  adminStudentGrowthSchema,
   adminRegistrationSourcesSchema,
   adminDashboardSummarySchema,
   adminRevenueSchema,
@@ -230,6 +232,37 @@ describe('Ringkasan dashboard', () => {
     await admin.get('/admin/dashboard/revenue?year=abc').expect(422);
     const tutorA = await as.tutorA(t.app);
     await tutorA.get('/admin/dashboard/revenue').expect(403);
+  });
+
+  it('Admin: grafik peringkat tutor dan komposisi jenjang dari sesi yang dihitung', async () => {
+    const body = adminDashboardChartsSchema.parse((await admin.get('/admin/dashboard/charts?period=2026-10').expect(200)).body);
+    // Okt (approved): Farhan s01, s05 (Aisyah 3 SD) + s08 (Bima 5 SD); Noreen s11 (Citra 5 SD).
+    expect(body.tutor_ranking.map((t) => [t.name, t.sessions])).toEqual([['Farhan', 3], ['Noreen', 1]]);
+    expect(body.grade_composition).toEqual([
+      { tier: 'PAUD-TK', students: 0 }, { tier: 'SD 1-3', students: 1 }, { tier: 'SD 4-6', students: 2 },
+      { tier: 'SMP', students: 0 }, { tier: 'SMA', students: 0 },
+    ]);
+    await admin.get('/admin/dashboard/charts').expect(422);
+    const tutorA = await as.tutorA(t.app);
+    await tutorA.get('/admin/dashboard/charts?period=2026-10').expect(403);
+  });
+
+  it('Admin: pertumbuhan murid aktif Januari–Desember dengan filter tahun', async () => {
+    const body = adminStudentGrowthSchema.parse((await admin.get('/admin/dashboard/student-growth').expect(200)).body);
+    expect(body).toMatchObject({ year: 2026, years: [2026] });
+    expect(body.months.map((m) => m.period)).toEqual(Array.from({ length: 12 }, (_, i) => `2026-${String(i + 1).padStart(2, '0')}`));
+    // Sep: s07 (Citra) → 1; Okt: Aisyah, Bima, Citra → 3 (+2); Nov: s06 (Aisyah) → 1 (−2).
+    expect(body.months.slice(8, 11)).toEqual([
+      { period: '2026-09', students: 1, change: 1 },
+      { period: '2026-10', students: 3, change: 2 },
+      { period: '2026-11', students: 1, change: -2 },
+    ]);
+    expect(body.months[0]).toEqual({ period: '2026-01', students: 0, change: 0 });
+    const other = adminStudentGrowthSchema.parse((await admin.get('/admin/dashboard/student-growth?year=2025').expect(200)).body);
+    expect(other.months.every((m) => m.students === 0)).toBe(true);
+    await admin.get('/admin/dashboard/student-growth?year=abc').expect(422);
+    const tutorA = await as.tutorA(t.app);
+    await tutorA.get('/admin/dashboard/student-growth').expect(403);
   });
 
   it('Admin: sumber pendaftaran = murid aktif per kanal; murid tanpa sumber dikelompokkan terpisah', async () => {
