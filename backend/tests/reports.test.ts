@@ -13,6 +13,8 @@ import {
 } from '@mumtaz/contracts';
 import { EXPECTED_PAYROLL_2026_10, STUDENT_IDS, SUBJECT_IDS, TUTOR_IDS, SESSION_IDS } from '@mumtaz/contracts/fixtures';
 import { invoiceFileName, invoiceNumber } from '../src/services/billing/invoice-pdf.js';
+import { eq } from 'drizzle-orm';
+import { lessonSessionSubjects, subjects } from '../src/db/schema.js';
 import { as, createTestApp, type TestApp, type TestClient } from './helpers/test-app.js';
 
 let t: TestApp;
@@ -297,7 +299,26 @@ describe('Ringkasan dashboard', () => {
       approved_sessions: 2,
       approved_duration_minutes: 180,
       subjects: ['Matematika'],
+      subject_sessions: [{ name: 'Matematika', sessions: 2 }],
     });
     expect(JSON.stringify(res.body)).not.toMatch(/amount|honor|rate/);
+  });
+
+  it('Orang Tua: jumlah sesi per mapel, mapel bernama koma tetap utuh', async () => {
+    // s05 (Aisyah, 31 Okt) jadi dua mapel: Matematika + "Mengaji, Tajwid, dan Hafalan".
+    const [mengaji] = await t.database.db.insert(subjects).values({ name: 'Mengaji, Tajwid, dan Hafalan' }).returning();
+    if (!mengaji) throw new Error('mapel uji gagal dibuat');
+    await t.database.db.insert(lessonSessionSubjects).values({ lesson_session_id: SESSION_IDS.s05, subject_id: mengaji.id });
+    try {
+      const parent = await as.parentA(t.app);
+      const body = parentDashboardSummarySchema.parse((await parent.get(`/parent/dashboard/summary?student_id=${STUDENT_IDS.murid1}&period=2026-10`).expect(200)).body);
+      expect(body.subject_sessions).toEqual([
+        { name: 'Matematika', sessions: 2 },
+        { name: 'Mengaji, Tajwid, dan Hafalan', sessions: 1 },
+      ]);
+    } finally {
+      await t.database.db.delete(lessonSessionSubjects).where(eq(lessonSessionSubjects.subject_id, mengaji.id));
+      await t.database.db.delete(subjects).where(eq(subjects.id, mengaji.id));
+    }
   });
 });

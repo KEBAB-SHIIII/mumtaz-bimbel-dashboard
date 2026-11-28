@@ -211,11 +211,15 @@ export async function getParentDashboardSummary(
     period,
     and(eq(lessonSessions.student_id, studentId), eq(lessonSessions.status, 'approved')),
   );
+  const perSubject = new Map<string, number>();
+  for (const row of rows) for (const name of new Set(row.subject_names)) perSubject.set(name, (perSubject.get(name) ?? 0) + 1);
   return {
     period,
     student_id: studentId,
     approved_sessions: rows.length,
     approved_duration_minutes: rows.reduce((sum, row) => sum + row.duration_minutes, 0),
-    subjects: [...new Set(rows.flatMap((row) => row.subject_names))].sort((a, b) => a.localeCompare(b, 'id')),
+    subjects: [...perSubject.keys()].sort((a, b) => a.localeCompare(b, 'id')),
+    subject_sessions: [...perSubject].map(([name, sessions]) => ({ name, sessions }))
+      .sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name, 'id')),
   };
 }

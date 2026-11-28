@@ -975,6 +975,9 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
           approved_sessions: rows.length,
           approved_duration_minutes: rows.reduce((sum, s) => sum + s.duration_minutes, 0),
           subjects: [...new Set(rows.map((s) => core(s).subject_name))].sort(),
+          subject_sessions: [...rows.reduce((m, s) => m.set(core(s).subject_name, (m.get(core(s).subject_name) ?? 0) + 1), new Map<string, number>())]
+            .map(([name, sessions]) => ({ name, sessions }))
+            .sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name, 'id')),
         });
       },
     ],

@@ -111,5 +111,7 @@ export const parentDashboardSummarySchema = z.strictObject({
   approved_sessions: z.number().int().min(0),
   approved_duration_minutes: z.number().int().min(0),
   subjects: z.array(z.string()),
+  /** Jumlah sesi approved per mapel (sesi multi-mapel dihitung di tiap mapelnya); sesi terbanyak dulu, lalu nama. */
+  subject_sessions: z.array(z.strictObject({ name: z.string(), sessions: z.number().int().min(0) })),
 });
 export type ParentDashboardSummary = z.infer<typeof parentDashboardSummarySchema>;
