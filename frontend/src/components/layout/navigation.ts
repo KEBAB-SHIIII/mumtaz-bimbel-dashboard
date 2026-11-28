@@ -89,6 +89,7 @@ export const NAVIGATION: Record<Role, NavGroup[]> = {
       items: [
         { to: '/orang-tua-murid', label: 'Progress Anak', icon: LayoutDashboard, end: true },
         { to: '/orang-tua-murid/riwayat', label: 'Riwayat Pembelajaran', icon: BookOpenText },
+        { to: '/orang-tua-murid/mata-pelajaran', label: 'Mata Pelajaran', icon: BookOpenText },
       ],
     },
   ],

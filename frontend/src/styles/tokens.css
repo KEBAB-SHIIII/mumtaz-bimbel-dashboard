@@ -209,7 +209,8 @@
 }
 
 /* Applied to the document so drawers, dialogs, and other portals inherit the role theme. */
-:root[data-app-role='tutor'] {
+:root[data-app-role='tutor'],
+:root[data-app-role='parent'] {
   --color-primary: oklch(0.49 0.12 250);
   --color-primary-subtle: oklch(0.955 0.025 250);
   --color-focus-ring: oklch(0.48 0.12 250);

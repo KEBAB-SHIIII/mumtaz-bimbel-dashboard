@@ -2,6 +2,7 @@ import { ChevronDown, ChevronUp, RefreshCw, RotateCcw, Sparkles } from 'lucide-r
 import { useState } from 'react';
 import type { LearningSummaryStatus, LearningSummaryView } from '@mumtaz/contracts';
 import { Button } from '../../components/ui/actions/button';
+import { Modal } from '../../components/ui/overlay/dialog';
 import { Chip, type ChipColor } from '../../components/ui/data-display/chip';
 import { InlineAlert } from '../../components/ui/feedback/states';
 import { Card } from '../../components/ui/surfaces/layout-primitives';
@@ -225,6 +226,7 @@ export function MonthlyLearningSummaryCard({
 }
 
 export interface SessionLearningSummaryBlockProps {
+  sessionLabel: string;
   summary: LearningSummaryView | undefined;
   isGenerating: boolean;
   error: unknown;
@@ -232,40 +234,32 @@ export interface SessionLearningSummaryBlockProps {
 }
 
 export function SessionLearningSummaryBlock({
+  sessionLabel,
   summary,
   isGenerating,
   error,
   onGenerate,
 }: SessionLearningSummaryBlockProps) {
-  if (summary) {
-    return (
-      <div className="mt-2 rounded-md border border-border bg-surface p-3">
-        <p className="mb-2 text-meta font-semibold text-muted">Ringkasan AI sesi ini</p>
-        <SummaryBody
-          summary={summary}
-          isLoading={isGenerating}
-          error={error}
-          onGenerate={onGenerate}
-          compact
-        />
-      </div>
-    );
-  }
-
+  const [open, setOpen] = useState(false);
   return (
-    <div className="mt-2 flex flex-col gap-2">
-      <div>
+    <div className="mt-2">
         <Button
           variant="secondary"
-          size="sm"
-          loading={isGenerating}
+          size="md"
+          aria-haspopup="dialog"
+          aria-expanded={open}
           icon={<Sparkles aria-hidden className="size-3.5" />}
-          onClick={onGenerate}
+          onClick={() => {
+            setOpen(true);
+            if (!summary && !isGenerating && !error) onGenerate();
+          }}
         >
-          Ringkas sesi ini
+          {summary ? 'Baca ringkasan AI' : isGenerating || error ? 'Lihat status ringkasan' : 'Ringkas sesi ini'}
         </Button>
-      </div>
-      {error ? (
+      <Modal open={open} onClose={() => setOpen(false)} size="lg" title="Ringkasan AI sesi ini" description={sessionLabel}>
+        {summary ? (
+          <SummaryBody summary={summary} isLoading={isGenerating} error={error} onGenerate={onGenerate} compact />
+        ) : error ? (
         <InlineAlert tone="danger" title="Ringkasan sesi belum dapat dibuat">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span>{toApiError(error).message}</span>
@@ -280,7 +274,8 @@ export function SessionLearningSummaryBlock({
             </Button>
           </div>
         </InlineAlert>
-      ) : null}
+        ) : <p role="status" className="py-4 text-sm text-muted">Sedang merangkum catatan tutor…</p>}
+      </Modal>
     </div>
   );
 }
