@@ -975,7 +975,11 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
           approved_sessions: rows.length,
           approved_duration_minutes: rows.reduce((sum, s) => sum + s.duration_minutes, 0),
           subjects: [...new Set(rows.map((s) => core(s).subject_name))].sort(),
-          subject_sessions: [...rows.reduce((m, s) => m.set(core(s).subject_name, (m.get(core(s).subject_name) ?? 0) + 1), new Map<string, number>())]
+          // Hitung per mapel (sesi multi-mapel masuk ke tiap mapelnya), sama dengan backend.
+          subject_sessions: [...rows.reduce((m, s) => {
+            for (const name of new Set(s.subject_ids.map((id) => subjects.find((su) => su.id === id)?.name ?? ''))) if (name) m.set(name, (m.get(name) ?? 0) + 1);
+            return m;
+          }, new Map<string, number>())]
             .map(([name, sessions]) => ({ name, sessions }))
             .sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name, 'id')),
         });

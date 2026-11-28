@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { STUDENT_IDS, USER_IDS } from '@mumtaz/contracts/fixtures';
+import { STUDENT_IDS, SUBJECT_IDS, USER_IDS } from '@mumtaz/contracts/fixtures';
 import { choosePeriod, renderApp, useFakeBackend } from '../test/render';
 
 async function loginParentA(route = '/login/orang-tua') {
@@ -50,5 +50,32 @@ describe('Beranda Orang Tua', () => {
     await user.click(await screen.findByRole('button', { name: /^Anak/ }));
     await user.click(await screen.findByRole('option', { name: 'Bima' }));
     expect(await screen.findByRole('heading', { name: 'Bima', level: 1 })).toBeInTheDocument();
+  });
+
+  it('label kartu angka dibacakan sekali saja (tanpa duplikat untuk pembaca layar)', async () => {
+    useFakeBackend();
+    await loginParentA();
+    await choosePeriod('2026-10');
+    const stats = await screen.findByRole('list', { name: 'Ringkasan bulan ini' });
+    for (const label of ['Sesi belajar', 'Waktu belajar', 'Mata pelajaran']) {
+      expect(within(stats).getAllByText(label)).toHaveLength(1);
+    }
+  });
+
+  it('sesi multi-mapel dihitung per mapel di "Pelajaran bulan ini"', async () => {
+    const backend = useFakeBackend();
+    backend.seedApprovedSession({
+      student_id: STUDENT_IDS.murid1,
+      subject_ids: [SUBJECT_IDS.matematika, SUBJECT_IDS.bahasaInggris],
+      lesson_date: '2026-10-20',
+      learning_material: 'Latihan gabungan',
+      learning_notes: 'Siswa mengikuti latihan gabungan matematika dan bahasa Inggris dengan baik dan fokus sepanjang sesi berlangsung.',
+    });
+    await loginParentA();
+    await choosePeriod('2026-10');
+    const subjects = await screen.findByRole('region', { name: 'Pelajaran bulan ini' });
+    await waitFor(() => expect(within(subjects).getAllByRole('listitem')).toHaveLength(2));
+    expect(within(subjects).getByText('Matematika').closest('li')).toHaveTextContent('3 sesi');
+    expect(within(subjects).getByText('Bahasa Inggris').closest('li')).toHaveTextContent('1 sesi');
   });
 });

@@ -277,7 +277,6 @@ function StatTile({ icon: Icon, label, value, unit, tone }: { icon: LucideIcon; 
         <Icon aria-hidden className="size-5 shrink-0 text-text" />
       </div>
       <p className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
-        <span className="sr-only sm:hidden">{label} </span>
         <span className="text-2xl font-bold text-text tabular-nums sm:text-3xl">{value}</span>
         <span className="text-meta text-muted">{unit}</span>
       </p>
