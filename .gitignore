@@ -37,3 +37,6 @@ yarn-error.log*
 
 # Dokumentasi internal & data asli owner (berisi data pribadi; repo publik) — hanya lokal
 docs/
+
+# Mockup brainstorming lokal
+.superpowers/
