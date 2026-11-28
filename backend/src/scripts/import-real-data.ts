@@ -9,7 +9,7 @@ import { importRealData } from '../db/real-data-import.js';
 import { safeErrorMessage } from '../lib/db-errors.js';
 import { parseCsv } from '../services/import/real-data.js';
 
-const DEFAULT_CSV = fileURLToPath(new URL('../../../docs/dataset/data clean bimbel from ds.csv', import.meta.url));
+const DEFAULT_CSV = fileURLToPath(new URL('../../../docs/dataset/data-bimbel.csv', import.meta.url));
 const USAGE = 'Pakai: npm run db:import-real-data -w backend -- [--file <csv>] [--out-dir <folder>] [--apply]';
 
 function parseArgs(args: string[]) {

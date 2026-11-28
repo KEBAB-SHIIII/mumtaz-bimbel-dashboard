@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { GRADE_OPTIONS, timeToMinutes, usernameSchema } from '@mumtaz/contracts';
+import { GRADE_OPTIONS, timeToMinutes, usernameSchema, type RegistrationSource } from '@mumtaz/contracts';
 import { countedSnapshot } from '../billing/tariff.js';
 import { BASELINE_DATE, hourlyFor } from '../master-data/grade-history.js';
 
@@ -25,6 +25,14 @@ export const csvRowSchema = z.object({
   tanggal_les: z.iso.date(),
   jam_mulai: time,
   jam_selesai: time,
+  /** Opsional (dataset DS ≥ 28-11-2026); kosong/tidak ada → sumber tidak diubah. */
+  sumber_pendaftaran: z.string().trim().optional()
+    .transform((v, ctx) => {
+      if (!v) return undefined;
+      const source = REGISTRATION_SOURCE_BY_LABEL[v.toLowerCase()];
+      if (!source) { ctx.addIssue({ code: 'custom', message: `Sumber pendaftaran tidak dikenali: "${v}"` }); return z.NEVER; }
+      return source;
+    }),
 }).refine((r) => timeToMinutes(r.jam_selesai) > timeToMinutes(r.jam_mulai), { message: 'Jam selesai harus setelah jam mulai' });
 export type CsvRow = z.infer<typeof csvRowSchema>;
 
@@ -82,9 +90,31 @@ export const SUBJECT_ALIASES: Record<string, string> = {
   'pendidikan pancasila dan kewarganegaraan': 'PKN',
 };
 
-/** Mapel dipisah `;` (nama mapel sendiri boleh memuat koma, mis. "Mengaji, Tajwid, dan Hafalan"). */
+/** Label sumber pendaftaran di CSV DS → kode aplikasi. */
+export const REGISTRATION_SOURCE_BY_LABEL: Record<string, RegistrationSource> = {
+  whatsapp: 'whatsapp', instagram: 'instagram', tiktok: 'tiktok', teman: 'referral', 'teman/keluarga': 'referral', lainnya: 'other',
+};
+
+/** Nama mapel yang memuat koma; dilindungi saat CSV memakai koma sebagai pemisah mapel. */
+export const COMMA_SUBJECTS = ['Mengaji, Tajwid, dan Hafalan'] as const;
+
+/**
+ * Mapel dipisah `;` (dataset lama) atau `,` (dataset DS 28-11-2026). Nama mapel yang memuat koma
+ * (`COMMA_SUBJECTS`) tetap utuh.
+ */
 export function splitSubjects(value: string): string[] {
-  return [...new Set(value.split(';').map((s) => s.trim().replace(/\s+/g, ' ')).filter(Boolean)
+  let parts: string[];
+  if (value.includes(';')) parts = value.split(';');
+  else {
+    let rest = value;
+    const kept: string[] = [];
+    for (const name of COMMA_SUBJECTS) {
+      const pattern = new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/,\s*/g, ',\\s*'), 'gi');
+      rest = rest.replace(pattern, () => { kept.push(name); return ''; });
+    }
+    parts = [...kept, ...rest.split(',')];
+  }
+  return [...new Set(parts.map((s) => s.trim().replace(/\s+/g, ' ')).filter(Boolean)
     .map((s) => SUBJECT_ALIASES[s.toLowerCase()] ?? s))];
 }
 
@@ -112,6 +142,8 @@ const norm = (s: string) => s.trim().replace(/\s+/g, ' ');
 export interface PlannedTutor { id: string; userId: string; name: string; username: string; sessions: number }
 export interface PlannedStudent {
   id: string; name: string; school: string; grade: string;
+  /** Sumber mayoritas di CSV (seri → sesi paling awal); `null` bila CSV tidak memuatnya. */
+  registration_source: RegistrationSource | null;
   history: { grade: string; effective_from: string }[];
   sessions: number;
 }
@@ -189,7 +221,7 @@ export function buildImportPlan(records: Record<string, string>[], options: Buil
 
   const tutorByName = new Map<string, PlannedTutor>();
   const usernames = new Set<string>(options.reservedUsernames ?? []);
-  const studentByKey = new Map<string, PlannedStudent & { rows: { date: string; start: string; grade: string }[] }>();
+  const studentByKey = new Map<string, PlannedStudent & { rows: { date: string; start: string; grade: string; source?: RegistrationSource | undefined }[] }>();
   const subjectNames = new Map<string, string>();
   const sessions: PlannedSession[] = [];
   const duplicates: { line: number; duplicateOf: number }[] = [];
@@ -205,7 +237,7 @@ export function buildImportPlan(records: Record<string, string>[], options: Buil
     }
     let student = studentByKey.get(studentKey);
     if (!student) {
-      student = { id: deterministicUuid('student', studentKey), name: row.nama_murid, school: row.asal_sekolah, grade, history: [], sessions: 0, rows: [] };
+      student = { id: deterministicUuid('student', studentKey), name: row.nama_murid, school: row.asal_sekolah, grade, registration_source: null, history: [], sessions: 0, rows: [] };
       studentByKey.set(studentKey, student);
     }
     for (const s of subjects) if (!subjectNames.has(s.toLowerCase())) subjectNames.set(s.toLowerCase(), s);
@@ -218,7 +250,7 @@ export function buildImportPlan(records: Record<string, string>[], options: Buil
 
     tutor.sessions++;
     student.sessions++;
-    student.rows.push({ date: row.tanggal_les, start: row.jam_mulai, grade });
+    student.rows.push({ date: row.tanggal_les, start: row.jam_mulai, grade, source: row.sumber_pendaftaran });
     const duration = timeToMinutes(row.jam_selesai) - timeToMinutes(row.jam_mulai);
     sessions.push({
       id: deterministicUuid('session', dupKey), client_submission_id: deterministicUuid('submission', dupKey),
@@ -237,9 +269,17 @@ export function buildImportPlan(records: Record<string, string>[], options: Buil
 
   // Riwayat kelas: baseline = kelas sesi pertama; perubahan kelas tercatat di tanggal les pertama kelas baru.
   const regressions: { student: string; school: string; date: string; from: string; to: string }[] = [];
+  const sourceConflicts: { student: string; school: string; chosen: RegistrationSource | null; counts: Record<string, number> }[] = [];
   const students = [...studentByKey.values()].filter((s) => s.sessions > 0).map(({ rows: lessonRows, ...s }) => {
     const history: { grade: string; effective_from: string }[] = [];
-    for (const r of [...lessonRows].sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start))) {
+    const ordered = [...lessonRows].sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
+    // Sumber pendaftaran: mayoritas; seri → yang muncul paling awal (urutan `ordered`).
+    const sourceCounts = new Map<RegistrationSource, number>();
+    for (const r of ordered) if (r.source) sourceCounts.set(r.source, (sourceCounts.get(r.source) ?? 0) + 1);
+    let registration_source: RegistrationSource | null = null;
+    for (const [source, n] of sourceCounts) if (registration_source === null || n > (sourceCounts.get(registration_source) ?? 0)) registration_source = source;
+    if (sourceCounts.size > 1) sourceConflicts.push({ student: s.name, school: s.school, chosen: registration_source, counts: Object.fromEntries(sourceCounts) });
+    for (const r of ordered) {
       const prev = history[history.length - 1];
       if (!prev) history.push({ grade: r.grade, effective_from: BASELINE_DATE });
       else if (prev.grade !== r.grade) {
@@ -247,12 +287,12 @@ export function buildImportPlan(records: Record<string, string>[], options: Buil
         history.push({ grade: r.grade, effective_from: r.date });
       }
     }
-    return { ...s, grade: history[history.length - 1]?.grade ?? s.grade, history };
+    return { ...s, grade: history[history.length - 1]?.grade ?? s.grade, registration_source, history };
   }).sort((a, b) => a.name.localeCompare(b.name) || a.school.localeCompare(b.school));
 
   const subjects = [...subjectNames.values()].sort((a, b) => a.localeCompare(b));
   sessions.sort((a, b) => (a.lesson_date + a.start_time).localeCompare(b.lesson_date + b.start_time) || a.id.localeCompare(b.id));
-  return { tutors, students, subjects, sessions, issues: { invalid, unusualTime, duplicates, gradeNormalized, regressions } };
+  return { tutors, students, subjects, sessions, issues: { invalid, unusualTime, duplicates, gradeNormalized, regressions, sourceConflicts } };
 }
 export type ImportPlan = ReturnType<typeof buildImportPlan>;
 
