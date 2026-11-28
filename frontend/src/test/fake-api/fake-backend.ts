@@ -1073,6 +1073,10 @@ export function createFakeBackend(options: { now?: () => Date; passwordRequired?
     failNextLearningSummary() {
       summaryStore.failNext();
     },
+    /** Hook test: hubungkan anak tambahan ke akun orang tua (skenario orang tua dengan beberapa anak). */
+    linkStudent(parentUserId: string, studentId: string) {
+      links = [...links, { parent_user_id: parentUserId, student_id: studentId, relationship: 'ibu' }];
+    },
     /** Hook test: tambahkan sesi approved sintetis (mis. untuk skenario > 3 mapel). */
     seedApprovedSession(input: {
       student_id: string;

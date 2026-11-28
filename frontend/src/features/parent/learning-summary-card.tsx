@@ -5,9 +5,9 @@ import { Button } from '../../components/ui/actions/button';
 import { Modal } from '../../components/ui/overlay/dialog';
 import { Chip, type ChipColor } from '../../components/ui/data-display/chip';
 import { InlineAlert } from '../../components/ui/feedback/states';
-import { Card } from '../../components/ui/surfaces/layout-primitives';
 import { toApiError } from '../../lib/api-error';
 import { formatPeriod, formatTimestamp } from '../../lib/format';
+import { OwlMascot } from './owl-mascot';
 
 const MAX_COLLAPSED_SUBJECTS = 3;
 
@@ -169,59 +169,56 @@ export function MonthlyLearningSummaryCard({
   error,
   onGenerate,
 }: MonthlyLearningSummaryCardProps) {
+  const [open, setOpen] = useState(false);
+  const month = formatPeriod(period).split(' ')[0];
+  const retry = error ? (
+    <InlineAlert tone="danger" title={summary ? 'Gagal memperbarui ringkasan' : 'Ringkasan belum dapat dibuat'}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span>{toApiError(error).message}</span>
+        <Button variant="secondary" size="sm" loading={isGenerating} icon={<RotateCcw aria-hidden className="size-3.5" />} onClick={onGenerate}>
+          Coba lagi
+        </Button>
+      </div>
+    </InlineAlert>
+  ) : null;
+
   return (
-    <Card
-      title="Ringkasan belajar bulanan"
-      description={`Rangkuman perkembangan belajar berdasarkan sesi terverifikasi pada ${formatPeriod(period)}.`}
-    >
-      <div className="px-4 py-4 sm:px-5">
+    <section aria-labelledby="monthly-summary-title" className="relative isolate overflow-hidden rounded-2xl bg-pastel-sun p-4 sm:p-5">
+      <OwlMascot className="pointer-events-none absolute end-3 bottom-2 -z-10 size-16 sm:size-20" />
+      <div className="flex flex-col gap-2 pe-16 sm:pe-24">
+        <h2 id="monthly-summary-title" className="text-card-title text-balance text-text">Ringkasan belajar {month}</h2>
         {approvedSessionCount === 0 ? (
-          <p className="text-sm text-muted">
-            Belum ada sesi terverifikasi untuk diringkas pada {formatPeriod(period)}.
-          </p>
+          <p className="text-sm text-pretty text-muted">Belum ada sesi terverifikasi untuk diringkas pada {formatPeriod(period)}.</p>
         ) : summary ? (
-          <SummaryBody
-            summary={summary}
-            isLoading={isGenerating}
-            error={error}
-            onGenerate={onGenerate}
-          />
+          <>
+            <p className="w-fit rounded-md bg-pastel-teal px-2 py-0.5 text-meta font-semibold text-ink-teal">{STATUS_META[summary.overall_status].label}</p>
+            <p className="line-clamp-4 text-sm leading-relaxed text-pretty text-text">{summary.summary}</p>
+            {retry}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Button variant="secondary" size="sm" aria-haspopup="dialog" onClick={() => setOpen(true)}>Baca selengkapnya</Button>
+              {summary.is_stale && (
+                <Button variant="ghost" size="sm" loading={isGenerating} icon={<RefreshCw aria-hidden className="size-3.5" />} onClick={onGenerate}>
+                  Perbarui ringkasan
+                </Button>
+              )}
+            </div>
+            <Modal open={open} onClose={() => setOpen(false)} size="lg" title={`Ringkasan belajar ${formatPeriod(period)}`} description="Rangkuman perkembangan dari sesi terverifikasi.">
+              <SummaryBody summary={summary} isLoading={isGenerating} error={error} onGenerate={onGenerate} compact />
+            </Modal>
+          </>
         ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-              <p className="text-sm text-pretty text-muted">
-                Dapatkan rangkuman perkembangan anak dari {approvedSessionCount} sesi terverifikasi bulan ini.
-              </p>
-              <Button
-                variant="primary"
-                size="md"
-                loading={isGenerating}
-                icon={<Sparkles aria-hidden className="size-4" />}
-                onClick={onGenerate}
-              >
+          <>
+            <p className="text-sm text-pretty text-muted">Dapatkan rangkuman perkembangan anak dari {approvedSessionCount} sesi terverifikasi bulan ini.</p>
+            <div className="pt-1">
+              <Button variant="primary" size="md" loading={isGenerating} icon={<Sparkles aria-hidden className="size-4" />} onClick={onGenerate}>
                 Buat ringkasan bulanan
               </Button>
             </div>
-            {error ? (
-              <InlineAlert tone="danger" title="Ringkasan belum dapat dibuat">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span>{toApiError(error).message}</span>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    loading={isGenerating}
-                    icon={<RotateCcw aria-hidden className="size-3.5" />}
-                    onClick={onGenerate}
-                  >
-                    Coba lagi
-                  </Button>
-                </div>
-              </InlineAlert>
-            ) : null}
-          </div>
+            {retry}
+          </>
         )}
       </div>
-    </Card>
+    </section>
   );
 }
 

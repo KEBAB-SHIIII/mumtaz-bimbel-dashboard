@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, CalendarCheck, Clock } from 'lucide-react';
+import { BookOpen, CalendarCheck, Clock, GraduationCap, type LucideIcon } from 'lucide-react';
 import { Link } from 'react-router';
 import { m } from 'motion/react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type {
   LearningSummaryView,
   ParentLearningSummariesResponse,
@@ -10,11 +10,10 @@ import type {
   ParentStudent,
 } from '@mumtaz/contracts';
 import { itemEnter } from '../../components/ui/motion/animated-list';
-import { Avatar } from '../../components/ui/data-display/avatar';
 import { Pagination } from '../../components/ui/data-display/data-table';
 import { EmptyState, ErrorState } from '../../components/ui/feedback/states';
 import { FilterSelect } from '../../components/ui/forms/filter-select';
-import { Card, PageHeader, StatCard } from '../../components/ui/surfaces/layout-primitives';
+import { Card, PageHeader } from '../../components/ui/surfaces/layout-primitives';
 import { PeriodSelector } from '../../components/ui/forms/period-selector';
 import { QueryView } from '../../components/ui/feedback/query-view';
 import { LoadingSwitch, SkeletonCardList, SkeletonProfile, SkeletonStatCards } from '../../components/ui/feedback/skeleton';
@@ -34,6 +33,7 @@ import {
   MonthlyLearningSummaryCard,
   SessionLearningSummaryBlock,
 } from './learning-summary-card';
+import { subjectStyle } from './subject-style';
 
 /** Anak terpilih dari URL; default anak pertama yang terhubung. */
 function useSelectedStudent() {
@@ -188,30 +188,15 @@ function SessionNoteBoard({
   );
 }
 
-/** Identitas anak (avatar dari ID murid internal, bukan ID Akses Orang Tua). */
-function ChildCard({ student, children }: { student: ParentStudent; children?: ReactNode }) {
-  return (
-    <section aria-label="Data anak" className="relative isolate flex flex-col gap-4 rounded-lg border border-brand-border/60 bg-linear-to-br from-primary-subtle to-brand-gradient-to p-4 shadow-sm sm:flex-row sm:items-end sm:justify-between sm:p-5">
-      <svg aria-hidden="true" focusable="false" viewBox="0 0 150 62" className="pointer-events-none absolute end-2 top-1 -z-10 w-24 text-primary/25 sm:end-1/4 sm:w-36">
-        <path d="M3 53c24 4 49-6 48-20-1-11-22-8-17 3 6 14 37 13 57-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="3 5" />
-        <path d="m91 23 43-17-15 33-11-10-7 5 2-10Z" fill="var(--color-surface)" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-        <path d="m103 24 31-18-26 23" fill="none" stroke="currentColor" strokeLinejoin="round" />
-      </svg>
-      <div className="flex min-w-0 items-center gap-3">
-        <Avatar seed={student.id} name={student.full_name} size={40} decorative />
-        <div className="min-w-0">
-          <p className="text-card-title break-words text-text">{student.full_name}</p>
-          <p className="text-meta text-pretty text-muted">
-            {student.grade} · {student.school_name}
-          </p>
-        </div>
-      </div>
-      {children && <div className="flex flex-wrap items-end gap-3">{children}</div>}
-    </section>
-  );
+interface ParentContext {
+  student: ParentStudent;
+  period: string;
+  /** Pemilih anak (bila > 1) + bulan, untuk ditaruh di header halaman. */
+  controls: ReactNode;
 }
 
-function ParentPageFrame({ title, description, children }: { title: string; description: string; children: (student: ParentStudent, period: string) => ReactNode }) {
+/** Status muat/gagal/kosong daftar anak + pemilih anak & bulan yang dipakai semua halaman parent. */
+function ParentPageFrame({ title, children }: { title: string; children: (ctx: ParentContext) => ReactNode }) {
   const [period, setPeriod] = usePeriodParam();
   const { students, items, selected, select } = useSelectedStudent();
 
@@ -238,7 +223,7 @@ function ParentPageFrame({ title, description, children }: { title: string; desc
   if (!selected) {
     return (
       <>
-        <PageHeader title={title} description={description} />
+        <PageHeader title={title} />
         <Card>
           <EmptyState title="Belum ada anak yang terhubung" description="Hubungi Admin bimbel untuk menghubungkan akun dengan data anak." />
         </Card>
@@ -246,30 +231,78 @@ function ParentPageFrame({ title, description, children }: { title: string; desc
     );
   }
 
-  return (
-    <>
-      <PageHeader title={title} description={description} />
-      <ChildCard student={selected}>
-        <StudentSelector items={items} selected={selected} onSelect={select} />
-        <PeriodSelector value={period} onChange={setPeriod} hideLabel />
-      </ChildCard>
-      {children(selected, period)}
-    </>
+  const controls = (
+    <div className="flex flex-wrap items-end gap-2">
+      <StudentSelector items={items} selected={selected} onSelect={select} />
+      <PeriodSelector value={period} onChange={setPeriod} hideLabel />
+    </div>
   );
+  return <>{children({ student: selected, period, controls })}</>;
 }
 
-/** Progress Anak: hanya sesi disetujui; tanpa catatan internal, anomali, atau honor. */
+/** Beranda: ringkas dulu (angka, ringkasan AI), detail kemudian (sesi terakhir, pelajaran). */
 export function ParentDashboardPage() {
+  useEffect(() => {
+    document.title = 'Beranda · Mumtaz Bimbel';
+  }, []);
   return (
-    <ParentPageFrame title="Progress Anak" description="Ringkasan sesi belajar yang sudah diverifikasi.">
-      {(student, period) => (
-        <ProgressSummary key={`${student.id}:${period}`} studentId={student.id} period={period} />
+    <ParentPageFrame title="Beranda">
+      {({ student, period, controls }) => (
+        <>
+          <section aria-label="Data anak" className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:p-5">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-pastel-blue text-ink-blue">
+                <GraduationCap aria-hidden className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <h1 className="text-card-title break-words text-text sm:text-xl">{student.full_name}</h1>
+                <p className="text-meta text-pretty text-muted">{student.grade} · {student.school_name}</p>
+              </div>
+            </div>
+            {controls}
+          </section>
+          <HomeContent key={`${student.id}:${period}`} studentId={student.id} period={period} />
+        </>
       )}
     </ParentPageFrame>
   );
 }
 
-function ProgressSummary({ studentId, period }: { studentId: string; period: string }) {
+const STAT_TONES = {
+  blue: 'bg-pastel-blue',
+  teal: 'bg-pastel-teal',
+  amber: 'bg-pastel-amber',
+} as const;
+
+function StatTile({ icon: Icon, label, value, unit, tone }: { icon: LucideIcon; label: string; value: string; unit: string; tone: keyof typeof STAT_TONES }) {
+  return (
+    <li className={`flex flex-col gap-3 rounded-2xl p-3 sm:p-4 ${STAT_TONES[tone]}`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-meta font-semibold text-text max-sm:sr-only">{label}</span>
+        <Icon aria-hidden className="size-5 shrink-0 text-text" />
+      </div>
+      <p className="flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
+        <span className="sr-only sm:hidden">{label} </span>
+        <span className="text-2xl font-bold text-text tabular-nums sm:text-3xl">{value}</span>
+        <span className="text-meta text-muted">{unit}</span>
+      </p>
+    </li>
+  );
+}
+
+function SectionCard({ id, title, actions, children }: { id: string; title: string; actions?: ReactNode; children: ReactNode }) {
+  return (
+    <section aria-labelledby={id} className="rounded-2xl border border-border bg-surface p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 id={id} className="text-card-title text-text">{title}</h2>
+        {actions}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function HomeContent({ studentId, period }: { studentId: string; period: string }) {
   const summary = useQuery({ queryKey: queryKeys.parent.dashboard(studentId, period), queryFn: () => fetchParentDashboard(studentId, period) });
   const progress = useQuery({ queryKey: queryKeys.parent.progress(studentId, period), queryFn: () => fetchParentProgress(studentId, period) });
   const ai = useParentSummaries(studentId, period);
@@ -281,82 +314,110 @@ function ProgressSummary({ studentId, period }: { studentId: string; period: str
     error: summary.error ?? progress.error,
     refetch: () => Promise.all([summary.refetch(), progress.refetch()]),
   };
+  const notesLink = `/orang-tua-murid/riwayat?${new URLSearchParams({ student_id: studentId, period })}`;
 
   return (
     <QueryView query={combined} skeleton={<><SkeletonStatCards count={3} /><Card><SkeletonCardList count={2} /></Card></>}>
-      {({ summary: data, progress: detail }) => (
-        <>
-          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-            <StatCard index={0} icon={CalendarCheck} accent="green" label="Sesi terverifikasi" count={{ value: data.approved_sessions }} />
-            <StatCard index={1} icon={Clock} accent="blue" label="Total durasi" value={formatDuration(data.approved_duration_minutes)} />
-            <StatCard index={2} className="max-sm:col-span-2" icon={BookOpen} accent="violet" label="Mata pelajaran" count={{ value: data.subjects.length }} />
-          </dl>
-          <MonthlyLearningSummaryCard
-            period={period}
-            approvedSessionCount={ai.approvedSessionCount ?? data.approved_sessions}
-            summary={ai.monthly}
-            isGenerating={ai.monthlyGenerating}
-            error={ai.monthlyError}
-            onGenerate={ai.generateMonthly}
-          />
-          <Card title="Sesi terbaru" description={formatPeriod(period)}>
-            {detail.sessions.length === 0 ? (
-              <EmptyState title="Belum ada sesi terverifikasi" description={`Belum ada sesi yang diverifikasi pada ${formatPeriod(period)}.`} />
-            ) : (
-              <ol className="divide-y divide-border px-4 sm:px-5">
-                {detail.sessions.slice(0, 5).map((session) => (
-                  <li key={session.id} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                    <div className="min-w-0 break-words">
-                      <p className="font-medium text-text">{session.subject_name}</p>
-                      <p className="text-sm text-muted">Tutor: {session.tutor_name}</p>
-                    </div>
-                    <p className="text-sm text-muted sm:shrink-0">
-                      <time dateTime={session.lesson_date}>{formatLessonDate(session.lesson_date)}</time> · {formatDuration(session.duration_minutes)}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-            )}
-            <div className="border-t border-border px-4 py-2 sm:px-5">
-              <Link to={`/orang-tua-murid/riwayat?${new URLSearchParams({ student_id: studentId, period })}`} className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-semibold text-primary hover:bg-primary-subtle focus-visible:outline-2 focus-visible:outline-primary">Lihat semua sesi</Link>
-            </div>
-          </Card>
-        </>
-      )}
-    </QueryView>
-  );
-}
-
-export function ParentSubjectsPage() {
-  return (
-    <ParentPageFrame title="Mata Pelajaran" description="Pelajaran yang diikuti anak berdasarkan sesi terverifikasi pada bulan pilihan.">
-      {(student, period) => <SubjectList studentId={student.id} period={period} />}
-    </ParentPageFrame>
-  );
-}
-
-function SubjectList({ studentId, period }: { studentId: string; period: string }) {
-  const query = useQuery({ queryKey: queryKeys.parent.dashboard(studentId, period), queryFn: () => fetchParentDashboard(studentId, period) });
-  return (
-    <QueryView query={query} skeleton={<Card><SkeletonCardList count={3} /></Card>}>
-      {({ subjects }) => (
-        <Card title={formatPeriod(period)}>
-          {subjects.length ? (
-            <ul className="divide-y divide-border px-4 sm:px-5">
-              {subjects.map((name) => <li key={name} className="break-words py-3 font-medium text-text">{name}</li>)}
+      {({ summary: data, progress: detail }) => {
+        const maxSessions = Math.max(1, ...data.subject_sessions.map((item) => item.sessions));
+        return (
+          <>
+            <ul aria-label="Ringkasan bulan ini" className="grid grid-cols-3 gap-2 sm:gap-4">
+              <StatTile icon={CalendarCheck} tone="blue" label="Sesi belajar" value={String(data.approved_sessions)} unit="sesi" />
+              <StatTile icon={Clock} tone="teal" label="Waktu belajar" value={formatHours(data.approved_duration_minutes)} unit="jam" />
+              <StatTile icon={BookOpen} tone="amber" label="Mata pelajaran" value={String(data.subject_sessions.length)} unit="mapel" />
             </ul>
-          ) : <EmptyState title="Belum ada mata pelajaran" description="Belum ada sesi terverifikasi pada bulan ini. Pilih bulan lain untuk melihat pelajaran anak." />}
-        </Card>
-      )}
+
+            {data.approved_sessions === 0 ? (
+              <Card>
+                <EmptyState title="Belum ada sesi terverifikasi" description={`Belum ada sesi yang diverifikasi pada ${formatPeriod(period)}. Pilih bulan lain untuk melihat perkembangan anak.`} />
+              </Card>
+            ) : (
+              <div className="grid items-start gap-4 lg:grid-cols-[1.35fr_1fr]">
+                <div className="flex min-w-0 flex-col gap-4">
+                  <MonthlyLearningSummaryCard
+                    period={period}
+                    approvedSessionCount={ai.approvedSessionCount ?? data.approved_sessions}
+                    summary={ai.monthly}
+                    isGenerating={ai.monthlyGenerating}
+                    error={ai.monthlyError}
+                    onGenerate={ai.generateMonthly}
+                  />
+                  <SectionCard
+                    id="recent-sessions-title"
+                    title="Sesi terakhir"
+                    actions={<Link to={notesLink} className="inline-flex min-h-11 items-center rounded-md px-2 text-sm font-semibold text-primary hover:bg-primary-subtle focus-visible:outline-2 focus-visible:outline-primary">Lihat semua catatan</Link>}
+                  >
+                    <ol className="mt-1 divide-y divide-border">
+                      {detail.sessions.slice(0, 5).map((session) => {
+                        const style = subjectStyle(session.subject_name);
+                        return (
+                          <li key={session.id} className="flex items-center gap-3 py-3">
+                            <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${style.tileClass}`}>
+                              <style.icon aria-hidden className={`size-5 ${style.iconClass}`} />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold break-words text-text">{session.subject_name}</p>
+                              <p className="text-meta text-muted">{session.tutor_name} · {formatDuration(session.duration_minutes)}</p>
+                            </div>
+                            <time dateTime={session.lesson_date} className="shrink-0 text-meta text-muted">{formatShortDate(session.lesson_date)}</time>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </SectionCard>
+                </div>
+                <SectionCard id="subjects-title" title="Pelajaran bulan ini">
+                  <ul className="mt-1 divide-y divide-border">
+                    {data.subject_sessions.map((item) => {
+                      const style = subjectStyle(item.name);
+                      return (
+                        <li key={item.name} className="flex items-center gap-3 py-3">
+                          <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${style.tileClass}`}>
+                            <style.icon aria-hidden className={`size-[1.125rem] ${style.iconClass}`} />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline justify-between gap-3">
+                              <span className="break-words text-sm font-medium text-text">{item.name}</span>
+                              <span className="shrink-0 text-meta text-muted">{item.sessions} sesi</span>
+                            </div>
+                            <div aria-hidden className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-muted">
+                              <div className={`h-full rounded-full ${style.barClass}`} style={{ width: `${(item.sessions / maxSessions) * 100}%` }} />
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </SectionCard>
+              </div>
+            )}
+          </>
+        );
+      }}
     </QueryView>
   );
+}
+
+/** "180" menit → "3"; "90" → "1,5" (jam, tanpa nol berlebih). */
+function formatHours(minutes: number): string {
+  return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 }).format(minutes / 60);
+}
+
+const shortDate = new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+/** "2026-10-31" → "Sab, 31 Okt". */
+function formatShortDate(isoDate: string): string {
+  return shortDate.format(new Date(`${isoDate}T00:00:00Z`));
 }
 
 export function ParentHistoryPage() {
   return (
-    <ParentPageFrame title="Riwayat Pembelajaran" description="Catatan sesi yang sudah diverifikasi.">
-      {(student, period) => (
-        <HistoryList key={`${student.id}:${period}`} studentId={student.id} period={period} />
+    <ParentPageFrame title="Catatan Belajar">
+      {({ student, period, controls }) => (
+        <>
+          <PageHeader title="Catatan Belajar" description={`Catatan tutor untuk ${student.full_name} dari sesi yang sudah diverifikasi.`} actions={controls} />
+          <HistoryList key={`${student.id}:${period}`} studentId={student.id} period={period} />
+        </>
       )}
     </ParentPageFrame>
   );
